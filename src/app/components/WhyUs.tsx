@@ -1,192 +1,160 @@
-import { ReactNode } from "react";
+"use client";
 
-interface WhyUsItem {
-  icon: ReactNode;
-  title: string;
-  text: string;
-}
+import { CheckIcon, SparklesIcon } from "@heroicons/react/24/solid";
 
-interface WhyUsProps {
-  items?: WhyUsItem[];
-}
-
-const defaultItems: WhyUsItem[] = [
+const reasons = [
   {
-    icon: (
-      <svg
-        className='w-8 h-8'
-        fill='none'
-        stroke='currentColor'
-        viewBox='0 0 24 24'
-        aria-hidden='true'>
-        <path
-          strokeLinecap='round'
-          strokeLinejoin='round'
-          strokeWidth={2}
-          d='M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'
-        />
-      </svg>
-    ),
-    title: "جودة مضمونة",
-    text: "مناهج محدثة ومعتمدة تواكب أحدث التطورات التقنية",
+    title: "منهج تعليمي مُحدث",
+    description:
+      "مناهج مطورة حسب أحدث معايير الصناعة ومتطلبات سوق العمل العالمي",
+    icon: "📚",
+    highlight: "منهج 2024",
   },
   {
-    icon: (
-      <svg
-        className='w-8 h-8'
-        fill='none'
-        stroke='currentColor'
-        viewBox='0 0 24 24'
-        aria-hidden='true'>
-        <path
-          strokeLinecap='round'
-          strokeLinejoin='round'
-          strokeWidth={2}
-          d='M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'
-        />
-      </svg>
-    ),
-    title: "مرونة كاملة",
-    text: "تعلم في وقتك المناسب مع حصص مباشرة ومسجلة",
+    title: "تعلم عملي وتطبيقي",
+    description: "70% من الوقت مخصص للتطبيق العملي وبناء مشاريع حقيقية",
+    icon: "⚡",
+    highlight: "مشاريع حقيقية",
   },
   {
-    icon: (
-      <svg
-        className='w-8 h-8'
-        fill='none'
-        stroke='currentColor'
-        viewBox='0 0 24 24'
-        aria-hidden='true'>
-        <path
-          strokeLinecap='round'
-          strokeLinejoin='round'
-          strokeWidth={2}
-          d='M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z'
-        />
-      </svg>
-    ),
-    title: "خبراء محترفون",
-    text: "مدربون ذوو خبرة عملية في أكبر الشركات التقنية",
+    title: "دعم فني مستمر",
+    description: "فريق دعم متاح 24/7 لمساعدتك في حل أي مشكلة تقنية أو أكاديمية",
+    icon: "🛟",
+    highlight: "دعم 24/7",
   },
   {
-    icon: (
-      <svg
-        className='w-8 h-8'
-        fill='none'
-        stroke='currentColor'
-        viewBox='0 0 24 24'
-        aria-hidden='true'>
-        <path
-          strokeLinecap='round'
-          strokeLinejoin='round'
-          strokeWidth={2}
-          d='M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253'
-        />
-      </svg>
-    ),
-    title: "شهادات معتمدة",
-    text: "احصل على شهادات معترف بها دولياً تعزز مسيرتك المهنية",
+    title: "شبكة خريجين قوية",
+    description: "انضم لشبكة من الخريجين الناجحين والحصول على فرص عمل حصرية",
+    icon: "🌐",
+    highlight: "شبكة مهنية",
   },
   {
-    icon: (
-      <svg
-        className='w-8 h-8'
-        fill='none'
-        stroke='currentColor'
-        viewBox='0 0 24 24'
-        aria-hidden='true'>
-        <path
-          strokeLinecap='round'
-          strokeLinejoin='round'
-          strokeWidth={2}
-          d='M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192L5.636 18.364M12 2.25a9.75 9.75 0 100 19.5 9.75 9.75 0 000-19.5z'
-        />
-      </svg>
-    ),
-    title: "دعم مستمر",
-    text: "متابعة شخصية ودعم فني على مدار الساعة طوال فترة التعلم",
+    title: "ضمان الجودة",
+    description:
+      "ضمان استرداد كامل إذا لم تكن راضياً عن جودة التعليم خلال 30 يوم",
+    icon: "🛡️",
+    highlight: "ضمان 30 يوم",
   },
   {
-    icon: (
-      <svg
-        className='w-8 h-8'
-        fill='none'
-        stroke='currentColor'
-        viewBox='0 0 24 24'
-        aria-hidden='true'>
-        <path
-          strokeLinecap='round'
-          strokeLinejoin='round'
-          strokeWidth={2}
-          d='M13 10V3L4 14h7v7l9-11h-7z'
-        />
-      </svg>
-    ),
-    title: "نتائج سريعة",
-    text: "ابدأ بناء مشاريع حقيقية من الأسبوع الأول للتعلم",
+    title: "التعلم المخصص",
+    description: "مسار تعليمي مخصص حسب مستواك وأهدافك المهنية",
+    icon: "🎯",
+    highlight: "مخصص لك",
   },
 ];
 
-export default function WhyUs({ items = defaultItems }: WhyUsProps) {
+const benefits = [
+  "حصص مباشرة مع المدربين",
+  "وصول مدى الحياة للمواد",
+  "شهادات معتمدة دولياً",
+  "مجتمع طلاب نشط",
+  "ورش عمل إضافية مجانية",
+  "متابعة شخصية لكل طالب",
+  "مكتبة موارد شاملة",
+  "دعم البحث عن وظيفة",
+];
+
+export default function WhyUs() {
   return (
-    <section className='py-16 lg:py-24'>
-      <div className='max-w-7xl mx-auto px-4'>
+    <section
+      className='py-20 bg-gradient-to-br from-white to-blue-50'
+      dir='rtl'>
+      <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
         {/* Section Header */}
-        <div className='text-center mb-12'>
-          <h2 className='text-3xl font-bold text-brand-blue mb-4'>
-            لماذا تختارنا؟
+        <div className='text-center mb-16'>
+          <div className='inline-flex items-center px-4 py-2 rounded-full bg-[#343b50]/20 text-[#343b50] text-sm font-medium mb-4'>
+            <SparklesIcon className='w-4 h-4 ml-2' />
+            لماذا أندرينو؟
+          </div>
+          <h2 className='text-4xl lg:text-5xl font-bold text-gray-900 mb-6'>
+            نحن مختلفون وهذا ما يميزنا
           </h2>
-          <p className='text-lg text-brand-blue/70 max-w-2xl mx-auto'>
-            نجمع بين الخبرة والابتكار لنقدم لك أفضل تجربة تعليمية ممكنة
+          <p className='text-xl text-gray-600 max-w-3xl mx-auto'>
+            في أكاديمية أندرينو، نؤمن أن التعليم يجب أن يكون ملهماً وعملياً
+            ومؤثراً. إليك ما يجعلنا الخيار الأول للمتعلمين
           </p>
         </div>
 
-        {/* Why Us Container */}
-        <div className='bg-white border border-gray-200 rounded-2xl p-6 lg:p-8'>
-          <div
-            className='grid grid-cols-1 lg:grid-cols-2 gap-y-6 lg:gap-x-8 lg:gap-y-8'
-            role='list'
-            aria-label='أسباب اختيار أكاديمية أندرينو'>
-            {items.map((item, index) => (
+        <div className='grid lg:grid-cols-2 gap-16 items-start'>
+          {/* Left Side - Main Reasons */}
+          <div className='space-y-8'>
+            <h3 className='text-2xl font-bold text-gray-900 mb-8'>
+              ما يميز تجربة التعلم معنا:
+            </h3>
+
+            {reasons.map((reason, index) => (
               <div
                 key={index}
-                className='flex items-start space-x-4 rtl:space-x-reverse'
-                role='listitem'>
-                {/* Icon */}
-                <div className='flex-shrink-0 text-brand-copper'>
-                  {item.icon}
+                className='group relative bg-white rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 hover:border-blue-200'>
+                <div className='flex items-start gap-4'>
+                  {/* Icon */}
+                  <div className='flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-500 to-amber-500 rounded-xl flex items-center justify-center text-white text-lg'>
+                    {reason.icon}
+                  </div>
+
+                  {/* Content */}
+                  <div className='flex-1'>
+                    <div className='flex items-center gap-2 mb-2'>
+                      <h4 className='text-xl font-bold text-gray-900'>
+                        {reason.title}
+                      </h4>
+                      <span className='px-2 py-1 bg-[#c19170]/20 text-[#7e5b3f] text-xs font-medium rounded-full'>
+                        {reason.highlight}
+                      </span>
+                    </div>
+                    <p className='text-gray-600 leading-relaxed'>
+                      {reason.description}
+                    </p>
+                  </div>
                 </div>
 
-                {/* Content */}
-                <div className='min-w-0 flex-1 text-right'>
-                  <h3 className='text-lg font-semibold text-brand-blue mb-2'>
-                    {item.title}
-                  </h3>
-                  <p className='text-gray-600 text-sm leading-relaxed'>
-                    {item.text}
-                  </p>
-                </div>
+                {/* Hover Effect Border */}
+                <div className='absolute inset-0 rounded-2xl border-2 border-transparent group-hover:border-blue-100 transition-colors duration-300'></div>
               </div>
             ))}
           </div>
-        </div>
 
-        {/* Optional CTA */}
-        <div className='text-center mt-12'>
-          <p className='text-brand-blue/70 mb-6'>مستعد لتجربة الفرق؟</p>
-          <div className='flex flex-col sm:flex-row gap-4 justify-center'>
-            <a
-              href='/book-session'
-              className='inline-flex items-center justify-center px-6 py-3 text-base font-medium rounded-2xl text-white bg-brand-copper hover:bg-brand-copper-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-copper focus-visible:ring-offset-2 transition-all duration-200 hover:-translate-y-0.5 motion-reduce:hover:transform-none shadow-sm hover:shadow-md'
-              aria-label='احجز حصة مجانية لتجربة مميزاتنا'>
-              جرب مجاناً
-            </a>
-            <a
-              href='/about'
-              className='inline-flex items-center justify-center px-6 py-3 text-base font-medium rounded-2xl text-brand-blue bg-white border-2 border-brand-blue/10 hover:border-brand-blue hover:bg-brand-blue/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 transition-all duration-200 hover:-translate-y-0.5 motion-reduce:hover:transform-none shadow-sm hover:shadow-md'
-              aria-label='تعرف على المزيد عن أكاديمية أندرينو'>
-              اعرف المزيد
-            </a>
+          {/* Right Side - Benefits List & CTA */}
+          <div className='lg:sticky lg:top-8'>
+            <div className='bg-gradient-to-br from-blue-600 to-amber-600 rounded-3xl p-8 text-white'>
+              <h3 className='text-2xl font-bold mb-6 text-center'>
+                ماذا ستحصل عليه:
+              </h3>
+
+              {/* Benefits Grid */}
+              <div className='grid grid-cols-1 gap-3 mb-8'>
+                {benefits.map((benefit, index) => (
+                  <div key={index} className='flex items-center gap-3'>
+                    <CheckIcon className='w-5 h-5 text-[#c19170] flex-shrink-0' />
+                    <span className='text-white/90'>{benefit}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Stats Preview */}
+              <div className='grid grid-cols-2 gap-4 mb-8 pt-6 border-t border-white/20'>
+                <div className='text-center'>
+                  <div className='text-2xl font-bold'>98%</div>
+                  <div className='text-sm text-white/80'>نسبة الرضا</div>
+                </div>
+                <div className='text-center'>
+                  <div className='text-2xl font-bold'>1200+</div>
+                  <div className='text-sm text-white/80'>خريج ناجح</div>
+                </div>
+              </div>
+
+              {/* CTA Button */}
+              <div className='text-center'>
+                <a
+                  href='/signup'
+                  className='inline-block bg-white text-[#343b50] px-8 py-4 rounded-xl font-bold hover:bg-gray-100 transition-colors duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1'>
+                  ابدأ رحلتك الآن
+                </a>
+                <p className='text-sm text-white/80 mt-3'>
+                  🎁 حصة تجريبية مجانية لفترة محدودة
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

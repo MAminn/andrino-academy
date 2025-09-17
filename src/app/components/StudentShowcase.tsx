@@ -1,153 +1,192 @@
 "use client";
 
-import Image from "next/image";
+import { StarIcon } from "@heroicons/react/24/solid";
+import { ChatBubbleLeftIcon } from "@heroicons/react/24/outline";
 
-interface Student {
-  id: string;
-  name: string;
-  grade: string;
-  country: string;
-  photoUrl: string;
-}
-
-interface StudentShowcaseProps {
-  students?: Student[];
-}
-
-const defaultStudents: Student[] = [
+const testimonials = [
   {
-    id: "1",
-    name: "أحمد محمد",
-    grade: "A+",
-    country: "السعودية",
-    photoUrl: "https://picsum.photos/seed/ahmad/300/300",
+    id: 1,
+    name: "أحمد محمد علي",
+    role: "مطور ويب في شركة تقنية",
+    image: "/api/placeholder/150/150",
+    content:
+      "أكاديمية أندرينو غيرت مجرى حياتي المهنية. من صفر خبرة إلى مطور محترف في 6 أشهر فقط. المدربون رائعون والمنهج عملي جداً.",
+    rating: 5,
+    course: "تطوير المواقع الشاملة",
+    achievement: "حصل على وظيفة براتب 8000 ريال",
   },
   {
-    id: "2",
-    name: "فاطمة علي",
-    grade: "A",
-    country: "الإمارات",
-    photoUrl: "https://picsum.photos/seed/fatima/300/300",
+    id: 2,
+    name: "فاطمة أحمد السالم",
+    role: "مطورة تطبيقات موبايل",
+    image: "/api/placeholder/150/150",
+    content:
+      "التعلم في أندرينو مختلف تماماً. كل شيء عملي ومفيد للسوق. الآن أعمل كمطورة مستقلة وأحقق دخل ممتاز من البيت.",
+    rating: 5,
+    course: "تطوير تطبيقات الموبايل",
+    achievement: "بدأت عملها الحر وتحقق 12000 ريال شهرياً",
   },
   {
-    id: "3",
-    name: "محمد عبدالله",
-    grade: "A+",
-    country: "مصر",
-    photoUrl: "https://picsum.photos/seed/mohammed/300/300",
+    id: 3,
+    name: "عبدالله خالد النعيمي",
+    role: "مطور العاب",
+    image: "/api/placeholder/150/150",
+    content:
+      "حلمي كان تطوير الألعاب وأندرينو ساعدني أحقق هذا الحلم. المدربين يتابعونك خطوة بخطوة حتى تحترف.",
+    rating: 5,
+    course: "تطوير الألعاب",
+    achievement: "أطلق 3 ألعاب ناجحة على متاجر التطبيقات",
   },
   {
-    id: "4",
-    name: "نور الهدى",
-    grade: "A",
-    country: "الأردن",
-    photoUrl: "https://picsum.photos/seed/nour/300/300",
+    id: 4,
+    name: "نورا سعد المطيري",
+    role: "أخصائية أمن سيبراني",
+    image: "/api/placeholder/150/150",
+    content:
+      "مجال الأمن السيبراني كان صعب جداً لكن أسلوب التدريس في أندرينو خلاني أفهم كل شيء بسهولة. الآن أعمل في شركة عالمية.",
+    rating: 5,
+    course: "الأمن السيبراني",
+    achievement: "انضمت لشركة عالمية براتب 15000 ريال",
   },
   {
-    id: "5",
-    name: "عبدالرحمن سالم",
-    grade: "A+",
-    country: "الكويت",
-    photoUrl: "https://picsum.photos/seed/abdulrahman/300/300",
+    id: 5,
+    name: "يوسف عمر البقمي",
+    role: "مطور ذكاء اصطناعي",
+    image: "/api/placeholder/150/150",
+    content:
+      "أندرينو فتحت لي باب الذكاء الاصطناعي. من أصعب المجالات لكن مع التدريب العملي والمشاريع الحقيقية صار سهل.",
+    rating: 5,
+    course: "الذكاء الاصطناعي وتعلم الآلة",
+    achievement: "يعمل على مشاريع ذكاء اصطناعي براتب 20000 ريال",
   },
   {
-    id: "6",
-    name: "زينب أحمد",
-    grade: "A",
-    country: "لبنان",
-    photoUrl: "https://picsum.photos/seed/zeinab/300/300",
+    id: 6,
+    name: "مريم حسن العتيبي",
+    role: "محللة بيانات",
+    image: "/api/placeholder/150/150",
+    content:
+      "كنت أشتغل في مجال مختلف تماماً. أندرينو ساعدتني أتحول لمحللة بيانات وأحب شغلي الجديد جداً.",
+    rating: 5,
+    course: "علم البيانات والتحليل",
+    achievement: "انتقلت من التدريس إلى تحليل البيانات",
   },
 ];
 
-export default function StudentShowcase({
-  students = defaultStudents,
-}: StudentShowcaseProps) {
+const achievements = [
+  { number: "95%", label: "معدل الحصول على وظائف خلال 6 أشهر" },
+  { number: "150%", label: "متوسط زيادة الراتب بعد التخرج" },
+  { number: "4.9/5", label: "تقييم الطلاب للأكاديمية" },
+  { number: "1200+", label: "قصة نجاح حقيقية" },
+];
+
+export default function StudentShowcase() {
   return (
-    <section className='py-16 lg:py-24 bg-gray-50'>
-      <div className='max-w-7xl mx-auto px-4'>
+    <section
+      className='py-20 bg-gradient-to-b from-gray-50 to-white overflow-hidden'
+      dir='rtl'>
+      <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
         {/* Section Header */}
-        <div className='text-center mb-12'>
-          <h2 className='text-3xl font-bold text-brand-blue mb-4'>طلابنا</h2>
-          <p className='text-lg text-brand-blue/70 max-w-2xl mx-auto'>
-            تعرف على بعض طلابنا المتفوقين من مختلف أنحاء العالم العربي
+        <div className='text-center mb-16'>
+          <div className='inline-flex items-center px-4 py-2 rounded-full bg-[#c19170]/20 text-[#7e5b3f] text-sm font-medium mb-4'>
+            🌟 قصص نجاح
+          </div>
+          <h2 className='text-4xl lg:text-5xl font-bold text-gray-900 mb-6'>
+            طلابنا يحققون أحلامهم
+          </h2>
+          <p className='text-xl text-gray-600 max-w-3xl mx-auto'>
+            اكتشف كيف غيّرت أكاديمية أندرينو حياة آلاف الطلاب وساعدتهم في تحقيق
+            النجاح المهني
           </p>
         </div>
 
-        {/* Students Grid */}
-        <div
-          className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
-          role='list'
-          aria-label='قائمة الطلاب المتفوقين'>
-          {students.map((student) => (
+        {/* Achievement Stats */}
+        <div className='grid grid-cols-2 lg:grid-cols-4 gap-6 mb-16'>
+          {achievements.map((achievement, index) => (
             <div
-              key={student.id}
-              className='bg-white border border-brand-blue/10 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-md hover:-translate-y-1 focus:shadow-md focus:-translate-y-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 group cursor-pointer'
-              role='listitem'
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  // Optional: Add navigation or action here
-                }
-              }}>
-              {/* Student Photo */}
-              <div className='relative aspect-video overflow-hidden'>
-                <Image
-                  src={student.photoUrl}
-                  alt={`صورة الطالب ${student.name}`}
-                  width={300}
-                  height={200}
-                  className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-300'
-                  sizes='(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw'
-                />
-
-                {/* Overlay gradient for better text readability */}
-                <div className='absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300'></div>
+              key={index}
+              className='text-center p-6 bg-white rounded-xl shadow-sm border border-gray-100'>
+              <div className='text-3xl font-bold text-[#7e5b3f] mb-2'>
+                {achievement.number}
               </div>
-
-              {/* Student Info */}
-              <div className='p-6 text-right'>
-                <h3 className='text-xl font-semibold text-brand-blue mb-2 group-hover:text-brand-blue-700 transition-colors'>
-                  {student.name}
-                </h3>
-
-                <div className='space-y-1'>
-                  <div className='flex items-center justify-end space-x-2 rtl:space-x-reverse'>
-                    <span className='text-brand-blue/70 text-sm'>التقدير:</span>
-                    <span className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800'>
-                      {student.grade}
-                    </span>
-                  </div>
-
-                  <div className='flex items-center justify-end space-x-2 rtl:space-x-reverse'>
-                    <span className='text-brand-blue/70 text-sm'>البلد:</span>
-                    <span className='text-gray-700 text-sm font-medium'>
-                      {student.country}
-                    </span>
-                  </div>
-                </div>
-              </div>
+              <div className='text-sm text-gray-600'>{achievement.label}</div>
             </div>
           ))}
         </div>
 
-        {/* Call-to-Action */}
-        <div className='text-center mt-12'>
-          <p className='text-brand-blue/70 mb-6'>
-            انضم إلى مجتمعنا من الطلاب المتفوقين
+        {/* Testimonials Grid */}
+        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16'>
+          {testimonials.map((testimonial) => (
+            <div
+              key={testimonial.id}
+              className='group bg-white rounded-2xl p-6 shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-blue-200 hover:-translate-y-2'>
+              {/* Quote Icon */}
+              <div className='flex justify-between items-start mb-4'>
+                <ChatBubbleLeftIcon className='w-8 h-8 text-[#c19170]/30' />
+                <div className='flex'>
+                  {[...Array(testimonial.rating)].map((_, i) => (
+                    <StarIcon key={i} className='w-4 h-4 text-yellow-400' />
+                  ))}
+                </div>
+              </div>
+
+              {/* Content */}
+              <p className='text-gray-700 mb-6 leading-relaxed'>
+                &ldquo;{testimonial.content}&rdquo;
+              </p>
+
+              {/* Student Info */}
+              <div className='flex items-center gap-4 mb-4'>
+                <div className='w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold'>
+                  {testimonial.name.charAt(0)}
+                </div>
+                <div>
+                  <h4 className='font-bold text-gray-900'>
+                    {testimonial.name}
+                  </h4>
+                  <p className='text-sm text-gray-600'>{testimonial.role}</p>
+                </div>
+              </div>
+
+              {/* Course & Achievement */}
+              <div className='space-y-2'>
+                <div className='text-sm'>
+                  <span className='text-gray-500'>الدورة: </span>
+                  <span className='text-[#7e5b3f] font-medium'>
+                    {testimonial.course}
+                  </span>
+                </div>
+                <div className='text-sm'>
+                  <span className='text-gray-500'>الإنجاز: </span>
+                  <span className='text-[#c19170] font-medium'>
+                    {testimonial.achievement}
+                  </span>
+                </div>
+              </div>
+
+              {/* Hover Effect */}
+              <div className='absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300'></div>
+            </div>
+          ))}
+        </div>
+
+        {/* Bottom CTA */}
+        <div className='text-center bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white'>
+          <h3 className='text-2xl font-bold mb-4'>
+            هل أنت مستعد لتكون قصة النجاح القادمة؟
+          </h3>
+          <p className='text-[#c19170] mb-6 max-w-2xl mx-auto'>
+            انضم لآلاف الطلاب الذين حققوا أحلامهم المهنية مع أكاديمية أندرينو
           </p>
           <div className='flex flex-col sm:flex-row gap-4 justify-center'>
             <a
               href='/signup'
-              className='inline-flex items-center justify-center px-6 py-3 text-base font-medium rounded-2xl text-white bg-brand-copper hover:bg-brand-copper-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-copper focus-visible:ring-offset-2 transition-all duration-200 hover:-translate-y-0.5 motion-reduce:hover:transform-none shadow-sm hover:shadow-md'
-              aria-label='إنشاء حساب جديد للانضمام إلى طلابنا'>
-              ابدأ رحلتك التعليمية
+              className='bg-white text-[#343b50] px-8 py-3 rounded-xl font-bold hover:bg-gray-100 transition-colors duration-300'>
+              ابدأ رحلتك الآن
             </a>
             <a
-              href='/students'
-              className='inline-flex items-center justify-center px-6 py-3 text-base font-medium rounded-2xl text-brand-blue bg-white border-2 border-brand-blue/10 hover:border-brand-blue hover:bg-brand-blue/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 transition-all duration-200 hover:-translate-y-0.5 motion-reduce:hover:transform-none shadow-sm hover:shadow-md'
-              aria-label='مشاهدة المزيد من قصص نجاح الطلاب'>
-              قصص نجاح أخرى
+              href='/browse'
+              className='border-2 border-white text-white px-8 py-3 rounded-xl font-bold hover:bg-white hover:text-[#343b50] transition-colors duration-300'>
+              تصفح الدورات
             </a>
           </div>
         </div>

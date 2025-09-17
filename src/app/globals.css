@@ -1,260 +1,69 @@
 @import "tailwindcss";
 
-/* ========================================
-   RTL (Right-to-Left) Global Styles
-   ======================================== */
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
 
-/* Root RTL Configuration */
-html[dir="rtl"] {
-  text-align: right;
+  /* Andrino Academy Brand Colors */
+  --brand-dark: #343b50;
+  --brand-brown: #7e5b3f;
+  --brand-light-brown: #c19170;
+  --brand-black: #000000;
+  --brand-white: #ffffff;
 }
 
-/* Body Styles with Arabic Font Support */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  /* Brand Color Classes */
+  --color-brand-dark: #343b50;
+  --color-brand-brown: #7e5b3f;
+  --color-brand-light-brown: #c19170;
+  --color-brand-black: #000000;
+  --color-brand-white: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
 body {
-  font-family: var(--font-cairo), var(--font-tajawal), "Cairo", "Tajawal",
-    "Inter", ui-sans-serif, system-ui, sans-serif;
-  color: #343b50; /* brand-blue as default text color */
-  line-height: 1.7; /* Better readability for Arabic text */
-  font-feature-settings: "kern" 1, "liga" 1, "calt" 1; /* Typography improvements */
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Arabic Typography Styles */
-.font-arabic {
-  font-family: var(--font-cairo), var(--font-tajawal), "Cairo", "Tajawal",
-    system-ui, sans-serif;
-  font-weight: 400;
-  letter-spacing: 0.01em; /* Slight spacing for Arabic readability */
+/* Brand utility classes */
+.bg-brand-dark {
+  background-color: #343b50;
 }
-
-.font-heading {
-  font-family: var(--font-cairo), "Cairo", system-ui, sans-serif;
-  font-weight: 700;
-  line-height: 1.3;
-}
-
-.font-body {
-  font-family: var(--font-tajawal), var(--font-cairo), "Tajawal", "Cairo",
-    system-ui, sans-serif;
-  font-weight: 400;
-  line-height: 1.7;
-}
-
-/* Headings with Arabic Support */
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  font-family: var(--font-cairo), "Cairo", system-ui, sans-serif;
-  font-weight: 700;
-  color: #343b50; /* brand-blue */
-  line-height: 1.3;
-  margin-bottom: 0.75rem;
-}
-
-h1 {
-  font-size: 2.5rem; /* 40px */
-  font-weight: 800;
-}
-
-h2 {
-  font-size: 2rem; /* 32px */
-  font-weight: 700;
-}
-
-h3 {
-  font-size: 1.5rem; /* 24px */
-  font-weight: 600;
-}
-
-h4 {
-  font-size: 1.25rem; /* 20px */
-  font-weight: 600;
-}
-
-h5 {
-  font-size: 1.125rem; /* 18px */
-  font-weight: 500;
-}
-
-h6 {
-  font-size: 1rem; /* 16px */
-  font-weight: 500;
-}
-
-/* Responsive Typography for Arabic */
-@media (max-width: 768px) {
-  h1 {
-    font-size: 2rem;
-  }
-  h2 {
-    font-size: 1.75rem;
-  }
-  h3 {
-    font-size: 1.375rem;
-  }
-  body {
-    font-size: 0.9rem;
-  }
-}
-
-/* RTL-specific adjustments */
-[dir="rtl"] {
-  text-align: right;
-}
-
-[dir="rtl"] .container {
-  padding-right: 1rem;
-  padding-left: 1rem;
-}
-
-/* Accessibility Improvements */
-* {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-/* High Contrast for Accessibility */
-p,
-span,
-div {
-  color: #374151; /* High contrast gray for body text */
-}
-
-/* Focus states for accessibility */
-button:focus,
-a:focus,
-input:focus,
-textarea:focus,
-select:focus {
-  outline: 2px solid #343b50; /* brand-blue */
-  outline-offset: 2px;
-}
-
-/* Screen reader support */
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-.bg-brand-blue {
-  background-color: #343b50 !important;
-}
-
 .bg-brand-brown {
-  background-color: #7e5b3f !important;
+  background-color: #7e5b3f;
 }
-
-.bg-brand-copper {
-  background-color: #c19170 !important;
+.bg-brand-light-brown {
+  background-color: #c19170;
 }
-
-.text-brand-blue {
-  color: #343b50 !important;
+.text-brand-dark {
+  color: #343b50;
 }
-
-.text-brand-white {
-  color: #ffffff !important;
+.text-brand-brown {
+  color: #7e5b3f;
 }
-
-.text-brand-copper {
-  color: #c19170 !important;
+.text-brand-light-brown {
+  color: #c19170;
 }
-
-.hover\:bg-brand-blue-700:hover {
-  background-color: #464f71 !important;
+.border-brand-dark {
+  border-color: #343b50;
 }
-
-.hover\:bg-brand-brown-700:hover {
-  background-color: #7e5b3f !important;
+.border-brand-brown {
+  border-color: #7e5b3f;
 }
-
-.hover\:bg-brand-copper-700:hover {
-  background-color: #895c47 !important;
-}
-
-.hover\:text-brand-copper:hover {
-  color: #c19170 !important;
-}
-
-.rounded-brand {
-  border-radius: 0.5rem;
-}
-
-.rounded-brand-lg {
-  border-radius: 0.75rem;
-}
-
-.shadow-brand {
-  box-shadow: 0 4px 6px -1px rgba(52, 59, 80, 0.1),
-    0 2px 4px -1px rgba(52, 59, 80, 0.06);
-}
-
-.shadow-brand-lg {
-  box-shadow: 0 10px 15px -3px rgba(52, 59, 80, 0.1),
-    0 4px 6px -2px rgba(52, 59, 80, 0.05);
-}
-
-.shadow-copper {
-  box-shadow: 0 4px 6px -1px rgba(193, 145, 112, 0.2),
-    0 2px 4px -1px rgba(193, 145, 112, 0.1);
-}
-
-/* Font families */
-.font-heading {
-  font-family: var(--font-cairo), Cairo, Inter, system-ui, sans-serif;
-}
-
-.font-body {
-  font-family: var(--font-inter), Inter, Cairo, system-ui, sans-serif;
-}
-
-.font-arabic {
-  font-family: var(--font-cairo), Cairo, Tajawal, system-ui, sans-serif;
-}
-
-/* Animations */
-.animate-fade-in {
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-.animate-slide-up {
-  animation: slideUp 0.3s ease-out;
-}
-
-@keyframes fadeIn {
-  0% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
-@keyframes slideUp {
-  0% {
-    transform: translateY(10px);
-    opacity: 0;
-  }
-  100% {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-/* Base styles */
-body {
-  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-}
-
-/* RTL Support */
-[dir="rtl"] {
-  font-family: var(--font-cairo), ui-sans-serif, system-ui, sans-serif;
+.border-brand-light-brown {
+  border-color: #c19170;
 }

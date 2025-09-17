@@ -1,176 +1,155 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
 
-interface Stat {
-  id: string;
-  value: number;
-  suffix: string;
-  label: string;
-  ariaLabel: string;
-}
-
-interface StatsProps {
-  stats?: Stat[];
-}
-
-const defaultStats: Stat[] = [
+const stats = [
   {
-    id: "graduates",
-    value: 130,
-    suffix: "K+",
-    label: "الخريجون",
-    ariaLabel: "عدد الخريجين: 130 ألف",
+    id: 1,
+    label: "طالب متخرج",
+    value: 1250,
+    suffix: "+",
+    icon: "👨‍🎓",
+    color: "from-[#7e5b3f] to-[#c19170]",
   },
   {
-    id: "satisfaction",
+    id: 2,
+    label: "دورة تدريبية",
+    value: 85,
+    suffix: "+",
+    icon: "📚",
+    color: "from-[#343b50] to-[#7e5b3f]",
+  },
+  {
+    id: 3,
+    label: "مدرب خبير",
+    value: 28,
+    suffix: "+",
+    icon: "👨‍🏫",
+    color: "from-[#c19170] to-[#7e5b3f]",
+  },
+  {
+    id: 4,
+    label: "نسبة النجاح",
     value: 98,
     suffix: "%",
-    label: "الرضا",
-    ariaLabel: "معدل الرضا: 98 بالمائة",
+    icon: "🎯",
+    color: "from-[#7e5b3f] to-[#343b50]",
   },
   {
-    id: "instructors",
-    value: 50,
+    id: 5,
+    label: "ساعة تدريب",
+    value: 15000,
     suffix: "+",
-    label: "المدربون",
-    ariaLabel: "عدد المدربين: أكثر من 50",
+    icon: "⏰",
+    color: "from-[#343b50] to-[#c19170]",
   },
   {
-    id: "courses",
-    value: 200,
+    id: 6,
+    label: "مشروع منجز",
+    value: 420,
     suffix: "+",
-    label: "الدورات",
-    ariaLabel: "عدد الدورات: أكثر من 200",
+    icon: "🚀",
+    color: "from-[#c19170] to-[#343b50]",
   },
 ];
 
-// Custom hook for count-up animation
-function useCountUp(target: number, duration: number = 1000) {
+function CountUpNumber({ target, suffix }: { target: number; suffix: string }) {
   const [count, setCount] = useState(0);
-  const [isVisible, setIsVisible] = useState(false);
-  const elementRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !isVisible) {
-          setIsVisible(true);
-        }
-      },
-      { threshold: 0.5 }
-    );
+    const duration = 2000; // 2 seconds
+    const steps = 60;
+    const increment = target / steps;
+    const stepDuration = duration / steps;
 
-    if (elementRef.current) {
-      observer.observe(elementRef.current);
-    }
-
-    return () => observer.disconnect();
-  }, [isVisible]);
-
-  useEffect(() => {
-    if (!isVisible) return;
-
-    // Check for reduced motion preference
-    const prefersReducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
-
-    if (prefersReducedMotion) {
-      // Jump directly to final value for users who prefer reduced motion
-      setCount(target);
-      return;
-    }
-
-    // Animate count-up for users who don't prefer reduced motion
-    const startTime = Date.now();
-    const startValue = 0;
-
-    const updateCount = () => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-
-      // Easing function for smooth animation
-      const easeOutQuart = 1 - Math.pow(1 - progress, 4);
-      const currentValue = Math.floor(
-        startValue + (target - startValue) * easeOutQuart
-      );
-
-      setCount(currentValue);
-
-      if (progress < 1) {
-        requestAnimationFrame(updateCount);
-      } else {
+    let current = 0;
+    const timer = setInterval(() => {
+      current += increment;
+      if (current >= target) {
         setCount(target);
+        clearInterval(timer);
+      } else {
+        setCount(Math.floor(current));
       }
-    };
+    }, stepDuration);
 
-    requestAnimationFrame(updateCount);
-  }, [isVisible, target, duration]);
-
-  return { count, elementRef };
-}
-
-function StatItem({ stat }: { stat: Stat }) {
-  const { count, elementRef } = useCountUp(stat.value);
+    return () => clearInterval(timer);
+  }, [target]);
 
   return (
-    <div ref={elementRef} className='text-center' aria-label={stat.ariaLabel}>
-      <div className='mb-2'>
-        <span className='text-4xl md:text-5xl font-bold text-brand-blue'>
-          {count}
-          <span className='text-brand-blue'>{stat.suffix}</span>
-        </span>
-      </div>
-      <p className='text-lg font-medium text-brand-brown'>{stat.label}</p>
-    </div>
+    <span className='font-bold'>
+      {count.toLocaleString("ar-SA")}
+      {suffix}
+    </span>
   );
 }
 
-export default function Stats({ stats = defaultStats }: StatsProps) {
+export default function Stats() {
   return (
-    <section className='py-16 lg:py-24'>
-      <div className='max-w-7xl mx-auto px-4'>
+    <section
+      className='py-20 bg-gradient-to-br from-[#343b50] via-[#343b50]/90 to-[#343b50] relative overflow-hidden'
+      dir='rtl'>
+      {/* Background Effects */}
+      <div className='absolute inset-0'>
+        <div className='absolute top-20 left-20 w-72 h-72 bg-[#7e5b3f]/10 rounded-full blur-3xl'></div>
+        <div className='absolute bottom-20 right-20 w-96 h-96 bg-[#c19170]/10 rounded-full blur-3xl'></div>
+        <div className='absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#7e5b3f]/5 rounded-full blur-3xl'></div>
+      </div>
+
+      <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10'>
         {/* Section Header */}
-        <div className='text-center mb-12'>
-          <h2 className='text-3xl font-bold text-brand-blue mb-4'>
-            إنجازاتنا بالأرقام
+        <div className='text-center mb-16'>
+          <div className='inline-flex items-center px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm text-white text-sm font-medium mb-4'>
+            📊 إحصائياتنا
+          </div>
+          <h2 className='text-4xl lg:text-5xl font-bold text-white mb-6'>
+            أرقام تتحدث عن نجاحنا
           </h2>
-          <p className='text-lg text-brand-blue/70 max-w-2xl mx-auto'>
-            نفتخر بالثقة التي وضعها طلابنا فينا وبالنجاحات التي حققناها معاً
+          <p className='text-xl text-[#c19170] max-w-3xl mx-auto'>
+            نفتخر بما حققناه من إنجازات ونسعى دائماً لتقديم الأفضل لطلابنا
           </p>
         </div>
 
-        {/* Stats Container */}
-        <div className='bg-brand-blue/3 rounded-3xl p-8 lg:p-12'>
-          <div
-            className='grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12'
-            role='list'
-            aria-label='إحصائيات أكاديمية أندرينو'>
-            {stats.map((stat) => (
-              <div key={stat.id} role='listitem'>
-                <StatItem stat={stat} />
+        {/* Stats Grid */}
+        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8'>
+          {stats.map((stat, index) => (
+            <motion.div
+              key={stat.id}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: index * 0.1 }}
+              className='group relative'>
+              <div className='bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20 hover:bg-white/15 transition-all duration-300 hover:scale-105'>
+                {/* Icon */}
+                <div className='text-4xl mb-4 group-hover:scale-110 transition-transform duration-300'>
+                  {stat.icon}
+                </div>
+
+                {/* Number */}
+                <div
+                  className={`text-4xl lg:text-5xl font-bold bg-gradient-to-r ${stat.color} bg-clip-text text-transparent mb-2`}>
+                  <CountUpNumber target={stat.value} suffix={stat.suffix} />
+                </div>
+
+                {/* Label */}
+                <div className='text-[#c19170] text-lg font-medium'>
+                  {stat.label}
+                </div>
+
+                {/* Glow Effect */}
+                <div
+                  className={`absolute inset-0 bg-gradient-to-r ${stat.color} opacity-0 group-hover:opacity-20 rounded-2xl blur-xl transition-opacity duration-300`}></div>
               </div>
-            ))}
-          </div>
+            </motion.div>
+          ))}
         </div>
 
-        {/* Optional Call-to-Action */}
-        <div className='text-center mt-12'>
-          <p className='text-brand-blue/70 mb-6'>كن جزءاً من قصة نجاحنا</p>
-          <div className='flex flex-col sm:flex-row gap-4 justify-center'>
-            <a
-              href='/book-session'
-              className='inline-flex items-center justify-center px-6 py-3 text-base font-medium rounded-2xl text-white bg-brand-copper hover:bg-brand-copper-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-copper focus-visible:ring-offset-2 transition-all duration-200 hover:-translate-y-0.5 motion-reduce:hover:transform-none shadow-sm hover:shadow-md'
-              aria-label='احجز حصة مجانية وانضم لخريجينا'>
-              احجز حصتك المجانية
-            </a>
-            <a
-              href='/testimonials'
-              className='inline-flex items-center justify-center px-6 py-3 text-base font-medium rounded-2xl text-brand-blue bg-white border-2 border-brand-blue/10 hover:border-brand-blue hover:bg-brand-blue/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 transition-all duration-200 hover:-translate-y-0.5 motion-reduce:hover:transform-none shadow-sm hover:shadow-md'
-              aria-label='اقرأ آراء الطلاب والخريجين'>
-              آراء الطلاب
-            </a>
+        {/* Bottom Message */}
+        <div className='text-center mt-16'>
+          <div className='inline-flex items-center gap-2 text-[#c19170] font-medium bg-white/5 backdrop-blur-sm px-6 py-3 rounded-full border border-white/10'>
+            <span>وأرقام في تزايد مستمر...</span>
+            <span className='text-lg'>📈</span>
           </div>
         </div>
       </div>

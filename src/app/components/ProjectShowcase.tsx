@@ -1,326 +1,314 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import Image from "next/image";
+import { useState } from "react";
+import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+import {
+  CodeBracketIcon,
+  DevicePhoneMobileIcon,
+  GlobeAltIcon,
+} from "@heroicons/react/24/solid";
 
-interface Project {
-  id: string;
-  title: string;
-  summary: string;
-  coverUrl: string;
-}
-
-interface ProjectShowcaseProps {
-  projects?: Project[];
-}
-
-const defaultProjects: Project[] = [
+const projects = [
   {
-    id: "1",
+    id: 1,
     title: "متجر إلكتروني متكامل",
-    summary:
-      "تطبيق ويب للتجارة الإلكترونية باستخدام React و Node.js مع نظام دفع آمن وإدارة المخزون",
-    coverUrl: "https://picsum.photos/seed/ecommerce/600/400",
+    student: "أحمد محمد",
+    description:
+      "متجر إلكتروني بميزات متقدمة يتضمن نظام دفع، إدارة المخزون، وتتبع الطلبات",
+    image: "/api/placeholder/400/250",
+    technologies: ["React", "Node.js", "MongoDB", "Stripe"],
+    category: "تطوير ويب",
+    icon: GlobeAltIcon,
+    color: "from-blue-500 to-cyan-500",
+    stats: {
+      lines: "15,000+",
+      features: "25+",
+      performance: "98%",
+    },
   },
   {
-    id: "2",
-    title: "تطبيق إدارة المهام",
-    summary:
-      "تطبيق جوال لإدارة المشاريع والمهام مع إشعارات ذكية ومزامنة سحابية",
-    coverUrl: "https://picsum.photos/seed/taskmanager/600/400",
+    id: 2,
+    title: "تطبيق توصيل طعام",
+    student: "فاطمة أحمد",
+    description: "تطبيق موبايل لتوصيل الطعام مع نظام GPS وتتبع مباشر للطلبات",
+    image: "/api/placeholder/400/250",
+    technologies: ["React Native", "Firebase", "Maps API", "Payment Gateway"],
+    category: "تطبيقات موبايل",
+    icon: DevicePhoneMobileIcon,
+    color: "from-green-500 to-emerald-500",
+    stats: {
+      downloads: "5,000+",
+      rating: "4.8★",
+      users: "2,500+",
+    },
   },
   {
-    id: "3",
-    title: "منصة تعليمية تفاعلية",
-    summary:
-      "نظام إدارة التعلم مع فيديوهات تفاعلية واختبارات ذكية وتتبع التقدم",
-    coverUrl: "https://picsum.photos/seed/lms/600/400",
+    id: 3,
+    title: "نظام إدارة المدارس",
+    student: "عبدالله خالد",
+    description:
+      "نظام شامل لإدارة المدارس يشمل الطلاب، المعلمين، الدرجات، والحضور",
+    image: "/api/placeholder/400/250",
+    technologies: ["Vue.js", "Laravel", "MySQL", "Chart.js"],
+    category: "أنظمة إدارة",
+    icon: CodeBracketIcon,
+    color: "from-purple-500 to-pink-500",
+    stats: {
+      schools: "15+",
+      students: "10,000+",
+      efficiency: "85%",
+    },
   },
   {
-    id: "4",
-    title: "شبكة اجتماعية",
-    summary:
-      "منصة تواصل اجتماعي مع دردشة فورية ومشاركة الملفات ومجموعات المناقشة",
-    coverUrl: "https://picsum.photos/seed/social/600/400",
+    id: 4,
+    title: "منصة تعلم أونلاين",
+    student: "نورا سعد",
+    description: "منصة تعليمية تفاعلية مع فيديوهات، اختبارات، وتتبع التقدم",
+    image: "/api/placeholder/400/250",
+    technologies: ["Angular", "Express.js", "PostgreSQL", "Socket.io"],
+    category: "تطبيقات تعليمية",
+    icon: GlobeAltIcon,
+    color: "from-amber-500 to-orange-500",
+    stats: {
+      courses: "50+",
+      students: "3,000+",
+      completion: "92%",
+    },
   },
   {
-    id: "5",
-    title: "تطبيق ذكي للصحة",
-    summary:
-      "تطبيق لتتبع اللياقة البدنية والتغذية مع تحليل البيانات والتوصيات الشخصية",
-    coverUrl: "https://picsum.photos/seed/health/600/400",
+    id: 5,
+    title: "لعبة ألغاز ثلاثية الأبعاد",
+    student: "يوسف عمر",
+    description:
+      "لعبة ألغاز مبتكرة بجرافيك ثلاثي الأبعاد ومستويات متدرجة الصعوبة",
+    image: "/api/placeholder/400/250",
+    technologies: ["Unity", "C#", "Blender", "Photon"],
+    category: "تطوير ألعاب",
+    icon: CodeBracketIcon,
+    color: "from-indigo-500 to-purple-500",
+    stats: {
+      levels: "100+",
+      downloads: "15,000+",
+      rating: "4.7★",
+    },
   },
   {
-    id: "6",
-    title: "نظام إدارة المطاعم",
-    summary: "حل شامل لإدارة المطاعم مع نظام الطلبات والمخزون وإدارة الموظفين",
-    coverUrl: "https://picsum.photos/seed/restaurant/600/400",
+    id: 6,
+    title: "تطبيق ذكي لتحليل البيانات",
+    student: "مريم حسن",
+    description:
+      "تطبيق يستخدم الذكاء الاصطناعي لتحليل البيانات وإنتاج تقارير ذكية",
+    image: "/api/placeholder/400/250",
+    technologies: ["Python", "TensorFlow", "Flask", "D3.js"],
+    category: "ذكاء اصطناعي",
+    icon: CodeBracketIcon,
+    color: "from-teal-500 to-blue-500",
+    stats: {
+      accuracy: "96%",
+      datasets: "500+",
+      reports: "1,000+",
+    },
   },
 ];
 
-export default function ProjectShowcase({
-  projects = defaultProjects,
-}: ProjectShowcaseProps) {
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [hoveredProject, setHoveredProject] = useState<string | null>(null);
-  const dialogRef = useRef<HTMLDialogElement>(null);
+export default function ProjectShowcase() {
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [selectedCategory, setSelectedCategory] = useState("الكل");
 
-  // Handle modal open/close
-  const openModal = (project: Project) => {
-    setSelectedProject(project);
-    dialogRef.current?.showModal();
+  const categories = [
+    "الكل",
+    "تطوير ويب",
+    "تطبيقات موبايل",
+    "أنظمة إدارة",
+    "تطبيقات تعليمية",
+    "تطوير ألعاب",
+    "ذكاء اصطناعي",
+  ];
+
+  const filteredProjects =
+    selectedCategory === "الكل"
+      ? projects
+      : projects.filter((project) => project.category === selectedCategory);
+
+  const nextSlide = () => {
+    setCurrentSlide(
+      (prev) => (prev + 1) % Math.max(1, filteredProjects.length - 2)
+    );
   };
 
-  const closeModal = () => {
-    setSelectedProject(null);
-    dialogRef.current?.close();
+  const prevSlide = () => {
+    setCurrentSlide(
+      (prev) =>
+        (prev - 1 + Math.max(1, filteredProjects.length - 2)) %
+        Math.max(1, filteredProjects.length - 2)
+    );
   };
-
-  // Handle escape key
-  useEffect(() => {
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        closeModal();
-      }
-    };
-
-    if (selectedProject) {
-      document.addEventListener("keydown", handleEscape);
-      return () => document.removeEventListener("keydown", handleEscape);
-    }
-  }, [selectedProject]);
-
-  // Focus trap for modal
-  useEffect(() => {
-    if (selectedProject && dialogRef.current) {
-      const dialog = dialogRef.current;
-      const focusableElements = dialog.querySelectorAll(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      );
-      const firstElement = focusableElements[0] as HTMLElement;
-      const lastElement = focusableElements[
-        focusableElements.length - 1
-      ] as HTMLElement;
-
-      const handleTabKey = (event: KeyboardEvent) => {
-        if (event.key === "Tab") {
-          if (event.shiftKey) {
-            if (document.activeElement === firstElement) {
-              event.preventDefault();
-              lastElement?.focus();
-            }
-          } else {
-            if (document.activeElement === lastElement) {
-              event.preventDefault();
-              firstElement?.focus();
-            }
-          }
-        }
-      };
-
-      dialog.addEventListener("keydown", handleTabKey);
-      firstElement?.focus();
-
-      return () => dialog.removeEventListener("keydown", handleTabKey);
-    }
-  }, [selectedProject]);
 
   return (
-    <section className='py-16 lg:py-24'>
-      <div className='max-w-7xl mx-auto px-4'>
+    <section
+      className='py-20 bg-gradient-to-br from-slate-50 to-gray-100'
+      dir='rtl'>
+      <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
         {/* Section Header */}
-        <div className='text-center mb-12'>
-          <h2 className='text-3xl font-bold text-brand-blue mb-4'>
-            نماذج من مشاريع الطلاب
+        <div className='text-center mb-16'>
+          <div className='inline-flex items-center px-4 py-2 rounded-full bg-[#343b50]/20 text-[#343b50] text-sm font-medium mb-4'>
+            🚀 مشاريع الطلاب
+          </div>
+          <h2 className='text-4xl lg:text-5xl font-bold text-gray-900 mb-6'>
+            مشاريع حقيقية بناها طلابنا
           </h2>
-          <p className='text-lg text-brand-blue/70 max-w-2xl mx-auto'>
-            اكتشف المشاريع المبتكرة التي أنجزها طلابنا خلال رحلتهم التعليمية
+          <p className='text-xl text-gray-600 max-w-3xl mx-auto'>
+            اطلع على المشاريع المذهلة التي طورها طلابنا خلال رحلة التعلم، من
+            تطبيقات الويب إلى الألعاب والذكاء الاصطناعي
           </p>
         </div>
 
-        {/* Projects Grid */}
-        <div
-          className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
-          role='list'
-          aria-label='قائمة مشاريع الطلاب'>
-          {projects.map((project) => (
-            <div
-              key={project.id}
-              className='relative overflow-hidden rounded-2xl border border-gray-200 bg-white group cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-1 focus-within:shadow-lg focus-within:-translate-y-1'
-              role='listitem'
-              onMouseEnter={() => setHoveredProject(project.id)}
-              onMouseLeave={() => setHoveredProject(null)}>
-              {/* Cover Image */}
-              <div className='relative aspect-video overflow-hidden'>
-                <Image
-                  src={project.coverUrl}
-                  alt={`صورة مشروع ${project.title}`}
-                  width={600}
-                  height={400}
-                  className='w-full h-full object-cover transition-transform duration-300 group-hover:scale-105'
-                  sizes='(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw'
-                />
-
-                {/* Dark Gradient Overlay - Simplified */}
-                <div
-                  className={`absolute inset-0 bg-black/60 transition-opacity duration-300 ${
-                    hoveredProject === project.id ? "opacity-100" : "opacity-0"
-                  }`}
-                />
-
-                {/* Hover Overlay Content - Minimalist */}
-                <div
-                  className={`absolute inset-0 flex flex-col justify-end p-6 text-white transition-opacity duration-300 ${
-                    hoveredProject === project.id ? "opacity-100" : "opacity-0"
-                  }`}>
-                  <div className='text-right'>
-                    {/* Project Type Badge */}
-                    <span className='inline-block px-3 py-1 bg-brand-copper text-white text-xs font-medium rounded-full mb-3'>
-                      مشروع طالب
-                    </span>
-                    <h3 className='text-xl font-bold mb-2 text-white'>
-                      {project.title}
-                    </h3>
-                    <p className='text-white/90 text-sm leading-relaxed line-clamp-2'>
-                      {project.summary}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Click Handler Button (invisible but accessible) */}
-              <button
-                onClick={() => openModal(project)}
-                className='absolute inset-0 w-full h-full bg-transparent focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-copper focus-visible:ring-offset-2 focus-visible:ring-offset-white rounded-2xl'
-                aria-label={`عرض تفاصيل مشروع ${project.title} - اضغط Enter للفتح`}
-                onFocus={() => setHoveredProject(project.id)}
-                onBlur={() => setHoveredProject(null)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    openModal(project);
-                  }
-                }}
-              />
-            </div>
+        {/* Category Filter */}
+        <div className='flex flex-wrap justify-center gap-3 mb-12'>
+          {categories.map((category) => (
+            <button
+              key={category}
+              onClick={() => {
+                setSelectedCategory(category);
+                setCurrentSlide(0);
+              }}
+              className={`px-6 py-3 rounded-full font-medium transition-all duration-300 ${
+                selectedCategory === category
+                  ? "bg-[#7e5b3f] text-white shadow-lg"
+                  : "bg-white text-gray-600 hover:bg-[#c19170]/10 hover:text-[#7e5b3f] border border-gray-200"
+              }`}>
+              {category}
+            </button>
           ))}
         </div>
 
-        {/* Call-to-Action */}
-        <div className='text-center mt-12'>
-          <p className='text-brand-blue/70 mb-6'>
-            هل أنت مستعد لبناء مشروعك التالي؟
-          </p>
-          <div className='flex flex-col sm:flex-row gap-4 justify-center'>
+        {/* Projects Carousel */}
+        <div className='relative overflow-hidden'>
+          <div
+            className='flex transition-transform duration-500 ease-in-out gap-6'
+            style={{ transform: `translateX(${currentSlide * 33.333}%)` }}>
+            {filteredProjects.map((project) => (
+              <div
+                key={project.id}
+                className='min-w-[calc(33.333%-16px)] bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group hover:-translate-y-2'>
+                {/* Project Image */}
+                <div className='relative h-48 bg-gradient-to-br from-gray-200 to-gray-300 overflow-hidden'>
+                  <div
+                    className={`absolute inset-0 bg-gradient-to-br ${project.color} opacity-20`}></div>
+                  <div className='absolute inset-0 flex items-center justify-center'>
+                    <project.icon className='w-16 h-16 text-white/80' />
+                  </div>
+                  {/* Category Badge */}
+                  <div className='absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium text-gray-700'>
+                    {project.category}
+                  </div>
+                </div>
+
+                {/* Project Content */}
+                <div className='p-6'>
+                  <div className='flex items-center gap-2 mb-3'>
+                    <div
+                      className={`w-3 h-3 rounded-full bg-gradient-to-r ${project.color}`}></div>
+                    <span className='text-sm text-gray-500'>
+                      بواسطة {project.student}
+                    </span>
+                  </div>
+
+                  <h3 className='text-xl font-bold text-gray-900 mb-3 group-hover:text-[#7e5b3f] transition-colors'>
+                    {project.title}
+                  </h3>
+
+                  <p className='text-gray-600 mb-4 leading-relaxed text-sm'>
+                    {project.description}
+                  </p>
+
+                  {/* Technologies */}
+                  <div className='flex flex-wrap gap-2 mb-4'>
+                    {project.technologies.slice(0, 3).map((tech, index) => (
+                      <span
+                        key={index}
+                        className='px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-md font-medium'>
+                        {tech}
+                      </span>
+                    ))}
+                    {project.technologies.length > 3 && (
+                      <span className='px-2 py-1 bg-[#c19170]/20 text-[#7e5b3f] text-xs rounded-md font-medium'>
+                        +{project.technologies.length - 3}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Project Stats */}
+                  <div className='grid grid-cols-3 gap-2 pt-4 border-t border-gray-100'>
+                    {Object.entries(project.stats).map(
+                      ([key, value], index) => (
+                        <div key={index} className='text-center'>
+                          <div className='text-sm font-bold text-gray-900'>
+                            {value}
+                          </div>
+                          <div className='text-xs text-gray-500 capitalize'>
+                            {key}
+                          </div>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Navigation Arrows */}
+          {filteredProjects.length > 3 && (
+            <>
+              <button
+                onClick={prevSlide}
+                className='absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-[#c19170]/10 transition-colors duration-300'>
+                <ChevronLeftIcon className='w-6 h-6 text-[#7e5b3f]' />
+              </button>
+              <button
+                onClick={nextSlide}
+                className='absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-[#c19170]/10 transition-colors duration-300'>
+                <ChevronRightIcon className='w-6 h-6 text-[#7e5b3f]' />
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Slide Indicators */}
+        {filteredProjects.length > 3 && (
+          <div className='flex justify-center gap-2 mt-8'>
+            {Array.from({
+              length: Math.max(1, filteredProjects.length - 2),
+            }).map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentSlide(index)}
+                className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                  currentSlide === index ? "bg-[#7e5b3f]" : "bg-gray-300"
+                }`}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Bottom CTA */}
+        <div className='text-center mt-16'>
+          <div className='bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-8 text-white'>
+            <h3 className='text-2xl font-bold mb-4'>
+              مستعد لبناء مشروعك الخاص؟
+            </h3>
+            <p className='text-[#c19170] mb-6 max-w-2xl mx-auto'>
+              ابدأ رحلتك التعليمية اليوم وكن جزءاً من قصص النجاح القادمة
+            </p>
             <a
-              href='/book-session'
-              className='inline-flex items-center justify-center px-6 py-3 text-base font-medium rounded-2xl text-white bg-brand-copper hover:bg-brand-copper-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-copper focus-visible:ring-offset-2 transition-all duration-200 hover:-translate-y-0.5 motion-reduce:hover:transform-none shadow-sm hover:shadow-md'
-              aria-label='ابدأ مشروعك مع خبرائنا'>
-              ابدأ مشروعك معنا
-            </a>
-            <a
-              href='/projects'
-              className='inline-flex items-center justify-center px-6 py-3 text-base font-medium rounded-2xl text-brand-blue bg-white border-2 border-brand-blue/10 hover:border-brand-blue hover:bg-brand-blue/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 transition-all duration-200 hover:-translate-y-0.5 motion-reduce:hover:transform-none shadow-sm hover:shadow-md'
-              aria-label='استكشاف المزيد من مشاريع الطلاب'>
-              مشاريع أخرى
+              href='/browse'
+              className='inline-block bg-white text-[#343b50] px-8 py-4 rounded-xl font-bold hover:bg-gray-100 transition-colors duration-300 shadow-lg'>
+              استكشف الدورات المتاحة
             </a>
           </div>
         </div>
       </div>
-
-      {/* Modal Dialog - Minimalist */}
-      <dialog
-        ref={dialogRef}
-        className='backdrop:bg-black/40 bg-transparent p-4 max-w-4xl w-full max-h-[90vh] rounded-2xl'
-        aria-modal='true'
-        aria-labelledby='modal-title'
-        onClick={(e) => {
-          // Close modal when clicking backdrop
-          if (e.target === dialogRef.current) {
-            closeModal();
-          }
-        }}>
-        {selectedProject && (
-          <div className='bg-white rounded-2xl overflow-hidden shadow-xl border border-gray-200'>
-            {/* Modal Header - Simplified */}
-            <div className='relative'>
-              <Image
-                src={selectedProject.coverUrl}
-                alt={`صورة مشروع ${selectedProject.title}`}
-                width={800}
-                height={300}
-                className='w-full h-48 lg:h-64 object-cover'
-              />
-              {/* Simple overlay instead of gradient */}
-              <div className='absolute inset-0 bg-black/20' />
-
-              {/* Brand accent badge */}
-              <div className='absolute top-4 right-4'>
-                <span className='px-3 py-1 bg-brand-copper text-white text-sm font-medium rounded-full'>
-                  مشروع طالب
-                </span>
-              </div>
-
-              <button
-                onClick={closeModal}
-                className='absolute top-4 left-4 w-10 h-10 bg-white/90 hover:bg-white text-gray-700 hover:text-gray-900 rounded-full flex items-center justify-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-copper shadow-sm'
-                aria-label='إغلاق النافذة - اضغط Escape أو Enter'
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    closeModal();
-                  }
-                }}>
-                <svg
-                  className='w-5 h-5'
-                  fill='none'
-                  stroke='currentColor'
-                  viewBox='0 0 24 24'>
-                  <path
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth={2}
-                    d='M6 18L18 6M6 6l12 12'
-                  />
-                </svg>
-              </button>
-            </div>
-
-            {/* Modal Content - Clean and minimal */}
-            <div className='p-6 lg:p-8 text-right'>
-              <h2
-                id='modal-title'
-                className='text-2xl lg:text-3xl font-bold text-brand-blue mb-4'>
-                {selectedProject.title}
-              </h2>
-              <p className='text-gray-700 leading-relaxed text-base lg:text-lg mb-8'>
-                {selectedProject.summary}
-              </p>
-
-              {/* Minimal action buttons */}
-              <div className='flex flex-col sm:flex-row gap-3 justify-center'>
-                <button
-                  onClick={closeModal}
-                  className='px-6 py-3 text-base font-medium rounded-2xl text-gray-700 bg-gray-100 hover:bg-gray-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2 transition-colors'
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      closeModal();
-                    }
-                  }}>
-                  إغلاق
-                </button>
-                <a
-                  href={`/projects/${selectedProject.id}`}
-                  className='inline-flex items-center justify-center px-6 py-3 text-base font-medium rounded-2xl text-white bg-brand-copper hover:bg-brand-copper-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-copper focus-visible:ring-offset-2 transition-colors'
-                  aria-label={`عرض تفاصيل مشروع ${selectedProject.title}`}>
-                  عرض التفاصيل
-                </a>
-              </div>
-            </div>
-          </div>
-        )}
-      </dialog>
     </section>
   );
 }
