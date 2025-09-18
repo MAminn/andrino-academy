@@ -171,11 +171,11 @@ export default function StudentShowcase() {
         </div>
 
         {/* Bottom CTA */}
-        <div className='text-center bg-gradient-to-r from-[#7e5b3f] to-[#c19170] rounded-2xl p-8 text-white'>
+        <div className='text-center bg-[#343b50] rounded-2xl p-8 text-white'>
           <h3 className='text-2xl font-bold mb-4'>
             هل أنت مستعد لتكون قصة النجاح القادمة؟
           </h3>
-          <p className='text-black mb-6 max-w-2xl mx-auto'>
+          <p className='text-[#a6a6a6] mb-6 max-w-2xl mx-auto'>
             انضم لآلاف الطلاب الذين حققوا أحلامهم المهنية مع أكاديمية أندرينو
           </p>
           <div className='flex flex-col sm:flex-row gap-4 justify-center'>
@@ -184,7 +184,7 @@ export default function StudentShowcase() {
                 const element = document.getElementById("features");
                 element?.scrollIntoView({ behavior: "smooth" });
               }}
-              className='inline-flex items-center px-8 py-4 text-lg font-semibold rounded-xl text-[#343b50] bg-white hover:bg-[#343b50] hover:text-white transition-colors duration-300 shadow-lg hover:shadow-xl'>
+              className='inline-flex items-center px-8 py-4 text-lg font-semibold rounded-xl text-[#343b50] bg-white hover:bg-[#7e5b3f] hover:text-white transition-colors duration-300 shadow-lg hover:shadow-xl'>
               <span>احجز حصة مجانية</span>
               <svg
                 className='mr-3 w-5 h-5'
@@ -201,7 +201,7 @@ export default function StudentShowcase() {
               href='https://wa.me/966123456789'
               target='_blank'
               rel='noopener noreferrer'
-              className='inline-flex items-center px-8 py-4 text-lg font-semibold rounded-xl text-[#343b50] bg-white border-2 border-[#343b50] hover:bg-[#343b50] hover:text-white transition-colors duration-300 shadow-lg hover:shadow-xl'>
+              className='inline-flex items-center px-8 py-4 text-lg font-semibold rounded-xl text-[#343b50] bg-white border-2 border-[#343b50] hover:bg-[#7e5b3f] hover:text-white transition-colors duration-300 shadow-lg hover:shadow-xl'>
               <span>تواصل واتساب</span>
               <svg
                 className='mr-3 w-5 h-5'
