@@ -39,19 +39,13 @@ export default function Header() {
         <div className='flex justify-between items-center h-16'>
           {/* Logo */}
           <div className='flex items-center'>
-            <button
-              onClick={() => scrollToSection("hero")}
-              className='flex items-center space-x-2 space-x-reverse hover:opacity-80 transition-opacity'>
-              <div className='w-10 h-10 bg-gradient-to-br from-[#343b50] to-[#7e5b3f] rounded-lg flex items-center justify-center'>
-                <AcademicCapIcon className='w-6 h-6 text-white' />
-              </div>
+            <Link href='/' className='flex items-center space-x-2 space-x-reverse hover:opacity-80 transition-opacity'>
               <div className='text-right'>
-                <h1 className='text-xl font-bold text-[#343b50]'>
-                  أكاديمية أندرينو
+                <h1 className='text-3xl font-bold text-black'>
+                  Andrino Academy{" "}
                 </h1>
-                <p className='text-xs text-[#7e5b3f]'>Andrino Academy</p>
               </div>
-            </button>
+            </Link>
           </div>
 
           {/* Desktop Navigation */}

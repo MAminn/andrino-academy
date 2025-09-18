@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import {
   CodeBracketIcon,
@@ -115,6 +115,16 @@ export default function ProjectShowcase() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState("الكل");
 
+  useEffect(() => {
+    // Reset slide when screen size changes
+    const handleResize = () => {
+      setCurrentSlide(0);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const categories = [
     "الكل",
     "تطوير ويب",
@@ -130,18 +140,29 @@ export default function ProjectShowcase() {
       ? projects
       : projects.filter((project) => project.category === selectedCategory);
 
+  const getItemsPerView = () => {
+    if (typeof window === 'undefined') return 3;
+    if (window.innerWidth < 768) return 1;
+    if (window.innerWidth < 1024) return 2;
+    return 3;
+  };
+
+  const getMaxSlides = () => {
+    const itemsPerView = getItemsPerView();
+    return Math.max(1, filteredProjects.length - itemsPerView + 1);
+  };
+
+  const getTranslatePercentage = () => {
+    const itemsPerView = getItemsPerView();
+    return 100 / itemsPerView;
+  };
+
   const nextSlide = () => {
-    setCurrentSlide(
-      (prev) => (prev + 1) % Math.max(1, filteredProjects.length - 2)
-    );
+    setCurrentSlide((prev) => (prev + 1) % getMaxSlides());
   };
 
   const prevSlide = () => {
-    setCurrentSlide(
-      (prev) =>
-        (prev - 1 + Math.max(1, filteredProjects.length - 2)) %
-        Math.max(1, filteredProjects.length - 2)
-    );
+    setCurrentSlide((prev) => (prev - 1 + getMaxSlides()) % getMaxSlides());
   };
 
   return (
@@ -150,21 +171,21 @@ export default function ProjectShowcase() {
       dir='rtl'>
       <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
         {/* Section Header */}
-        <div className='text-center mb-16'>
-          <div className='inline-flex items-center px-4 py-2 rounded-full bg-[#343b50]/20 text-[#343b50] text-sm font-medium mb-4'>
+        <div className='text-center mb-12 md:mb-16'>
+          <div className='inline-flex items-center px-3 md:px-4 py-2 rounded-full bg-[#343b50]/20 text-[#343b50] text-xs md:text-sm font-medium mb-4'>
             🚀 مشاريع الطلاب
           </div>
-          <h2 className='text-4xl lg:text-5xl font-bold text-gray-900 mb-6'>
+          <h2 className='text-2xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 md:mb-6 px-4'>
             مشاريع حقيقية بناها طلابنا
           </h2>
-          <p className='text-xl text-gray-600 max-w-3xl mx-auto'>
+          <p className='text-base md:text-xl text-gray-600 max-w-3xl mx-auto px-4'>
             اطلع على المشاريع المذهلة التي طورها طلابنا خلال رحلة التعلم، من
             تطبيقات الويب إلى الألعاب والذكاء الاصطناعي
           </p>
         </div>
 
         {/* Category Filter */}
-        <div className='flex flex-wrap justify-center gap-3 mb-12'>
+        <div className='flex flex-wrap justify-center gap-2 md:gap-3 mb-8 md:mb-12 px-4'>
           {categories.map((category) => (
             <button
               key={category}
@@ -172,7 +193,7 @@ export default function ProjectShowcase() {
                 setSelectedCategory(category);
                 setCurrentSlide(0);
               }}
-              className={`px-6 py-3 rounded-full font-medium transition-all duration-300 ${
+              className={`px-3 md:px-6 py-2 md:py-3 rounded-full font-medium transition-all duration-300 text-sm md:text-base ${
                 selectedCategory === category
                   ? "bg-[#7e5b3f] text-white shadow-lg"
                   : "bg-white text-gray-600 hover:bg-[#c19170]/10 hover:text-[#7e5b3f] border border-gray-200"
@@ -183,47 +204,49 @@ export default function ProjectShowcase() {
         </div>
 
         {/* Projects Carousel */}
-        <div className='relative overflow-hidden'>
+        <div className='relative overflow-hidden px-4 md:px-0'>
           <div
-            className='flex transition-transform duration-500 ease-in-out gap-6'
-            style={{ transform: `translateX(${currentSlide * 33.333}%)` }}>
+            className='flex transition-transform duration-500 ease-in-out gap-4 md:gap-6'
+            style={{ 
+              transform: `translateX(${currentSlide * -getTranslatePercentage()}%)` 
+            }}>
             {filteredProjects.map((project) => (
               <div
                 key={project.id}
-                className='min-w-[calc(33.333%-16px)] bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group hover:-translate-y-2'>
+                className='min-w-[calc(100%-16px)] md:min-w-[calc(50%-12px)] lg:min-w-[calc(33.333%-16px)] bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group hover:-translate-y-2'>
                 {/* Project Image */}
-                <div className='relative h-48 bg-gradient-to-br from-gray-200 to-gray-300 overflow-hidden'>
+                <div className='relative h-40 md:h-48 bg-gradient-to-br from-gray-200 to-gray-300 overflow-hidden'>
                   <div
                     className={`absolute inset-0 bg-gradient-to-br ${project.color} opacity-20`}></div>
                   <div className='absolute inset-0 flex items-center justify-center'>
-                    <project.icon className='w-16 h-16 text-white/80' />
+                    <project.icon className='w-12 h-12 md:w-16 md:h-16 text-white/80' />
                   </div>
                   {/* Category Badge */}
-                  <div className='absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium text-gray-700'>
+                  <div className='absolute top-3 md:top-4 right-3 md:right-4 bg-white/90 backdrop-blur-sm px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-medium text-gray-700'>
                     {project.category}
                   </div>
                 </div>
 
                 {/* Project Content */}
-                <div className='p-6'>
+                <div className='p-4 md:p-6'>
                   <div className='flex items-center gap-2 mb-3'>
                     <div
                       className={`w-3 h-3 rounded-full bg-gradient-to-r ${project.color}`}></div>
-                    <span className='text-sm text-gray-500'>
+                    <span className='text-xs md:text-sm text-gray-500'>
                       بواسطة {project.student}
                     </span>
                   </div>
 
-                  <h3 className='text-xl font-bold text-gray-900 mb-3 group-hover:text-[#7e5b3f] transition-colors'>
+                  <h3 className='text-lg md:text-xl font-bold text-gray-900 mb-3 group-hover:text-[#7e5b3f] transition-colors'>
                     {project.title}
                   </h3>
 
-                  <p className='text-gray-600 mb-4 leading-relaxed text-sm'>
+                  <p className='text-gray-600 mb-4 leading-relaxed text-sm line-clamp-3'>
                     {project.description}
                   </p>
 
                   {/* Technologies */}
-                  <div className='flex flex-wrap gap-2 mb-4'>
+                  <div className='flex flex-wrap gap-1 md:gap-2 mb-4'>
                     {project.technologies.slice(0, 3).map((tech, index) => (
                       <span
                         key={index}
@@ -239,11 +262,11 @@ export default function ProjectShowcase() {
                   </div>
 
                   {/* Project Stats */}
-                  <div className='grid grid-cols-3 gap-2 pt-4 border-t border-gray-100'>
+                  <div className='grid grid-cols-3 gap-1 md:gap-2 pt-4 border-t border-gray-100'>
                     {Object.entries(project.stats).map(
                       ([key, value], index) => (
                         <div key={index} className='text-center'>
-                          <div className='text-sm font-bold text-gray-900'>
+                          <div className='text-xs md:text-sm font-bold text-gray-900'>
                             {value}
                           </div>
                           <div className='text-xs text-gray-500 capitalize'>
@@ -259,32 +282,30 @@ export default function ProjectShowcase() {
           </div>
 
           {/* Navigation Arrows */}
-          {filteredProjects.length > 3 && (
+          {filteredProjects.length > getItemsPerView() && (
             <>
               <button
                 onClick={prevSlide}
-                className='absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-[#c19170]/10 transition-colors duration-300'>
-                <ChevronLeftIcon className='w-6 h-6 text-[#7e5b3f]' />
+                className='absolute left-2 md:left-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-[#c19170]/10 transition-colors duration-300 z-10'>
+                <ChevronLeftIcon className='w-5 h-5 md:w-6 md:h-6 text-[#7e5b3f]' />
               </button>
               <button
                 onClick={nextSlide}
-                className='absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-[#c19170]/10 transition-colors duration-300'>
-                <ChevronRightIcon className='w-6 h-6 text-[#7e5b3f]' />
+                className='absolute right-2 md:right-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-[#c19170]/10 transition-colors duration-300 z-10'>
+                <ChevronRightIcon className='w-5 h-5 md:w-6 md:h-6 text-[#7e5b3f]' />
               </button>
             </>
           )}
         </div>
 
         {/* Slide Indicators */}
-        {filteredProjects.length > 3 && (
-          <div className='flex justify-center gap-2 mt-8'>
-            {Array.from({
-              length: Math.max(1, filteredProjects.length - 2),
-            }).map((_, index) => (
+        {filteredProjects.length > getItemsPerView() && (
+          <div className='flex justify-center gap-2 mt-6 md:mt-8'>
+            {Array.from({ length: getMaxSlides() }).map((_, index) => (
               <button
                 key={index}
                 onClick={() => setCurrentSlide(index)}
-                className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                className={`w-2 h-2 md:w-3 md:h-3 rounded-full transition-all duration-300 ${
                   currentSlide === index ? "bg-[#7e5b3f]" : "bg-gray-300"
                 }`}
               />
@@ -293,17 +314,17 @@ export default function ProjectShowcase() {
         )}
 
         {/* Bottom CTA */}
-        <div className='text-center mt-16'>
-          <div className='bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-8 text-white'>
-            <h3 className='text-2xl font-bold mb-4'>
+        <div className='text-center mt-12 md:mt-16 px-4'>
+          <div className='bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-6 md:p-8 text-white'>
+            <h3 className='text-xl md:text-2xl font-bold mb-4'>
               مستعد لبناء مشروعك الخاص؟
             </h3>
-            <p className='text-[#c19170] mb-6 max-w-2xl mx-auto'>
+            <p className='text-[#c19170] mb-6 max-w-2xl mx-auto text-sm md:text-base'>
               ابدأ رحلتك التعليمية اليوم وكن جزءاً من قصص النجاح القادمة
             </p>
             <a
               href='/browse'
-              className='inline-block bg-white text-[#343b50] px-8 py-4 rounded-xl font-bold hover:bg-gray-100 transition-colors duration-300 shadow-lg'>
+              className='inline-block bg-white text-[#343b50] px-6 md:px-8 py-3 md:py-4 rounded-xl font-bold hover:bg-gray-100 transition-colors duration-300 shadow-lg text-sm md:text-base'>
               استكشف الدورات المتاحة
             </a>
           </div>
