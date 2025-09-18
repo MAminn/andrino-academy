@@ -2,24 +2,16 @@
 
 import Link from "next/link";
 
-import Image from "next/image";       
-import pngImage from  "@/../assests/png.png";
+import Image from "next/image";
+import pngImage from "@/../assests/png.png";
 
 export default function Hero() {
-
   return (
     <section className='bg-white relative overflow-hidden text-center lg:text-right'>
       <div className='max-w-7xl mx-auto px-6 py-8 lg:py-24 relative z-10'>
         <div className='flex justify-between items-center gap-8 lg:flex-row flex-col'>
           {/* Text Content - Right side */}
           <div className='text-center lg:text-right' dir='rtl'>
-            {/* Badge */}
-            <div className='inline-flex items-center px-4 py-2 rounded-full bg-[#343b50]/5 mb-6'>
-              <span className='text-sm font-medium text-[#343b50]'>
-                أكاديمية أندرينو للبرمجة
-              </span>
-            </div>
-
             {/* Main Headline */}
             <h1 className='text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight mb-6'>
               <span className='text-[#343b50] block mb-2'>
