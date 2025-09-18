@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
-import heroImg from "../../../assests/Hero.jpg";
+
+import Image from "next/image";       
+import pngImage from  "@/../assests/png.png";
 
 export default function Hero() {
+
   return (
     <section className='bg-white relative overflow-hidden text-center lg:text-right'>
       <div className='max-w-7xl mx-auto px-6 py-8 lg:py-24 relative z-10'>
@@ -38,8 +40,8 @@ export default function Hero() {
             <div className='mb-8 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start'>
               <button
                 onClick={() => {
-                  const element = document.getElementById('features');
-                  element?.scrollIntoView({ behavior: 'smooth' });
+                  const element = document.getElementById("features");
+                  element?.scrollIntoView({ behavior: "smooth" });
                 }}
                 className='inline-flex items-center px-8 py-4 text-lg font-semibold rounded-xl text-white bg-[#7e5b3f] hover:bg-[#343b50] transition-colors duration-300 shadow-lg hover:shadow-xl'>
                 <span>احجز حصة مجانية</span>
@@ -97,9 +99,9 @@ export default function Hero() {
           <div className=' flex items-center justify-center '>
             <div className='relative w-full max-w-md'>
               <Image
-                src={heroImg}
+                src={pngImage}
                 alt='تعلم البرمجة للأطفال'
-                className='w-full h-auto rounded-2xl shadow-lg'
+                className='w-full h-auto rounded-4xl bg-cover'
                 placeholder='blur'
                 sizes='(max-width: 768px) 100vw, 50vw'
                 priority
