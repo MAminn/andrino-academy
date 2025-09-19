@@ -207,8 +207,10 @@ export default function ProjectShowcase() {
         <div className='relative overflow-hidden px-4 md:px-0'>
           <div
             className='flex transition-transform duration-500 ease-in-out gap-4 md:gap-6'
-            style={{ 
-              transform: `translateX(${currentSlide * -getTranslatePercentage()}%)` 
+            style={{
+              transform: `translateX(${
+                currentSlide * -getTranslatePercentage()
+              }%)`,
             }}>
             {filteredProjects.map((project) => (
               <div
@@ -315,16 +317,16 @@ export default function ProjectShowcase() {
 
         {/* Bottom CTA */}
         <div className='text-center mt-12 md:mt-16 px-4'>
-          <div className='bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-6 md:p-8 text-white'>
+          <div className='bg-gradient-to-r bg-[#343b50] rounded-2xl p-6 md:p-8 text-white'>
             <h3 className='text-xl md:text-2xl font-bold mb-4'>
               مستعد لبناء مشروعك الخاص؟
             </h3>
-            <p className='text-[#c19170] mb-6 max-w-2xl mx-auto text-sm md:text-base'>
+            <p className='text-[#a6a6a6] mb-6 max-w-2xl mx-auto text-sm md:text-base'>
               ابدأ رحلتك التعليمية اليوم وكن جزءاً من قصص النجاح القادمة
             </p>
             <a
               href='/browse'
-              className='inline-block bg-white text-[#343b50] px-6 md:px-8 py-3 md:py-4 rounded-xl font-bold hover:bg-gray-100 transition-colors duration-300 shadow-lg text-sm md:text-base'>
+              className='inline-block bg-white text-[#343b50] px-6 md:px-8 py-3 md:py-4 rounded-xl font-bold  hover:bg-[#7e5b3f] hover:text-white transition-colors duration-300 shadow-lg text-sm md:text-base'>
               استكشف الدورات المتاحة
             </a>
           </div>
