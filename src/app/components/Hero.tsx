@@ -3,7 +3,7 @@
 import Link from "next/link";
 
 import Image from "next/image";
-import pngImage from "@/../assests/png.png";
+import HImage from "@/../assests/w f.png";
 
 export default function Hero() {
   return (
@@ -91,7 +91,7 @@ export default function Hero() {
           <div className=' flex items-center justify-center '>
             <div className='relative w-full max-w-md'>
               <Image
-                src={pngImage}
+                src={HImage}
                 alt='تعلم البرمجة للأطفال'
                 className='w-full h-auto rounded-4xl bg-cover'
                 placeholder='blur'
