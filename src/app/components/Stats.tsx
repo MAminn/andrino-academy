@@ -10,7 +10,6 @@ const stats = [
     value: 1250,
     suffix: "+",
     icon: "👨‍🎓",
-    color: "from-[#7e5b3f] to-[#c19170]",
   },
   {
     id: 2,
@@ -18,7 +17,6 @@ const stats = [
     value: 85,
     suffix: "+",
     icon: "📚",
-    color: "from-[#343b50] to-[#7e5b3f]",
   },
   {
     id: 3,
@@ -26,7 +24,6 @@ const stats = [
     value: 28,
     suffix: "+",
     icon: "👨‍🏫",
-    color: "from-[#c19170] to-[#7e5b3f]",
   },
   {
     id: 4,
@@ -34,23 +31,6 @@ const stats = [
     value: 98,
     suffix: "%",
     icon: "🎯",
-    color: "from-[#7e5b3f] to-[#343b50]",
-  },
-  {
-    id: 5,
-    label: "ساعة تدريب",
-    value: 15000,
-    suffix: "+",
-    icon: "⏰",
-    color: "from-[#343b50] to-[#c19170]",
-  },
-  {
-    id: 6,
-    label: "مشروع منجز",
-    value: 420,
-    suffix: "+",
-    icon: "🚀",
-    color: "from-[#c19170] to-[#343b50]",
   },
 ];
 
@@ -58,7 +38,7 @@ function CountUpNumber({ target, suffix }: { target: number; suffix: string }) {
   const [count, setCount] = useState(0);
 
   useEffect(() => {
-    const duration = 2000; // 2 seconds
+    const duration = 2000;
     const steps = 60;
     const increment = target / steps;
     const stepDuration = duration / steps;
@@ -88,67 +68,57 @@ function CountUpNumber({ target, suffix }: { target: number; suffix: string }) {
 export default function Stats() {
   return (
     <section
-      className='py-20 bg-gradient-to-br from-[#343b50] via-[#343b50]/90 to-[#343b50] relative overflow-hidden'
+      className='py-16 md:py-20 bg-gradient-to-b from-white to-[#b7b7b8] overflow-hidden'
       dir='rtl'>
-      {/* Background Effects */}
-      <div className='absolute inset-0'>
-        <div className='absolute top-20 left-20 w-72 h-72 bg-[#7e5b3f]/10 rounded-full blur-3xl'></div>
-        <div className='absolute bottom-20 right-20 w-96 h-96 bg-[#c19170]/10 rounded-full blur-3xl'></div>
-        <div className='absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#7e5b3f]/5 rounded-full blur-3xl'></div>
-      </div>
-
-      <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10'>
+      <div className='max-w-6xl mx-auto px-4 sm:px-6 lg:px-8'>
         {/* Section Header */}
-        <div className='text-center mb-16'>
-          <div className='inline-flex items-center px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm text-white text-sm font-medium mb-4'>
+        <div className='text-center mb-12 md:mb-16'>
+          <div className='inline-flex items-center px-4 py-2 rounded-full bg-[#7e5b3f]/10 text-[#7e5b3f] text-sm font-medium mb-4'>
             📊 إحصائياتنا
           </div>
-          <h2 className='text-4xl lg:text-5xl font-bold text-white mb-6'>
-            أرقام تتحدث عن نجاحنا
+          <h2 className='text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4'>
+            أرقام تتحدث عن النجاح
           </h2>
-          <p className='text-xl text-[#c19170] max-w-3xl mx-auto'>
-            نفتخر بما حققناه من إنجازات ونسعى دائماً لتقديم الأفضل لطلابنا
+          <p className='text-lg md:text-xl text-gray-600 max-w-2xl mx-auto'>
+            إنجازات حقيقية تعكس التزامنا بتقديم أفضل تعليم تقني
           </p>
         </div>
 
         {/* Stats Grid */}
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8'>
+        <div className='grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8'>
           {stats.map((stat, index) => (
             <motion.div
               key={stat.id}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: index * 0.1 }}
-              className='group relative'>
-              <div className='bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20 hover:bg-white/15 transition-all duration-300 hover:scale-105'>
+              transition={{ duration: 0.5, delay: index * 0.1 }}
+              viewport={{ once: true }}
+              className='group text-center'>
+              {/* Card */}
+              <div className='bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-gray-100 hover:shadow-lg hover:border-[#7e5b3f]/20 transition-all duration-300 group-hover:-translate-y-1'>
                 {/* Icon */}
-                <div className='text-4xl mb-4 group-hover:scale-110 transition-transform duration-300'>
+                <div className='text-3xl md:text-4xl mb-4 group-hover:scale-110 transition-transform duration-300'>
                   {stat.icon}
                 </div>
 
                 {/* Number */}
-                <div
-                  className={`text-4xl lg:text-5xl font-bold bg-gradient-to-r ${stat.color} bg-clip-text text-transparent mb-2`}>
+                <div className='text-3xl md:text-4xl lg:text-5xl font-bold text-[#7e5b3f] mb-2'>
                   <CountUpNumber target={stat.value} suffix={stat.suffix} />
                 </div>
 
                 {/* Label */}
-                <div className='text-[#c19170] text-lg font-medium'>
+                <div className='text-gray-600 text-sm md:text-base font-medium'>
                   {stat.label}
                 </div>
-
-                {/* Glow Effect */}
-                <div
-                  className={`absolute inset-0 bg-gradient-to-r ${stat.color} opacity-0 group-hover:opacity-20 rounded-2xl blur-xl transition-opacity duration-300`}></div>
               </div>
             </motion.div>
           ))}
         </div>
 
-        {/* Bottom Message */}
-        <div className='text-center mt-16'>
-          <div className='inline-flex items-center gap-2 text-[#c19170] font-medium bg-white/5 backdrop-blur-sm px-6 py-3 rounded-full border border-white/10'>
-            <span>وأرقام في تزايد مستمر...</span>
+        {/* Bottom Section */}
+        <div className='text-center mt-12 md:mt-16'>
+          <div className='inline-flex items-center gap-2 text-[#7e5b3f] font-medium bg-[#7e5b3f]/5 px-6 py-3 rounded-full border border-[#7e5b3f]/10'>
+            <span>وأرقام في تزايد مستمر</span>
             <span className='text-lg'>📈</span>
           </div>
         </div>

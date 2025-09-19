@@ -57,7 +57,7 @@ const benefits = [
 export default function WhyUs() {
   return (
     <section
-      className='py-20 bg-gradient-to-br from-white to-blue-50'
+      className='py-20 bg-gradient-to-b from-white to-[#b7b7b8] overflow-hidden'
       dir='rtl'>
       <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
         {/* Section Header */}

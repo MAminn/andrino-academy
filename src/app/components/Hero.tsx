@@ -7,7 +7,7 @@ import HImage from "@/../assests/w f.png";
 
 export default function Hero() {
   return (
-    <section className='bg-white relative overflow-hidden text-center lg:text-right'>
+    <section className='bg-gradient-to-b from-white to-[#b7b7b8] relative overflow-hidden text-center lg:text-right'>
       <div className='max-w-7xl mx-auto px-6 py-8 lg:py-24 relative z-10'>
         <div className='flex justify-between items-center gap-8 lg:flex-row flex-col'>
           {/* Text Content - Right side */}
@@ -25,7 +25,9 @@ export default function Hero() {
             {/* Subheading */}
             <p className='text-lg leading-relaxed text-gray-600 mb-8 max-w-lg'>
               في أندرينو، يتعلم الأطفال البرمجة بطريقة ممتعة وبسيطة، تساعدهم على
-              تنمية مهارات التفكير المنطقي وحل المشكلات.
+              تنمية مهارات التفكير المنطقي، وحل المشكلات، والإبداع. جميع الدروس
+              مصممة خصيصًا لتناسب أعمارهم وتضمن لهم تجربة تعليمية مليئة بالمرح
+              والفائدة.
             </p>
 
             {/* Call-to-Action Button */}

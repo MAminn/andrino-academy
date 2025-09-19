@@ -167,7 +167,7 @@ export default function ProjectShowcase() {
 
   return (
     <section
-      className='py-20 bg-gradient-to-br from-slate-50 to-gray-100'
+      className='py-20 bg-gradient-to-b from-[#b7b7b8] to-white overflow-hidden'
       dir='rtl'>
       <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
         {/* Section Header */}

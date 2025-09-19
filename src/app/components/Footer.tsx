@@ -51,7 +51,7 @@ export default function Footer() {
   };
 
   return (
-    <footer className='bg-[#343b50] text-white'>
+    <footer className='bg-gradient-to-b from-[#b7b7b8] to-white text-white'>
       {/* Main Footer Content */}
       <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12'>
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8'>
@@ -66,7 +66,7 @@ export default function Footer() {
                 <p className='text-sm text-[#c19170]'>Andrino Academy</p>
               </div>
             </div>
-            <p className='text-gray-300 mb-6 leading-relaxed'>
+            <p className='text-black hover:font-semibold mb-6 leading-relaxed '>
               نحن أكاديمية متخصصة في تعليم البرمجة والتقنية للأطفال والشباب.
               هدفنا إعداد جيل قادر على مواكبة التطور التقني والمساهمة في بناء
               المستقبل الرقمي.
@@ -100,7 +100,7 @@ export default function Footer() {
                   <li key={link.name}>
                     <Link
                       href={link.href}
-                      className='text-gray-300 hover:text-white transition-colors text-sm'>
+                      className='text-black text-[1rem] hover:text-white hover:font-semibold transition-colors text-sm'>
                       {link.name}
                     </Link>
                   </li>

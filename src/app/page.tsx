@@ -24,10 +24,6 @@ export default function Home() {
         <ProjectShowcase />
       </section>
 
-      <section id='stats'>
-        <Stats />
-      </section>
-
       <section id='why-us'>
         <WhyUs />
       </section>
