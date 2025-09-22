@@ -126,7 +126,6 @@ export default function StudentShowcase() {
                   <h4 className='font-bold text-gray-900'>
                     {testimonial.name}
                   </h4>
-                  <p className='text-sm text-gray-600'>{testimonial.role}</p>
                 </div>
               </div>
 

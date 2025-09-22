@@ -19,10 +19,10 @@ export default function Home() {
       <section id='students'>
         <StudentShowcase />
       </section>
-
+      {/* 
       <section id='projects'>
         <ProjectShowcase />
-      </section>
+      </section> */}
 
       <section id='why-us'>
         <WhyUs />
