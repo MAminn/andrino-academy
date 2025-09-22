@@ -49,7 +49,7 @@ export default function Hero() {
               </Link>
 
               <Link
-                href='https://wa.me/966123456789'
+                href='https://wa.me/2001066520225'
                 target='_blank'
                 rel='noopener noreferrer'
                 className='inline-flex items-center px-8 py-4 text-lg font-semibold rounded-xl text-[#343b50] bg-white border-2 border-[#343b50] hover:bg-[#343b50] hover:text-white transition-colors duration-300 shadow-lg hover:shadow-xl'>
