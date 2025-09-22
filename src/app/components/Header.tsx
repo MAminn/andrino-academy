@@ -101,7 +101,7 @@ export default function Header() {
                 </button>
               ))}
 
-              <div className='border-t border-gray-100 pt-4 mt-4 space-y-2'>
+              {/* <div className='border-t border-gray-100 pt-4 mt-4 space-y-2'>
                 <Link
                   href='/auth/signin'
                   className='block px-3 py-2 text-[#7e5b3f] hover:bg-gray-50 rounded-md transition-colors'
@@ -114,7 +114,7 @@ export default function Header() {
                   onClick={() => setIsMobileMenuOpen(false)}>
                   إنشاء حساب
                 </Link>
-              </div>
+              </div> */}
             </div>
           </div>
         )}
