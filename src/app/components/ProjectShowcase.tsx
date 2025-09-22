@@ -121,8 +121,8 @@ export default function ProjectShowcase() {
       setCurrentSlide(0);
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const categories = [
@@ -141,7 +141,7 @@ export default function ProjectShowcase() {
       : projects.filter((project) => project.category === selectedCategory);
 
   const getItemsPerView = () => {
-    if (typeof window === 'undefined') return 3;
+    if (typeof window === "undefined") return 3;
     if (window.innerWidth < 768) return 1;
     if (window.innerWidth < 1024) return 2;
     return 3;
@@ -172,9 +172,6 @@ export default function ProjectShowcase() {
       <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
         {/* Section Header */}
         <div className='text-center mb-12 md:mb-16'>
-          <div className='inline-flex items-center px-3 md:px-4 py-2 rounded-full bg-[#343b50]/20 text-[#343b50] text-xs md:text-sm font-medium mb-4'>
-            🚀 مشاريع الطلاب
-          </div>
           <h2 className='text-2xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 md:mb-6 px-4'>
             مشاريع حقيقية بناها طلابنا
           </h2>

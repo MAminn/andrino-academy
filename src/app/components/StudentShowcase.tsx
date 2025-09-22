@@ -88,9 +88,6 @@ export default function StudentShowcase() {
       <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
         {/* Section Header */}
         <div className='text-center mb-16'>
-          <div className='inline-flex items-center px-4 py-2 rounded-full bg-[#c19170]/20 text-[#7e5b3f] text-sm font-medium mb-4'>
-            🌟 قصص نجاح
-          </div>
           <h2 className='text-4xl lg:text-5xl font-bold text-gray-900 mb-6'>
             طلابنا يحققون أحلامهم
           </h2>
@@ -100,19 +97,7 @@ export default function StudentShowcase() {
           </p>
         </div>
 
-        {/* Achievement Stats */}
-        {/* <div className='grid grid-cols-2 lg:grid-cols-4 gap-6 mb-16'>
-          {achievements.map((achievement, index) => (
-            <div
-              key={index}
-              className='text-center p-6 bg-white rounded-xl shadow-sm border border-gray-100'>
-              <div className='text-3xl font-bold text-[#7e5b3f] mb-2'>
-                {achievement.number}
-              </div>
-              <div className='text-sm text-gray-600'>{achievement.label}</div>
-            </div>
-          ))}
-        </div> */}
+
 
         {/* Testimonials Grid */}
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16'>
@@ -179,11 +164,8 @@ export default function StudentShowcase() {
             انضم لآلاف الطلاب الذين حققوا أحلامهم المهنية مع أكاديمية أندرينو
           </p>
           <div className='flex flex-col sm:flex-row gap-4 justify-center'>
-            <button
-              onClick={() => {
-                const element = document.getElementById("features");
-                element?.scrollIntoView({ behavior: "smooth" });
-              }}
+            <Link
+              href='/form'
               className='inline-flex items-center px-8 py-4 text-lg font-semibold rounded-xl text-[#343b50] bg-white hover:bg-[#7e5b3f] hover:text-white transition-colors duration-300 shadow-lg hover:shadow-xl'>
               <span>احجز حصة مجانية</span>
               <svg
@@ -196,7 +178,7 @@ export default function StudentShowcase() {
                   clipRule='evenodd'
                 />
               </svg>
-            </button>
+            </Link>
             <Link
               href='https://wa.me/966123456789'
               target='_blank'

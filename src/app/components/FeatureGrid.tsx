@@ -65,9 +65,6 @@ export default function FeatureGrid() {
       <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
         {/* Section Header */}
         <div className='text-center mb-16'>
-          <div className='inline-flex items-center px-4 py-2 rounded-full bg-[#343b50]/10 text-[#343b50] text-sm font-medium mb-4'>
-            🎯 مميزاتنا
-          </div>
           <h2 className='text-4xl lg:text-5xl font-bold text-[#343b50] mb-6'>
             لماذا تختار أكاديمية أندرينو؟
           </h2>
@@ -102,13 +99,6 @@ export default function FeatureGrid() {
           ))}
         </div>
 
-        {/* Bottom CTA */}
-        <div className='text-center mt-16'>
-          <div className='inline-flex items-center gap-2 text-[#7e5b3f] font-medium'>
-            <span>وأكثر من ذلك بكثير...</span>
-            <StarIcon className='w-5 h-5' />
-          </div>
-        </div>
       </div>
     </section>
   );

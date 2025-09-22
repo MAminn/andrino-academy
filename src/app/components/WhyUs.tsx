@@ -62,10 +62,6 @@ export default function WhyUs() {
       <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
         {/* Section Header */}
         <div className='text-center mb-16'>
-          <div className='inline-flex items-center px-4 py-2 rounded-full bg-[#343b50]/20 text-[#343b50] text-sm font-medium mb-4'>
-            <SparklesIcon className='w-4 h-4 ml-2' />
-            لماذا أندرينو؟
-          </div>
           <h2 className='text-4xl lg:text-5xl font-bold text-gray-900 mb-6'>
             نحن مختلفون وهذا ما يميزنا
           </h2>

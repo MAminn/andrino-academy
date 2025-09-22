@@ -32,11 +32,8 @@ export default function Hero() {
 
             {/* Call-to-Action Button */}
             <div className='mb-8 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start'>
-              <button
-                onClick={() => {
-                  const element = document.getElementById("features");
-                  element?.scrollIntoView({ behavior: "smooth" });
-                }}
+              <Link
+                href='/form'
                 className='inline-flex items-center px-8 py-4 text-lg font-semibold rounded-xl text-white bg-[#7e5b3f] hover:bg-[#343b50] transition-colors duration-300 shadow-lg hover:shadow-xl'>
                 <span>احجز حصة مجانية</span>
                 <svg
@@ -49,7 +46,7 @@ export default function Hero() {
                     clipRule='evenodd'
                   />
                 </svg>
-              </button>
+              </Link>
 
               <Link
                 href='https://wa.me/966123456789'
