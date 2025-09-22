@@ -2,11 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import {
-  Bars3Icon,
-  XMarkIcon,
-  AcademicCapIcon,
-} from "@heroicons/react/24/outline";
+import Image from "next/image";
+import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
+import LogoImage from "@/../assests/A.A All Logo's Colors-03.png";
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -34,17 +32,20 @@ export default function Header() {
   ];
 
   return (
-    <header className='bg-white/95 backdrop-blur-sm shadow-sm border-b border-gray-100 sticky top-0 z-50 transition-all duration-300'>
-      <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-        <div className='flex justify-between items-center h-16'>
+    <header className='bg-white sticky top-0 z-50 transition-all duration-300'>
+      <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-6'>
+        <div className='flex justify-between lg:justify-start gap-12 items-center h-20'>
           {/* Logo */}
           <div className='flex items-center'>
-            <Link href='/' className='flex items-center space-x-2 space-x-reverse hover:opacity-80 transition-opacity'>
-              <div className='text-right'>
-                <h1 className='text-3xl font-bold text-black'>
-                  Andrino Academy{" "}
-                </h1>
-              </div>
+            <Link href='/' className=' hover:opacity-80 transition-opacity'>
+              <Image
+                src={LogoImage}
+                alt='Andrino Academy Logo'
+                width={300}
+                height={60}
+                className=''
+                priority
+              />
             </Link>
           </div>
 
@@ -61,7 +62,7 @@ export default function Header() {
           </nav>
 
           {/* Auth Buttons */}
-          <div className='hidden md:flex items-center space-x-3 space-x-reverse'>
+          {/* <div className='hidden md:flex items-center space-x-3 space-x-reverse'>
             <Link
               href='/auth/signin'
               className='text-[#7e5b3f] hover:text-[#343b50] px-3 py-2 text-sm font-medium transition-colors'>
@@ -72,7 +73,7 @@ export default function Header() {
               className='bg-[#7e5b3f] hover:bg-[#343b50] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm hover:shadow-md transform hover:-translate-y-0.5'>
               إنشاء حساب
             </Link>
-          </div>
+          </div> */}
 
           {/* Mobile menu button */}
           <div className='md:hidden'>

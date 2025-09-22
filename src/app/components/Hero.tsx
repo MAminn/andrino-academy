@@ -51,10 +51,10 @@ export default function Hero() {
             </div>
 
             {/* Call-to-Action Button */}
-            <div className='mb-8 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start'>
+            <div className='mb-8 flex flex-col sm:flex-row gap-4  justify-center lg:justify-start'>
               <Link
                 href='/form'
-                className='inline-flex items-center px-8 py-4 text-lg font-semibold rounded-xl text-white bg-[#7e5b3f] hover:bg-[#343b50] transition-colors duration-300 shadow-lg hover:shadow-xl'>
+                className='inline-flex items-center px-8 py-4 text-lg justify-center font-semibold rounded-xl text-white bg-[#7e5b3f] hover:bg-[#343b50] transition-colors duration-300 shadow-lg hover:shadow-xl'>
                 <span>احجز حصة مجانية</span>
                 <svg
                   className='mr-3 w-5 h-5'
@@ -72,7 +72,7 @@ export default function Hero() {
                 href='https://wa.me/2001066520225'
                 target='_blank'
                 rel='noopener noreferrer'
-                className='inline-flex items-center px-8 py-4 text-lg font-semibold rounded-xl text-[#343b50] bg-white border-2 border-[#343b50] hover:bg-[#343b50] hover:text-white transition-colors duration-300 shadow-lg hover:shadow-xl'>
+                className='inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-xl text-[#343b50] bg-white border-2 border-[#343b50] hover:bg-[#343b50] hover:text-white transition-colors duration-300 shadow-lg hover:shadow-xl'>
                 <span>تواصل واتساب</span>
                 <svg
                   className='mr-3 w-5 h-5'
