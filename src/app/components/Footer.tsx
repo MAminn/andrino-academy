@@ -11,9 +11,7 @@ export default function Footer() {
     <footer className='bg-gradient-to-b from-white to-[#000000] text-white'>
       {/* Main Footer Content */}
       <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16'>
-        <div
-          className='flex flex-start justify-between '
-          dir='rtl'>
+        <div className='flex flex-start justify-between ' dir='rtl'>
           {/* Academy Info Section */}
           <div className='space-y-6'>
             <div className='flex justify-start items-center'>
@@ -29,10 +27,6 @@ export default function Footer() {
             <h2 className='text-white text-2xl font-bold leading-tight text-right'>
               صُنّاع قادة التكنولوجيا القادمين
             </h2>
-            <p className='text-gray-200 leading-relaxed text-right max-w-md'>
-              نهدف إلى إعداد جيل رقمي متميز قادر على مواكبة التطور التكنولوجي
-              وصناعة المستقبل بأيديهم.
-            </p>
 
             {/* Social Media Icons */}
             <div className='flex items-center space-x-4 space-x-reverse justify-start'>
@@ -85,35 +79,35 @@ export default function Footer() {
               التدريس عبر الإنترنت
             </h3>
             <ul className='space-y-3 text-right'>
-              <li className='flex items-center justify-end group cursor-pointer'>
+              <li className='flex items-center justify-start group cursor-pointer'>
+                <div className='w-1 h-4 bg-[#c19170] rounded-full ml-3 group-hover:h-6 transition-all duration-200'></div>
                 <span className='text-gray-200 group-hover:text-[#c19170] group-hover:font-medium transition-all duration-200'>
                   الذكاء الاصطناعي
                 </span>
-                <div className='w-1 h-4 bg-[#c19170] rounded-full mr-3 group-hover:h-6 transition-all duration-200'></div>
               </li>
-              <li className='flex items-center justify-end group cursor-pointer'>
+              <li className='flex items-center justify-start group cursor-pointer'>
+                <div className='w-1 h-4 bg-[#c19170] rounded-full ml-3 group-hover:h-6 transition-all duration-200'></div>
                 <span className='text-gray-200 group-hover:text-[#c19170] group-hover:font-medium transition-all duration-200'>
                   الواقع الافتراضي
                 </span>
-                <div className='w-1 h-4 bg-[#c19170] rounded-full mr-3 group-hover:h-6 transition-all duration-200'></div>
               </li>
-              <li className='flex items-center justify-end group cursor-pointer'>
+              <li className='flex items-center justify-start group cursor-pointer'>
+                <div className='w-1 h-4 bg-[#c19170] rounded-full ml-3 group-hover:h-6 transition-all duration-200'></div>
                 <span className='text-gray-200 group-hover:text-[#c19170] group-hover:font-medium transition-all duration-200'>
                   تطوير الشبكة
                 </span>
-                <div className='w-1 h-4 bg-[#c19170] rounded-full mr-3 group-hover:h-6 transition-all duration-200'></div>
               </li>
-              <li className='flex items-center justify-end group cursor-pointer'>
+              <li className='flex items-center justify-start group cursor-pointer'>
+                <div className='w-1 h-4 bg-[#c19170] rounded-full ml-3 group-hover:h-6 transition-all duration-200'></div>
                 <span className='text-gray-200 group-hover:text-[#c19170] group-hover:font-medium transition-all duration-200'>
                   تطوير تطبيقات أندرويد
                 </span>
-                <div className='w-1 h-4 bg-[#c19170] rounded-full mr-3 group-hover:h-6 transition-all duration-200'></div>
               </li>
-              <li className='flex items-center justify-end group cursor-pointer'>
+              <li className='flex items-center justify-start group cursor-pointer'>
+                <div className='w-1 h-4 bg-[#c19170] rounded-full ml-3 group-hover:h-6 transition-all duration-200'></div>
                 <span className='text-gray-200 group-hover:text-[#c19170] group-hover:font-medium transition-all duration-200'>
                   البرمجة للأطفال
                 </span>
-                <div className='w-1 h-4 bg-[#c19170] rounded-full mr-3 group-hover:h-6 transition-all duration-200'></div>
               </li>
             </ul>
           </div>
