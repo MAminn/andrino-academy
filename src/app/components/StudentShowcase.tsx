@@ -22,7 +22,7 @@ const testimonials = [
     role: "مطورة تطبيقات موبايل",
     image: "/api/placeholder/150/150",
     content:
-      "التعلم في أندرينو مختلف تماماً. كل شيء عملي ومفيد للسوق. الآن أعمل كمطورة مستقلة وأحقق دخل ممتاز من البيت.",
+      "بدات مع اندرينو من الصفر النهاردة انا قادر ابرمج موقع الكترونى متكامل من الصفر",
     rating: 5,
     course: "تطوير تطبيقات الموبايل",
     achievement: "بدأت عملها الحر وتحقق 12000 ريال شهرياً",
@@ -43,8 +43,7 @@ const testimonials = [
     name: "نورا سعد المطيري",
     role: "أخصائية أمن سيبراني",
     image: "/api/placeholder/150/150",
-    content:
-      "مجال الأمن السيبراني كان صعب جداً لكن أسلوب التدريس في أندرينو خلاني أفهم كل شيء بسهولة. الآن أعمل في شركة عالمية.",
+    content: "كنت فاكر تحليل البيانت صعب لكن لما بدات مع اندرينو كان سهل جدا",
     rating: 5,
     course: "الأمن السيبراني",
     achievement: "انضمت لشركة عالمية براتب 15000 ريال",
@@ -55,7 +54,7 @@ const testimonials = [
     role: "مطور ذكاء اصطناعي",
     image: "/api/placeholder/150/150",
     content:
-      "أندرينو فتحت لي باب الذكاء الاصطناعي. من أصعب المجالات لكن مع التدريب العملي والمشاريع الحقيقية صار سهل.",
+      "انا قدرت اعمل شات بوت بالبايثون و زى ما كنت بستخدمه انا مبسوط اوى مع اندرينو",
     rating: 5,
     course: "الذكاء الاصطناعي وتعلم الآلة",
     achievement: "يعمل على مشاريع ذكاء اصطناعي براتب 20000 ريال",
@@ -66,7 +65,7 @@ const testimonials = [
     role: "محللة بيانات",
     image: "/api/placeholder/150/150",
     content:
-      "كنت أشتغل في مجال مختلف تماماً. أندرينو ساعدتني أتحول لمحللة بيانات وأحب شغلي الجديد جداً.",
+      "كنت بابحث عن مكان لتعليم التطبيقات الموبايل و ده افضل مكان اتعلمت فيه ",
     rating: 5,
     course: "علم البيانات والتحليل",
     achievement: "انتقلت من التدريس إلى تحليل البيانات",
@@ -96,8 +95,6 @@ export default function StudentShowcase() {
             النجاح المهني
           </p>
         </div>
-
-
 
         {/* Testimonials Grid */}
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16'>
@@ -130,22 +127,6 @@ export default function StudentShowcase() {
                     {testimonial.name}
                   </h4>
                   <p className='text-sm text-gray-600'>{testimonial.role}</p>
-                </div>
-              </div>
-
-              {/* Course & Achievement */}
-              <div className='space-y-2'>
-                <div className='text-sm'>
-                  <span className='text-gray-500'>الدورة: </span>
-                  <span className='text-[#7e5b3f] font-medium'>
-                    {testimonial.course}
-                  </span>
-                </div>
-                <div className='text-sm'>
-                  <span className='text-gray-500'>الإنجاز: </span>
-                  <span className='text-[#c19170] font-medium'>
-                    {testimonial.achievement}
-                  </span>
                 </div>
               </div>
 

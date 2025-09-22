@@ -13,47 +13,47 @@ import {
 
 const features = [
   {
-    icon: CodeBracketIcon,
-    title: "تعلم البرمجة من الصفر",
+    icon: UserGroupIcon,
+    title: "مدرّبون خبراء",
     description:
-      "ابدأ رحلتك في عالم البرمجة بأساليب تعليمية مبسطة ومناسبة لجميع الأعمار",
+      "فريق متخصص بخبرة عالية في تعليم الأطفال البرمجة بأسلوب مبسط وسهل.",
   },
   {
     icon: AcademicCapIcon,
-    title: "شهادات معتمدة",
+    title: "جلسات فردية",
     description:
-      "احصل على شهادات معتمدة تضيف قيمة حقيقية لمسيرتك المهنية والأكاديمية",
+      "كل طفل له اهتمامه وطريقته في التعلّم، لذلك نقدّم جلسات فردية تركز على احتياجاته.",
   },
   {
     icon: ClockIcon,
-    title: "مرونة في التوقيت",
-    description: "تعلم في الوقت الذي يناسبك مع جدولة مرنة وإمكانية الوصول 24/7",
-  },
-  {
-    icon: UserGroupIcon,
-    title: "مدربين خبراء",
-    description:
-      "فريق من المدربين المحترفين مع سنوات من الخبرة في التدريس والبرمجة",
-  },
-  {
-    icon: PuzzlePieceIcon,
-    title: "تعلم تفاعلي",
-    description: "مشاريع عملية وأنشطة تفاعلية تجعل التعلم ممتعاً وفعالاً",
+    title: "وقت مرن",
+    description: "يمكنكم اختيار الأوقات الأنسب لجدولكم العائلي.",
   },
   {
     icon: StarIcon,
-    title: "جودة عالية",
-    description: "محتوى تعليمي عالي الجودة مطور بأحدث المعايير التعليمية",
+    title: "شهادة معتمدة",
+    description: "يحصل طفلك بعد كل مستوى على شهادة STEM معتمدة.",
   },
   {
-    icon: DevicePhoneMobileIcon,
-    title: "تعلم من أي مكان",
-    description: "منصة متجاوبة تعمل على جميع الأجهزة - حاسوب، تابلت، أو هاتف",
+    icon: PuzzlePieceIcon,
+    title: "تعليم ذكي",
+    description:
+      "مناهج تفاعلية مصممة خصيصًا للأطفال، تجعل التعلّم ممتعًا وفعّالًا.",
   },
   {
     icon: GlobeAltIcon,
     title: "مجتمع عالمي",
-    description: "انضم لمجتمع عالمي من المتعلمين وتبادل الخبرات والمعرفة",
+    description: "أكثر من 8 دول يجمعهم شغف واحد: التعلّم والبرمجة الممتعة.",
+  },
+  {
+    icon: CodeBracketIcon,
+    title: "جودة عالية",
+    description: "محتوى مدروس بعناية يضمن أفضل تجربة تعليمية.",
+  },
+  {
+    icon: DevicePhoneMobileIcon,
+    title: "تعلّم عملي",
+    description: "أنشطة ومشاريع حقيقية تجعل الطفل يطبّق ما يتعلّمه خطوة بخطوة.",
   },
 ];
 
@@ -68,10 +68,6 @@ export default function FeatureGrid() {
           <h2 className='text-4xl lg:text-5xl font-bold text-[#343b50] mb-6'>
             لماذا تختار أكاديمية أندرينو؟
           </h2>
-          <p className='text-xl text-gray-600 max-w-3xl mx-auto'>
-            نقدم تجربة تعليمية شاملة ومتميزة تضمن لك إتقان البرمجة بأسرع وقت
-            وأفضل جودة
-          </p>
         </div>
 
         {/* Features Grid */}
@@ -89,7 +85,7 @@ export default function FeatureGrid() {
               <h3 className='text-xl font-bold text-[#343b50] mb-4 group-hover:text-[#7e5b3f] transition-colors'>
                 {feature.title}
               </h3>
-              <p className='text-gray-600 leading-relaxed'>
+              <p className='text-gray-600 leading-relaxed text-center'>
                 {feature.description}
               </p>
 
@@ -98,7 +94,6 @@ export default function FeatureGrid() {
             </div>
           ))}
         </div>
-
       </div>
     </section>
   );

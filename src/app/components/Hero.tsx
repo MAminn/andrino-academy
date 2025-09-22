@@ -14,21 +14,41 @@ export default function Hero() {
           <div className='text-center lg:text-right' dir='rtl'>
             {/* Main Headline */}
             <h1 className='text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight mb-6'>
-              <span className='text-[#343b50] block mb-2'>
-                استثمر في مهارات طفلك
-              </span>
-              <span className='font-black bg-gradient-to-r from-[#7e5b3f] to-[#c19170] bg-clip-text text-transparent block'>
-                وخلّي مستقبله أذكى
+              <span className='text-[#343b50]'>أطفال اليوم صُنّاع </span>
+              <span className='font-black bg-gradient-to-r from-[#7e5b3f] to-[#c19170] bg-clip-text text-transparent'>
+                المستقبل
               </span>
             </h1>
 
             {/* Subheading */}
-            <p className='text-lg leading-relaxed text-gray-600 mb-8 max-w-lg'>
-              في أندرينو، يتعلم الأطفال البرمجة بطريقة ممتعة وبسيطة، تساعدهم على
-              تنمية مهارات التفكير المنطقي، وحل المشكلات، والإبداع. جميع الدروس
-              مصممة خصيصًا لتناسب أعمارهم وتضمن لهم تجربة تعليمية مليئة بالمرح
-              والفائدة.
-            </p>
+            <div className='mb-8 max-w-2xl'>
+              <p className='text-lg leading-relaxed text-gray-600 mb-6'>
+                تعليم برمجة ممتع وبسيط مصمم خصيصًا للأطفال.
+              </p>
+
+              <div className='space-y-4'>
+                <div className='flex items-start gap-3 text-right'>
+                  <div className='w-2 h-2 bg-[#7e5b3f] rounded-full mt-2 flex-shrink-0'></div>
+                  <p className='text-gray-700 leading-relaxed'>
+                    تطوير مهارات التفكير المنطقي والتحليل من خلال أنشطة شيّقة.
+                  </p>
+                </div>
+
+                <div className='flex items-start gap-3 text-right'>
+                  <div className='w-2 h-2 bg-[#7e5b3f] rounded-full mt-2 flex-shrink-0'></div>
+                  <p className='text-gray-700 leading-relaxed'>
+                    دروس تفاعلية مليئة بالمرح تساعد على حل المشكلات بطرق مبتكرة.
+                  </p>
+                </div>
+
+                <div className='flex items-start gap-3 text-right'>
+                  <div className='w-2 h-2 bg-[#7e5b3f] rounded-full mt-2 flex-shrink-0'></div>
+                  <p className='text-gray-700 leading-relaxed'>
+                    تنمية روح الإبداع والابتكار عند الأطفال منذ الصغر.
+                  </p>
+                </div>
+              </div>
+            </div>
 
             {/* Call-to-Action Button */}
             <div className='mb-8 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start'>
