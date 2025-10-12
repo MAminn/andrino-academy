@@ -9,7 +9,10 @@ import {
   QuickActionCard,
 } from "@/app/components/dashboard/DashboardComponents";
 import { GradeForm, TrackForm } from "@/components/ui/Forms";
-import { StudentAssignment, BulkStudentAssignment } from "@/components/ui/StudentAssignment";
+import {
+  StudentAssignment,
+  BulkStudentAssignment,
+} from "@/components/ui/StudentAssignment";
 import { ConfirmModal } from "@/components/ui/Modal";
 import {
   Users,
@@ -88,24 +91,36 @@ export default function ManagerDashboard() {
 
   // Modal states
   const [gradeModalOpen, setGradeModalOpen] = useState(false);
-  const [gradeModalMode, setGradeModalMode] = useState<"create" | "edit">("create");
+  const [gradeModalMode, setGradeModalMode] = useState<"create" | "edit">(
+    "create"
+  );
   const [selectedGrade, setSelectedGrade] = useState<Grade | undefined>();
-  
+
   const [trackModalOpen, setTrackModalOpen] = useState(false);
-  const [trackModalMode, setTrackModalMode] = useState<"create" | "edit">("create");
+  const [trackModalMode, setTrackModalMode] = useState<"create" | "edit">(
+    "create"
+  );
   const [selectedTrack, setSelectedTrack] = useState<Track | undefined>();
-  
+
   const [studentAssignmentOpen, setStudentAssignmentOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  
+
   const [bulkAssignmentOpen, setBulkAssignmentOpen] = useState(false);
-  
+
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<{ type: "grade" | "track"; id: string; name: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    type: "grade" | "track";
+    id: string;
+    name: string;
+  } | null>(null);
 
   // Data for forms
-  const [instructors, setInstructors] = useState<Array<{ id: string; name: string }>>([]);
-  const [coordinators, setCoordinators] = useState<Array<{ id: string; name: string }>>([]);
+  const [instructors, setInstructors] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
+  const [coordinators, setCoordinators] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -136,12 +151,18 @@ export default function ManagerDashboard() {
         if (usersResponse.ok) {
           const usersData = await usersResponse.json();
           const allUsers = usersData.students as User[]; // Note: This API returns all users, not just students
-          
-          setInstructors(allUsers.filter((user: User) => user.role === 'instructor')
-            .map((user: User) => ({ id: user.id, name: user.name })));
-          
-          setCoordinators(allUsers.filter((user: User) => user.role === 'coordinator')
-            .map((user: User) => ({ id: user.id, name: user.name })));
+
+          setInstructors(
+            allUsers
+              .filter((user: User) => user.role === "instructor")
+              .map((user: User) => ({ id: user.id, name: user.name }))
+          );
+
+          setCoordinators(
+            allUsers
+              .filter((user: User) => user.role === "coordinator")
+              .map((user: User) => ({ id: user.id, name: user.name }))
+          );
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -158,17 +179,17 @@ export default function ManagerDashboard() {
     const isEdit = gradeData.id;
     const url = isEdit ? `/api/grades/${gradeData.id}` : "/api/grades";
     const method = isEdit ? "PUT" : "POST";
-    
+
     const response = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(gradeData),
     });
-    
+
     if (!response.ok) {
-      throw new Error(`Failed to ${isEdit ? 'update' : 'create'} grade`);
+      throw new Error(`Failed to ${isEdit ? "update" : "create"} grade`);
     }
-    
+
     // Refresh grades
     const gradesResponse = await fetch("/api/grades");
     if (gradesResponse.ok) {
@@ -181,11 +202,11 @@ export default function ManagerDashboard() {
     const response = await fetch(`/api/grades/${gradeId}`, {
       method: "DELETE",
     });
-    
+
     if (!response.ok) {
       throw new Error("Failed to delete grade");
     }
-    
+
     // Refresh grades
     const gradesResponse = await fetch("/api/grades");
     if (gradesResponse.ok) {
@@ -206,11 +227,11 @@ export default function ManagerDashboard() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(trackData),
     });
-    
+
     if (!response.ok) {
       throw new Error("Failed to create track");
     }
-    
+
     // Refresh tracks
     const tracksResponse = await fetch("/api/tracks");
     if (tracksResponse.ok) {
@@ -225,50 +246,53 @@ export default function ManagerDashboard() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ studentId, gradeId }),
     });
-    
+
     if (!response.ok) {
       throw new Error("Failed to assign student");
     }
-    
+
     // Refresh data
     const [studentsResponse, gradesResponse] = await Promise.all([
       fetch("/api/students?unassigned=true"),
-      fetch("/api/grades")
+      fetch("/api/grades"),
     ]);
-    
+
     if (studentsResponse.ok) {
       const studentsData = await studentsResponse.json();
       setUnassignedStudents(studentsData.students);
     }
-    
+
     if (gradesResponse.ok) {
       const gradesData = await gradesResponse.json();
       setGrades(gradesData.grades);
     }
   };
 
-  const handleBulkAssignStudents = async (studentIds: string[], gradeId: string) => {
-    const promises = studentIds.map(studentId => 
+  const handleBulkAssignStudents = async (
+    studentIds: string[],
+    gradeId: string
+  ) => {
+    const promises = studentIds.map((studentId) =>
       fetch("/api/students/assign-grade", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ studentId, gradeId }),
       })
     );
-    
+
     await Promise.all(promises);
-    
+
     // Refresh data
     const [studentsResponse, gradesResponse] = await Promise.all([
       fetch("/api/students?unassigned=true"),
-      fetch("/api/grades")
+      fetch("/api/grades"),
     ]);
-    
+
     if (studentsResponse.ok) {
       const studentsData = await studentsResponse.json();
       setUnassignedStudents(studentsData.students);
     }
-    
+
     if (gradesResponse.ok) {
       const gradesData = await gradesResponse.json();
       setGrades(gradesData.grades);
@@ -379,49 +403,49 @@ export default function ManagerDashboard() {
                     )}
                   </div>
                   <div className='flex items-center space-x-2 space-x-reverse'>
-                    <button 
+                    <button
                       onClick={() => {
                         setSelectedGrade(grade);
                         setGradeModalMode("edit");
                         setGradeModalOpen(true);
                       }}
                       className='p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors'
-                      title="عرض تفاصيل المستوى"
-                    >
+                      title='عرض تفاصيل المستوى'>
                       <Eye className='w-4 h-4' />
                     </button>
-                    <button 
+                    <button
                       onClick={() => {
                         setSelectedGrade(grade);
                         setGradeModalMode("edit");
                         setGradeModalOpen(true);
                       }}
                       className='p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors'
-                      title="تعديل المستوى"
-                    >
+                      title='تعديل المستوى'>
                       <Edit className='w-4 h-4' />
                     </button>
-                    <button 
+                    <button
                       onClick={() => {
-                        setDeleteTarget({ type: "grade", id: grade.id, name: grade.name });
+                        setDeleteTarget({
+                          type: "grade",
+                          id: grade.id,
+                          name: grade.name,
+                        });
                         setDeleteConfirmOpen(true);
                       }}
                       className='p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors'
-                      title="حذف المستوى"
-                    >
+                      title='حذف المستوى'>
                       <Trash2 className='w-4 h-4' />
                     </button>
                   </div>
                 </div>
               ))}
-              <button 
+              <button
                 onClick={() => {
                   setGradeModalMode("create");
                   setSelectedGrade(undefined);
                   setGradeModalOpen(true);
                 }}
-                className='w-full flex items-center justify-center py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors'
-              >
+                className='w-full flex items-center justify-center py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors'>
                 <Plus className='w-5 h-5 ml-2' />
                 إنشاء مستوى جديد
               </button>
@@ -451,26 +475,24 @@ export default function ManagerDashboard() {
                       {student.age && <span>العمر: {student.age}</span>}
                     </div>
                   </div>
-                  <button 
+                  <button
                     onClick={() => {
                       setSelectedStudent(student);
                       setStudentAssignmentOpen(true);
                     }}
-                    className='px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors'
-                  >
+                    className='px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors'>
                     تسجيل في مستوى
                   </button>
                 </div>
               ))}
               {unassignedStudents.length > 5 && (
-                <div className="text-center">
+                <div className='text-center'>
                   <p className='text-sm text-gray-600 mb-2'>
                     و {unassignedStudents.length - 5} طالب آخر...
                   </p>
-                  <button 
+                  <button
                     onClick={() => setBulkAssignmentOpen(true)}
-                    className='px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors'
-                  >
+                    className='px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors'>
                     <UserCog className='w-4 h-4 ml-1 inline' />
                     تسجيل متعدد للطلاب
                   </button>
@@ -563,32 +585,29 @@ export default function ManagerDashboard() {
 
       {/* Academic Management Actions */}
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8'>
-        <button 
+        <button
           onClick={() => {
             setGradeModalMode("create");
             setSelectedGrade(undefined);
             setGradeModalOpen(true);
           }}
-          className='flex items-center justify-center p-6 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl'
-        >
+          className='flex items-center justify-center p-6 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl'>
           <BookOpen className='w-6 h-6 ml-2' />
           إدارة المستويات
         </button>
-        <button 
+        <button
           onClick={() => {
             setTrackModalMode("create");
             setSelectedTrack(undefined);
             setTrackModalOpen(true);
           }}
-          className='flex items-center justify-center p-6 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-lg hover:shadow-xl'
-        >
+          className='flex items-center justify-center p-6 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-lg hover:shadow-xl'>
           <MapPin className='w-6 h-6 ml-2' />
           إدارة المسارات
         </button>
-        <button 
+        <button
           onClick={() => setBulkAssignmentOpen(true)}
-          className='flex items-center justify-center p-6 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-lg hover:shadow-xl'
-        >
+          className='flex items-center justify-center p-6 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-lg hover:shadow-xl'>
           <UserPlus className='w-6 h-6 ml-2' />
           تسجيل الطلاب
         </button>
@@ -617,16 +636,20 @@ export default function ManagerDashboard() {
           setSelectedTrack(undefined);
         }}
         onSubmit={handleCreateTrack}
-        track={selectedTrack ? {
-          id: selectedTrack.id,
-          name: selectedTrack.name,
-          description: selectedTrack.description,
-          gradeId: selectedTrack.gradeId || "",
-          instructorId: selectedTrack.instructorId || "",
-          coordinatorId: selectedTrack.coordinatorId || ""
-        } : undefined}
+        track={
+          selectedTrack
+            ? {
+                id: selectedTrack.id,
+                name: selectedTrack.name,
+                description: selectedTrack.description,
+                gradeId: selectedTrack.gradeId || "",
+                instructorId: selectedTrack.instructorId || "",
+                coordinatorId: selectedTrack.coordinatorId || "",
+              }
+            : undefined
+        }
         mode={trackModalMode}
-        grades={grades.map(g => ({ id: g.id, name: g.name }))}
+        grades={grades.map((g) => ({ id: g.id, name: g.name }))}
         instructors={instructors}
         coordinators={coordinators}
       />
@@ -639,7 +662,7 @@ export default function ManagerDashboard() {
         }}
         onAssign={handleAssignStudent}
         student={selectedStudent}
-        grades={grades.map(g => ({ id: g.id, name: g.name }))}
+        grades={grades.map((g) => ({ id: g.id, name: g.name }))}
       />
 
       <BulkStudentAssignment
@@ -647,7 +670,7 @@ export default function ManagerDashboard() {
         onClose={() => setBulkAssignmentOpen(false)}
         onAssign={handleBulkAssignStudents}
         unassignedStudents={unassignedStudents}
-        grades={grades.map(g => ({ id: g.id, name: g.name }))}
+        grades={grades.map((g) => ({ id: g.id, name: g.name }))}
       />
 
       <ConfirmModal
@@ -663,11 +686,11 @@ export default function ManagerDashboard() {
             }
           }
         }}
-        title="تأكيد الحذف"
+        title='تأكيد الحذف'
         message={`هل أنت متأكد من حذف ${deleteTarget?.name}؟ لا يمكن التراجع عن هذا الإجراء.`}
-        confirmText="حذف"
-        cancelText="إلغاء"
-        type="danger"
+        confirmText='حذف'
+        cancelText='إلغاء'
+        type='danger'
       />
     </DashboardLayout>
   );
