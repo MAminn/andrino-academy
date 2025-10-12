@@ -18,12 +18,24 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { studentIds, gradeId } = body;
+    const { studentIds, studentId, gradeId } = body;
 
-    // Validation
-    if (!Array.isArray(studentIds) || studentIds.length === 0) {
+    // Support both single and bulk assignment
+    let studentIdsArray: string[];
+    if (studentIds && Array.isArray(studentIds)) {
+      studentIdsArray = studentIds;
+    } else if (studentId && typeof studentId === 'string') {
+      studentIdsArray = [studentId];
+    } else {
       return NextResponse.json(
-        { error: "Student IDs array is required" },
+        { error: "Either studentIds array or studentId is required" },
+        { status: 400 }
+      );
+    }
+
+    if (studentIdsArray.length === 0) {
+      return NextResponse.json(
+        { error: "At least one student ID is required" },
         { status: 400 }
       );
     }
@@ -54,13 +66,13 @@ export async function POST(request: NextRequest) {
     // Verify all users are students
     const users = await prisma.user.findMany({
       where: {
-        id: { in: studentIds },
+        id: { in: studentIdsArray },
         role: "student",
       },
       select: { id: true, name: true, email: true },
     });
 
-    if (users.length !== studentIds.length) {
+    if (users.length !== studentIdsArray.length) {
       return NextResponse.json(
         { error: "Some users are not valid students" },
         { status: 400 }
@@ -70,7 +82,7 @@ export async function POST(request: NextRequest) {
     // Bulk update students
     const updateResult = await prisma.user.updateMany({
       where: {
-        id: { in: studentIds },
+        id: { in: studentIdsArray },
         role: "student",
       },
       data: {
@@ -81,7 +93,7 @@ export async function POST(request: NextRequest) {
     // Get updated students for response
     const updatedStudents = await prisma.user.findMany({
       where: {
-        id: { in: studentIds },
+        id: { in: studentIdsArray },
       },
       select: {
         id: true,
