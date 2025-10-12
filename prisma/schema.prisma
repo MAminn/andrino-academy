@@ -10,6 +10,489 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  password      String?
+  role          String    @default("student") // student, instructor, coordinator, manager, ceo
+  emailVerified DateTime?
+  image         String?
+  
+  // Student-specific fields
+  age           Int?
+  parentEmail   String?
+  parentPhone   String?
+  parentName    String?
+  priorExperience String? // "none", "basic", "intermediate", "advanced"
+  gradeLevel    String? // Calculated dynamically: "beginner", "elementary", "intermediate", "advanced"
+  gradeId       String? // Assigned grade for school structure
+  
+  // Profile fields
+  phone         String?
+  address       String?
+  emergencyContact String?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  accounts              Account[]
+  sessions              Session[]
+  instructedCourses     Course[]                  @relation("CourseInstructor")
+  enrollments           Enrollment[]
+  assignments           Assignment[]              @relation("AssignmentInstructor")
+  assignmentSubmissions AssignmentSubmission[]
+  exams                 Exam[]                    @relation("ExamInstructor")
+  attendances           Attendance[]
+  certificates          Certificate[]
+  payments              Payment[]
+  invoices              Invoice[]
+  sessionProgress       SessionProgress[]
+  learningActivities    LearningActivity[]
+  learningStreak        LearningStreak?
+  progressMilestones    ProgressMilestone[]
+
+  // Academic Structure Relations
+  assignedGrade         Grade?                    @relation("StudentGrade", fields: [gradeId], references: [id], onDelete: SetNull)
+  instructedTracks      Track[]                   @relation("TrackInstructor")
+  coordinatedTracks     Track[]                   @relation("TrackCoordinator")
+  instructedSessions    LiveSession[]             @relation("SessionInstructor")
+  sessionAttendances    SessionAttendance[]       @relation("StudentSessionAttendance")
+
+  @@map("User")
+}
+
+// NextAuth.js required models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("Account")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("Session")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("VerificationToken")
+}
+
+// LMS Models
+model Course {
+  id                    String        @id @default(cuid())
+  title                 String
+  description           String?
+  thumbnail             String?
+  price                 Decimal?
+  category              String?
+  level                 String        @default("beginner")
+  duration              Int?
+  isPublished           Boolean       @default(false)
+  programmingLanguages  String?       // JSON string
+  skillLevel            String        @default("BEGINNER")
+  ageGroup              String?
+  tools                 String?       // JSON string
+  githubRepo            String?
+  meetingLink           String?
+  schedulePattern       String?
+  totalSessions         Int?
+  prerequisites         String?       // JSON string
+  currency              String?
+  subscriptionEligible  Boolean       @default(false)
+  isActive              Boolean       @default(true)
+  instructorId          String
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  instructor            User                    @relation("CourseInstructor", fields: [instructorId], references: [id], onDelete: Cascade)
+  sessions              CourseSession[]
+  enrollments           Enrollment[]
+  assignments           Assignment[]
+  exams                 Exam[]
+  certificates          Certificate[]
+  learningActivities    LearningActivity[]
+  progressMilestones    ProgressMilestone[]
+
+  @@index([isActive])
+  @@index([instructorId])
+  @@map("Course")
+}
+
+model CourseSession {
+  id              String   @id @default(cuid())
+  title           String
+  description     String?
+  startsAt        DateTime
+  endsAt          DateTime
+  timezone        String?
+  meetingLink     String
+  recordingLink   String?
+  materials       String?  // JSON string
+  topics          String?  // JSON string
+  videoUrl        String?
+  duration        Int?
+  order           Int?
+  isPublished     Boolean  @default(false)
+  courseId        String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  course             Course              @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  attendances        Attendance[]
+  sessionProgress    SessionProgress[]
+  learningActivities LearningActivity[]
+
+  @@index([courseId, startsAt])
+  @@map("CourseSession")
+}
+
+model Enrollment {
+  id              String    @id @default(cuid())
+  studentId       String
+  courseId        String
+  enrolledAt      DateTime  @default(now())
+  completedAt     DateTime?
+  progress        Float     @default(0)
+  status          String    @default("active")
+  lastAccessedAt  DateTime?
+  totalTimeSpent  Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  student            User                  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course             Course                @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  attendances        Attendance[]
+  sessionProgress    SessionProgress[]
+  progressMilestones ProgressMilestone[]
+
+  @@unique([studentId, courseId])
+  @@map("Enrollment")
+}
+
+model Assignment {
+  id           String   @id @default(cuid())
+  title        String
+  description  String
+  dueDate      DateTime
+  courseId     String
+  instructorId String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  course               Course                 @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  instructor           User                   @relation("AssignmentInstructor", fields: [instructorId], references: [id], onDelete: Cascade)
+  submissions          AssignmentSubmission[]
+  learningActivities   LearningActivity[]
+
+  @@map("Assignment")
+}
+
+model AssignmentSubmission {
+  id           String   @id @default(cuid())
+  submission   String
+  submittedAt  DateTime @default(now())
+  grade        String?
+  assignmentId String
+  studentId    String
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student    User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, studentId])
+  @@map("AssignmentSubmission")
+}
+
+model Exam {
+  id           String   @id @default(cuid())
+  title        String
+  description  String?
+  examLink     String
+  date         DateTime
+  courseId     String
+  instructorId String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  course     Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  instructor User   @relation("ExamInstructor", fields: [instructorId], references: [id], onDelete: Cascade)
+
+  @@map("Exam")
+}
+
+model Attendance {
+  id           String   @id @default(cuid())
+  status       String
+  markedAt     DateTime @default(now())
+  sessionId    String
+  studentId    String
+  enrollmentId String?
+
+  session    CourseSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student    User          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  enrollment Enrollment?   @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, studentId])
+  @@map("Attendance")
+}
+
+model Certificate {
+  id        String   @id @default(cuid())
+  issuedAt  DateTime @default(now())
+  pdfUrl    String?
+  studentId String
+  courseId  String
+
+  student User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, courseId])
+  @@map("Certificate")
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  amount        Float
+  currency      String   @default("USD")
+  status        String   @default("pending")
+  method        String?
+  transactionId String?
+  paidAt        DateTime?
+  studentId     String
+  invoiceId     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  student User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  invoice Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  @@map("Payment")
+}
+
+model Invoice {
+  id            String   @id @default(cuid())
+  invoiceNumber String   @unique
+  amount        Float
+  currency      String   @default("USD")
+  status        String   @default("draft")
+  dueDate       DateTime?
+  issuedAt      DateTime @default(now())
+  paidAt        DateTime?
+  items         String?  // JSON string
+  studentId     String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  student  User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  payments Payment[]
+
+  @@map("Invoice")
+}
+
+model SessionProgress {
+  id               String    @id @default(cuid())
+  sessionId        String
+  studentId        String
+  enrollmentId     String
+  startedAt        DateTime?
+  completedAt      DateTime?
+  timeSpent        Int       @default(0)
+  status           String    @default("not_started")
+  watchPercentage  Float     @default(0)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  session    CourseSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student    User          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  enrollment Enrollment    @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, studentId])
+  @@index([enrollmentId])
+  @@index([status])
+  @@map("SessionProgress")
+}
+
+model LearningActivity {
+  id           String   @id @default(cuid())
+  studentId    String
+  courseId     String?
+  sessionId    String?
+  assignmentId String?
+  activityType String
+  description  String
+  duration     Int      @default(0)
+  points       Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  student    User           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course     Course?        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  session    CourseSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  assignment Assignment?    @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([courseId])
+  @@index([activityType])
+  @@index([createdAt])
+  @@map("LearningActivity")
+}
+
+model LearningStreak {
+  id               String    @id @default(cuid())
+  studentId        String    @unique
+  currentStreak    Int       @default(0)
+  longestStreak    Int       @default(0)
+  lastActivityDate DateTime?
+  streakStartDate  DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("LearningStreak")
+}
+
+model ProgressMilestone {
+  id                 String   @id @default(cuid())
+  studentId          String
+  courseId           String
+  enrollmentId       String
+  milestoneType      String
+  title              String
+  description        String?
+  progressPercentage Float
+  achievedAt         DateTime @default(now())
+  points             Int      @default(0)
+
+  student    User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course     Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([courseId])
+  @@index([milestoneType])
+  @@map("ProgressMilestone")
+}
+
+// Academic Structure Models for School-like LMS
+model Grade {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  order       Int?     // For ordering grades (1st, 2nd, etc.)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  students    User[]   @relation("StudentGrade")
+  tracks      Track[]
+
+  @@index([isActive])
+  @@index([order])
+  @@map("Grade")
+}
+
+model Track {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  gradeId       String
+  instructorId  String
+  coordinatorId String
+  isActive      Boolean  @default(true)
+  order         Int?     // For ordering tracks within a grade
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  grade        Grade         @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  instructor   User          @relation("TrackInstructor", fields: [instructorId], references: [id], onDelete: Restrict)
+  coordinator  User          @relation("TrackCoordinator", fields: [coordinatorId], references: [id], onDelete: Restrict)
+  liveSessions LiveSession[]
+
+  @@index([gradeId])
+  @@index([instructorId])
+  @@index([coordinatorId])
+  @@index([isActive])
+  @@map("Track")
+}
+
+model LiveSession {
+  id           String   @id @default(cuid())
+  title        String
+  description  String?
+  trackId      String
+  instructorId String
+  date         DateTime
+  startTime    String   // Format: "HH:mm" (e.g., "14:30")
+  endTime      String   // Format: "HH:mm" (e.g., "16:00")
+  meetLink     String?  // Google Meet or external link
+  status       String   @default("scheduled") // scheduled, in_progress, completed, cancelled
+  materials    String?  // JSON string for session materials/links
+  notes        String?  // Instructor notes
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  track          Track              @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  instructor     User               @relation("SessionInstructor", fields: [instructorId], references: [id], onDelete: Restrict)
+  attendances    SessionAttendance[]
+
+  @@index([trackId])
+  @@index([instructorId])
+  @@index([date])
+  @@index([status])
+  @@map("LiveSession")
+}
+
+model SessionAttendance {
+  id            String   @id @default(cuid())
+  sessionId     String
+  studentId     String
+  status        String   @default("absent") // present, absent, late, excused
+  markedAt      DateTime @default(now())
+  markedBy      String?  // coordinator or instructor who marked attendance
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  session LiveSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student User        @relation("StudentSessionAttendance", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, studentId])
+  @@index([sessionId])
+  @@index([studentId])
+  @@index([status])
+  @@map("SessionAttendance")
 }
