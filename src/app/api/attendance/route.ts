@@ -17,7 +17,13 @@ export async function GET(request: NextRequest) {
     const sessionId = searchParams.get("sessionId");
 
     // Build where clause based on user role and filters
-    let whereClause: any = {};
+    interface WhereClause {
+      studentId?: string;
+      instructorId?: string;
+      sessionId?: string | { in: string[] };
+    }
+    
+    const whereClause: WhereClause = {};
 
     if (session.user.role === "student") {
       // Students can only see their own attendance

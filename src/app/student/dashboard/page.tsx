@@ -313,7 +313,7 @@ export default function StudentDashboard() {
           <div className='text-center py-8'>
             <Calendar className='w-16 h-16 text-gray-400 mx-auto mb-4' />
             <p className='text-gray-500'>لا توجد جلسات قادمة</p>
-            {!studentData?.gradeId && (
+            {!studentData?.grade && (
               <p className='text-sm text-gray-400 mt-2'>
                 سيتم عرض الجلسات بعد تعيين المستوى الدراسي
               </p>
