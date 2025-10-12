@@ -122,7 +122,9 @@ export default function StudentDashboard() {
         );
         if (upcomingResponse.ok) {
           const upcomingData = await upcomingResponse.json();
-          setUpcomingSessions(upcomingData);
+          setUpcomingSessions(upcomingData.sessions || []);
+        } else {
+          setUpcomingSessions([]);
         }
 
         // Fetch attendance history
@@ -131,7 +133,10 @@ export default function StudentDashboard() {
         );
         if (attendanceResponse.ok) {
           const attendanceData = await attendanceResponse.json();
-          setAttendanceHistory(attendanceData);
+          setAttendanceHistory(attendanceData.attendances || []);
+        } else {
+          console.log("Attendance endpoint not available yet");
+          setAttendanceHistory([]);
         }
       } catch (error) {
         console.error("Error fetching student data:", error);
@@ -299,11 +304,16 @@ export default function StudentDashboard() {
 
       {/* Upcoming Sessions */}
       <QuickActionCard title='الجلسات القادمة'>
-        {upcomingSessions.length === 0 ? (
+        {loading ? (
+          <div className='text-center py-8'>
+            <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto'></div>
+            <p className='mt-2 text-gray-600'>جاري التحميل...</p>
+          </div>
+        ) : !upcomingSessions || upcomingSessions.length === 0 ? (
           <div className='text-center py-8'>
             <Calendar className='w-16 h-16 text-gray-400 mx-auto mb-4' />
             <p className='text-gray-500'>لا توجد جلسات قادمة</p>
-            {!studentData?.grade && (
+            {!studentData?.gradeId && (
               <p className='text-sm text-gray-400 mt-2'>
                 سيتم عرض الجلسات بعد تعيين المستوى الدراسي
               </p>
@@ -368,7 +378,7 @@ export default function StudentDashboard() {
               </div>
             ))}
 
-            {upcomingSessions.length > 5 && (
+            {upcomingSessions && upcomingSessions.length > 5 && (
               <div className='text-center py-4'>
                 <button className='text-blue-600 hover:text-blue-800 font-medium'>
                   عرض جميع الجلسات القادمة ({upcomingSessions.length})
@@ -381,7 +391,7 @@ export default function StudentDashboard() {
 
       {/* Attendance History */}
       <QuickActionCard title='سجل الحضور'>
-        {attendanceHistory.length === 0 ? (
+        {!attendanceHistory || attendanceHistory.length === 0 ? (
           <div className='text-center py-8'>
             <CheckCircle className='w-16 h-16 text-gray-400 mx-auto mb-4' />
             <p className='text-gray-500'>لا يوجد سجل حضور بعد</p>
@@ -391,7 +401,7 @@ export default function StudentDashboard() {
           </div>
         ) : (
           <div className='space-y-4'>
-            {attendanceHistory.slice(0, 5).map((record) => (
+            {Array.isArray(attendanceHistory) ? attendanceHistory.slice(0, 5).map((record) => (
               <div
                 key={record.id}
                 className='border rounded-lg p-4 hover:shadow-md transition-shadow'>
@@ -429,9 +439,9 @@ export default function StudentDashboard() {
                   </div>
                 </div>
               </div>
-            ))}
+            )) : null}
 
-            {attendanceHistory.length > 5 && (
+            {attendanceHistory && attendanceHistory.length > 5 && (
               <div className='text-center py-4'>
                 <button className='text-blue-600 hover:text-blue-800 font-medium'>
                   عرض سجل الحضور الكامل ({attendanceHistory.length})

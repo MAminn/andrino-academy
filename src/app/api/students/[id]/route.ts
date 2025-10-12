@@ -15,8 +15,13 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Only manager and CEO can view student details
-    if (!["manager", "ceo"].includes(session.user.role)) {
+    // Students can access their own data, managers and CEO can access any student
+    if (session.user.role === "student") {
+      // Students can only access their own data
+      if (session.user.id !== params.id) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    } else if (!["manager", "ceo", "coordinator", "instructor"].includes(session.user.role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
