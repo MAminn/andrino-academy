@@ -6,9 +6,10 @@ import { prisma } from "@/lib/prisma";
 // GET /api/students/[id] - Get a specific student
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
 
     if (!session) {
@@ -18,15 +19,19 @@ export async function GET(
     // Students can access their own data, managers and CEO can access any student
     if (session.user.role === "student") {
       // Students can only access their own data
-      if (session.user.id !== params.id) {
+      if (session.user.id !== id) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
-    } else if (!["manager", "ceo", "coordinator", "instructor"].includes(session.user.role)) {
+    } else if (
+      !["manager", "ceo", "coordinator", "instructor"].includes(
+        session.user.role
+      )
+    ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const student = await prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         name: true,
@@ -102,7 +107,7 @@ export async function GET(
 
     // Check if user is actually a student
     const fullUser = await prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: { role: true },
     });
 
@@ -126,9 +131,10 @@ export async function GET(
 // PUT /api/students/[id] - Update student (mainly for grade assignment)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
 
     if (!session) {
@@ -145,7 +151,7 @@ export async function PUT(
 
     // Check if student exists
     const existingStudent = await prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         role: true,
@@ -194,7 +200,7 @@ export async function PUT(
     }
 
     const updatedStudent = await prisma.user.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       select: {
         id: true,

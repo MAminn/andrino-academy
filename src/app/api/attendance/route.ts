@@ -22,13 +22,13 @@ export async function GET(request: NextRequest) {
       instructorId?: string;
       sessionId?: string | { in: string[] };
     }
-    
+
     const whereClause: WhereClause = {};
 
     if (session.user.role === "student") {
       // Students can only see their own attendance
       whereClause.studentId = session.user.id;
-      
+
       if (studentId && studentId !== session.user.id) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
@@ -40,14 +40,14 @@ export async function GET(request: NextRequest) {
       });
 
       if (sessionId) {
-        const isAuthorized = instructorSessions.some(s => s.id === sessionId);
+        const isAuthorized = instructorSessions.some((s) => s.id === sessionId);
         if (!isAuthorized) {
           return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
         whereClause.sessionId = sessionId;
       } else {
         whereClause.sessionId = {
-          in: instructorSessions.map(s => s.id),
+          in: instructorSessions.map((s) => s.id),
         };
       }
 
@@ -68,25 +68,27 @@ export async function GET(request: NextRequest) {
 
     // For now, return empty array since SessionAttendance table might not have data
     // This prevents the 404 error and allows the student dashboard to work
-    const attendances = await prisma.sessionAttendance.findMany({
-      where: whereClause,
-      include: {
-        session: {
-          include: {
-            track: {
-              select: { id: true, name: true },
+    const attendances = await prisma.sessionAttendance
+      .findMany({
+        where: whereClause,
+        include: {
+          session: {
+            include: {
+              track: {
+                select: { id: true, name: true },
+              },
             },
           },
+          student: {
+            select: { id: true, name: true, email: true },
+          },
         },
-        student: {
-          select: { id: true, name: true, email: true },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    }).catch(() => {
-      // If table doesn't exist or has issues, return empty array
-      return [];
-    });
+        orderBy: { createdAt: "desc" },
+      })
+      .catch(() => {
+        // If table doesn't exist or has issues, return empty array
+        return [];
+      });
 
     return NextResponse.json({ attendances });
   } catch (error) {
@@ -106,7 +108,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Only instructors and admins can mark attendance
-    if (!["instructor", "manager", "ceo", "coordinator"].includes(session.user.role)) {
+    if (
+      !["instructor", "manager", "ceo", "coordinator"].includes(
+        session.user.role
+      )
+    ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -130,7 +136,10 @@ export async function POST(request: NextRequest) {
     }
 
     // If instructor, verify they own this session
-    if (session.user.role === "instructor" && liveSession.instructorId !== session.user.id) {
+    if (
+      session.user.role === "instructor" &&
+      liveSession.instructorId !== session.user.id
+    ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

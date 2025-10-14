@@ -104,7 +104,7 @@ Grade: Not assigned (for testing manager dashboard)
 
 ### Scenario 2: Manager Dashboard Testing
 
-**Login as:** manager@andrino-academy.com / Manager2024!
+**Login as:** manager@andrino-academy.com /  
 
 **Expected Features:**
 

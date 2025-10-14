@@ -18,13 +18,14 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    console.log("Received body:", body); // Debug log
     const { studentIds, studentId, gradeId } = body;
 
     // Support both single and bulk assignment
     let studentIdsArray: string[];
     if (studentIds && Array.isArray(studentIds)) {
       studentIdsArray = studentIds;
-    } else if (studentId && typeof studentId === 'string') {
+    } else if (studentId && typeof studentId === "string") {
       studentIdsArray = [studentId];
     } else {
       return NextResponse.json(

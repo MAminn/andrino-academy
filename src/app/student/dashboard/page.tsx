@@ -401,45 +401,49 @@ export default function StudentDashboard() {
           </div>
         ) : (
           <div className='space-y-4'>
-            {Array.isArray(attendanceHistory) ? attendanceHistory.slice(0, 5).map((record) => (
-              <div
-                key={record.id}
-                className='border rounded-lg p-4 hover:shadow-md transition-shadow'>
-                <div className='flex items-center justify-between mb-2'>
-                  <h3 className='font-semibold'>{record.session.title}</h3>
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      record.status === "present"
-                        ? "bg-green-100 text-green-800"
-                        : record.status === "absent"
-                        ? "bg-red-100 text-red-800"
-                        : "bg-yellow-100 text-yellow-800"
-                    }`}>
-                    {record.status === "present"
-                      ? "حاضر"
-                      : record.status === "absent"
-                      ? "غائب"
-                      : "متأخر"}
-                  </span>
-                </div>
+            {Array.isArray(attendanceHistory)
+              ? attendanceHistory.slice(0, 5).map((record) => (
+                  <div
+                    key={record.id}
+                    className='border rounded-lg p-4 hover:shadow-md transition-shadow'>
+                    <div className='flex items-center justify-between mb-2'>
+                      <h3 className='font-semibold'>{record.session.title}</h3>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          record.status === "present"
+                            ? "bg-green-100 text-green-800"
+                            : record.status === "absent"
+                            ? "bg-red-100 text-red-800"
+                            : "bg-yellow-100 text-yellow-800"
+                        }`}>
+                        {record.status === "present"
+                          ? "حاضر"
+                          : record.status === "absent"
+                          ? "غائب"
+                          : "متأخر"}
+                      </span>
+                    </div>
 
-                <div className='grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600'>
-                  <div className='flex items-center'>
-                    <Calendar className='w-4 h-4 ml-2' />
-                    {new Date(record.session.date).toLocaleDateString("ar-SA")}
+                    <div className='grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600'>
+                      <div className='flex items-center'>
+                        <Calendar className='w-4 h-4 ml-2' />
+                        {new Date(record.session.date).toLocaleDateString(
+                          "ar-SA"
+                        )}
+                      </div>
+                      <div className='flex items-center'>
+                        <Clock className='w-4 h-4 ml-2' />
+                        {formatTime(record.session.startTime)} -{" "}
+                        {formatTime(record.session.endTime)}
+                      </div>
+                      <div className='flex items-center'>
+                        <BookOpen className='w-4 h-4 ml-2' />
+                        {record.session.track.name}
+                      </div>
+                    </div>
                   </div>
-                  <div className='flex items-center'>
-                    <Clock className='w-4 h-4 ml-2' />
-                    {formatTime(record.session.startTime)} -{" "}
-                    {formatTime(record.session.endTime)}
-                  </div>
-                  <div className='flex items-center'>
-                    <BookOpen className='w-4 h-4 ml-2' />
-                    {record.session.track.name}
-                  </div>
-                </div>
-              </div>
-            )) : null}
+                ))
+              : null}
 
             {attendanceHistory && attendanceHistory.length > 5 && (
               <div className='text-center py-4'>

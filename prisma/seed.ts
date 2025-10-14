@@ -10,7 +10,7 @@ async function seed() {
     // Clear existing data
     await prisma.user.deleteMany();
     await prisma.grade.deleteMany();
-    
+
     console.log("🗑️  Cleared existing data");
 
     // Hash passwords
@@ -31,7 +31,7 @@ async function seed() {
       }),
       prisma.grade.create({
         data: {
-          name: "المستوى الثاني", 
+          name: "المستوى الثاني",
           description: "المستوى الابتدائي للأعمار 9-12 سنة",
           order: 2,
         },
@@ -39,7 +39,7 @@ async function seed() {
       prisma.grade.create({
         data: {
           name: "المستوى الثالث",
-          description: "المستوى المتوسط للأعمار 13-16 سنة", 
+          description: "المستوى المتوسط للأعمار 13-16 سنة",
           order: 3,
         },
       }),
@@ -55,7 +55,7 @@ async function seed() {
     console.log("✅ Created 4 grades");
 
     // Create Administrative Accounts
-    const ceo = await prisma.user.create({
+    await prisma.user.create({
       data: {
         name: "المدير التنفيذي",
         email: "ceo@andrino-academy.com",
@@ -64,10 +64,10 @@ async function seed() {
       },
     });
 
-    const manager = await prisma.user.create({
+    await prisma.user.create({
       data: {
         name: "المدير الأكاديمي",
-        email: "manager@andrino-academy.com", 
+        email: "manager@andrino-academy.com",
         password: managerPassword,
         role: "manager",
       },
@@ -115,7 +115,7 @@ async function seed() {
     console.log("✅ Created 3 instructor accounts");
 
     // Create Student Accounts
-    const students = await Promise.all([
+    await Promise.all([
       // Student 1 - Beginner Level (assigned to grade 1)
       prisma.user.create({
         data: {
@@ -133,7 +133,7 @@ async function seed() {
           name: "فاطمة أحمد",
           email: "fatima.student@andrino-academy.com",
           password: studentPassword,
-          role: "student", 
+          role: "student",
           age: 11,
           gradeId: grades[1].id, // المستوى الثاني
         },
@@ -327,35 +327,40 @@ async function seed() {
     console.log("\n🎉 Database seeded successfully!");
     console.log("\n📋 Complete Test Credentials:");
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    
+
     console.log("\n👑 Administrative Accounts:");
     console.log("CEO: ceo@andrino-academy.com / Andrino2024!");
     console.log("Manager: manager@andrino-academy.com / Manager2024!");
     console.log("Coordinator: coordinator@andrino-academy.com / Coord2024!");
-    
+
     console.log("\n👨‍🏫 Instructor Accounts:");
-    console.log("Programming: ahmed.instructor@andrino-academy.com / Instructor123!");
+    console.log(
+      "Programming: ahmed.instructor@andrino-academy.com / Instructor123!"
+    );
     console.log("Design: sara.instructor@andrino-academy.com / Instructor123!");
-    console.log("Data Science: omar.instructor@andrino-academy.com / Instructor123!");
-    
+    console.log(
+      "Data Science: omar.instructor@andrino-academy.com / Instructor123!"
+    );
+
     console.log("\n👨‍🎓 Student Accounts:");
     console.log("Beginner: ali.student@andrino-academy.com / Student123!");
     console.log("Elementary: fatima.student@andrino-academy.com / Student123!");
-    console.log("Intermediate: mohammed.student@andrino-academy.com / Student123!");
+    console.log(
+      "Intermediate: mohammed.student@andrino-academy.com / Student123!"
+    );
     console.log("Advanced: aisha.student@andrino-academy.com / Student123!");
     console.log("Unassigned: hassan.student@andrino-academy.com / Student123!");
-    
+
     console.log("\n📚 Academic Structure Created:");
     console.log(`- ${grades.length} Grades (المستويات)`);
     console.log(`- ${tracks.length} Tracks (المسارات)`);
     console.log(`- Live Sessions scheduled for today and tomorrow`);
-    
+
     console.log("\n🚀 Ready for Testing:");
     console.log("1. npm run dev");
     console.log("2. Visit http://localhost:3000");
     console.log("3. Login with any of the credentials above");
     console.log("4. Test the interactive features in Manager Dashboard!");
-    
   } catch (error) {
     console.error("❌ Error seeding database:", error);
     throw error;
