@@ -109,7 +109,7 @@ export default function CEODashboard() {
 
     if (session?.user?.role === "ceo") {
       fetchAnalytics();
-      
+
       // Set up auto-refresh every 5 minutes
       const interval = setInterval(fetchAnalytics, 5 * 60 * 1000);
       return () => clearInterval(interval);
@@ -154,7 +154,7 @@ export default function CEODashboard() {
       change: `+${analytics.userStatistics.studentGrowth}%`,
       trend: analytics.userStatistics.studentGrowth >= 0 ? "up" : "down",
       period: "هذا الشهر",
-      icon: <Users className="w-8 h-8" />,
+      icon: <Users className='w-8 h-8' />,
       color: "blue" as const,
     },
     {
@@ -163,7 +163,7 @@ export default function CEODashboard() {
       change: `+${analytics.userStatistics.studentsThisMonth}`,
       trend: "up" as const,
       period: "جديد هذا الشهر",
-      icon: <BookOpen className="w-8 h-8" />,
+      icon: <BookOpen className='w-8 h-8' />,
       color: "green" as const,
     },
     {
@@ -172,7 +172,7 @@ export default function CEODashboard() {
       change: `${analytics.academicStatistics.totalTracks} إجمالي`,
       trend: "up" as const,
       period: "متاح حالياً",
-      icon: <Target className="w-8 h-8" />,
+      icon: <Target className='w-8 h-8' />,
       color: "purple" as const,
     },
     {
@@ -181,7 +181,7 @@ export default function CEODashboard() {
       change: `${analytics.sessionStatistics.presentAttendance}/${analytics.sessionStatistics.totalAttendance}`,
       trend: analytics.sessionStatistics.attendanceRate >= 80 ? "up" : "down",
       period: "إجمالي",
-      icon: <CheckCircle className="w-8 h-8" />,
+      icon: <CheckCircle className='w-8 h-8' />,
       color: "indigo" as const,
     },
   ];
@@ -201,19 +201,28 @@ export default function CEODashboard() {
           <div className='flex items-center space-x-4 space-x-reverse'>
             <div className='flex items-center'>
               <div className='w-3 h-3 bg-green-500 rounded-full ml-2 animate-pulse'></div>
-              <span className='text-sm text-gray-600'>النظام يعمل بشكل طبيعي</span>
+              <span className='text-sm text-gray-600'>
+                النظام يعمل بشكل طبيعي
+              </span>
             </div>
             <div className='flex items-center'>
               <Activity className='w-4 h-4 text-blue-500 ml-2' />
-              <span className='text-sm text-gray-600'>صحة النظام: {analytics.systemHealth.score}%</span>
+              <span className='text-sm text-gray-600'>
+                صحة النظام: {analytics.systemHealth.score}%
+              </span>
             </div>
             <div className='flex items-center'>
               <Database className='w-4 h-4 text-green-500 ml-2' />
-              <span className='text-sm text-gray-600'>قاعدة البيانات متصلة</span>
+              <span className='text-sm text-gray-600'>
+                قاعدة البيانات متصلة
+              </span>
             </div>
           </div>
           <div className='text-xs text-gray-500'>
-            آخر تحديث: {new Date(analytics.realtimeMetrics.lastUpdated).toLocaleTimeString('ar-SA')}
+            آخر تحديث:{" "}
+            {new Date(analytics.realtimeMetrics.lastUpdated).toLocaleTimeString(
+              "ar-SA"
+            )}
           </div>
         </div>
       </div>
@@ -224,9 +233,10 @@ export default function CEODashboard() {
           <div key={index} className='bg-white rounded-lg shadow p-6'>
             <div className='flex items-center justify-between mb-2'>
               <p className='text-sm font-medium text-gray-600'>{kpi.title}</p>
-              <div className={`flex items-center text-sm ${
-                kpi.trend === "up" ? "text-green-600" : "text-red-600"
-              }`}>
+              <div
+                className={`flex items-center text-sm ${
+                  kpi.trend === "up" ? "text-green-600" : "text-red-600"
+                }`}>
                 {kpi.trend === "up" ? (
                   <ArrowUp className='w-4 h-4' />
                 ) : (
@@ -237,12 +247,12 @@ export default function CEODashboard() {
             </div>
             <div className='flex items-center'>
               <div className='flex-1'>
-                <p className='text-2xl font-bold text-gray-900 mb-1'>{kpi.value}</p>
+                <p className='text-2xl font-bold text-gray-900 mb-1'>
+                  {kpi.value}
+                </p>
                 <p className='text-xs text-gray-500'>{kpi.period}</p>
               </div>
-              <div className={`text-${kpi.color}-600`}>
-                {kpi.icon}
-              </div>
+              <div className={`text-${kpi.color}-600`}>{kpi.icon}</div>
             </div>
           </div>
         ))}
@@ -255,46 +265,70 @@ export default function CEODashboard() {
           <div className='space-y-4'>
             <div className='flex items-center justify-between p-4 bg-gray-50 rounded-lg'>
               <div className='flex items-center'>
-                <div className={`w-3 h-3 rounded-full ml-3 ${
-                  analytics.systemHealth.indicators.activeGrades >= 80 ? 'bg-green-500' : 
-                  analytics.systemHealth.indicators.activeGrades >= 60 ? 'bg-yellow-500' : 'bg-red-500'
-                }`}></div>
+                <div
+                  className={`w-3 h-3 rounded-full ml-3 ${
+                    analytics.systemHealth.indicators.activeGrades >= 80
+                      ? "bg-green-500"
+                      : analytics.systemHealth.indicators.activeGrades >= 60
+                      ? "bg-yellow-500"
+                      : "bg-red-500"
+                  }`}></div>
                 <span className='font-medium'>المستويات النشطة</span>
               </div>
-              <span className='text-lg font-bold'>{analytics.systemHealth.indicators.activeGrades}%</span>
+              <span className='text-lg font-bold'>
+                {analytics.systemHealth.indicators.activeGrades}%
+              </span>
             </div>
-            
+
             <div className='flex items-center justify-between p-4 bg-gray-50 rounded-lg'>
               <div className='flex items-center'>
-                <div className={`w-3 h-3 rounded-full ml-3 ${
-                  analytics.systemHealth.indicators.activeTracks >= 80 ? 'bg-green-500' : 
-                  analytics.systemHealth.indicators.activeTracks >= 60 ? 'bg-yellow-500' : 'bg-red-500'
-                }`}></div>
+                <div
+                  className={`w-3 h-3 rounded-full ml-3 ${
+                    analytics.systemHealth.indicators.activeTracks >= 80
+                      ? "bg-green-500"
+                      : analytics.systemHealth.indicators.activeTracks >= 60
+                      ? "bg-yellow-500"
+                      : "bg-red-500"
+                  }`}></div>
                 <span className='font-medium'>المسارات النشطة</span>
               </div>
-              <span className='text-lg font-bold'>{analytics.systemHealth.indicators.activeTracks}%</span>
+              <span className='text-lg font-bold'>
+                {analytics.systemHealth.indicators.activeTracks}%
+              </span>
             </div>
 
             <div className='flex items-center justify-between p-4 bg-gray-50 rounded-lg'>
               <div className='flex items-center'>
-                <div className={`w-3 h-3 rounded-full ml-3 ${
-                  analytics.systemHealth.indicators.assignedStudents >= 80 ? 'bg-green-500' : 
-                  analytics.systemHealth.indicators.assignedStudents >= 60 ? 'bg-yellow-500' : 'bg-red-500'
-                }`}></div>
+                <div
+                  className={`w-3 h-3 rounded-full ml-3 ${
+                    analytics.systemHealth.indicators.assignedStudents >= 80
+                      ? "bg-green-500"
+                      : analytics.systemHealth.indicators.assignedStudents >= 60
+                      ? "bg-yellow-500"
+                      : "bg-red-500"
+                  }`}></div>
                 <span className='font-medium'>الطلاب المعينين</span>
               </div>
-              <span className='text-lg font-bold'>{analytics.systemHealth.indicators.assignedStudents}%</span>
+              <span className='text-lg font-bold'>
+                {analytics.systemHealth.indicators.assignedStudents}%
+              </span>
             </div>
 
             <div className='flex items-center justify-between p-4 bg-gray-50 rounded-lg'>
               <div className='flex items-center'>
-                <div className={`w-3 h-3 rounded-full ml-3 ${
-                  analytics.systemHealth.indicators.attendanceRate >= 80 ? 'bg-green-500' : 
-                  analytics.systemHealth.indicators.attendanceRate >= 60 ? 'bg-yellow-500' : 'bg-red-500'
-                }`}></div>
+                <div
+                  className={`w-3 h-3 rounded-full ml-3 ${
+                    analytics.systemHealth.indicators.attendanceRate >= 80
+                      ? "bg-green-500"
+                      : analytics.systemHealth.indicators.attendanceRate >= 60
+                      ? "bg-yellow-500"
+                      : "bg-red-500"
+                  }`}></div>
                 <span className='font-medium'>معدل الحضور</span>
               </div>
-              <span className='text-lg font-bold'>{analytics.systemHealth.indicators.attendanceRate}%</span>
+              <span className='text-lg font-bold'>
+                {analytics.systemHealth.indicators.attendanceRate}%
+              </span>
             </div>
           </div>
         </QuickActionCard>
@@ -302,26 +336,39 @@ export default function CEODashboard() {
         {/* Academic Distribution */}
         <QuickActionCard title='توزيع الطلاب حسب المستوى'>
           <div className='space-y-4'>
-            {analytics.academicStatistics.studentsByGrade.map((grade, index) => (
-              <div key={index} className='flex items-center justify-between p-4 border border-gray-200 rounded-lg'>
-                <div className='flex items-center'>
-                  <div className={`w-3 h-3 rounded-full ml-3 ${grade.isActive ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-                  <span className='font-medium'>{grade.name}</span>
+            {analytics.academicStatistics.studentsByGrade.map(
+              (grade, index) => (
+                <div
+                  key={index}
+                  className='flex items-center justify-between p-4 border border-gray-200 rounded-lg'>
+                  <div className='flex items-center'>
+                    <div
+                      className={`w-3 h-3 rounded-full ml-3 ${
+                        grade.isActive ? "bg-green-500" : "bg-gray-400"
+                      }`}></div>
+                    <span className='font-medium'>{grade.name}</span>
+                  </div>
+                  <div className='text-left'>
+                    <span className='text-lg font-bold text-gray-900'>
+                      {grade.studentCount}
+                    </span>
+                    <span className='text-sm text-gray-500 mr-2'>طالب</span>
+                  </div>
                 </div>
-                <div className='text-left'>
-                  <span className='text-lg font-bold text-gray-900'>{grade.studentCount}</span>
-                  <span className='text-sm text-gray-500 mr-2'>طالب</span>
-                </div>
-              </div>
-            ))}
-            
+              )
+            )}
+
             {analytics.userStatistics.unassignedStudents > 0 && (
               <div className='flex items-center justify-between p-4 bg-yellow-50 border border-yellow-200 rounded-lg'>
                 <div className='flex items-center'>
                   <AlertTriangle className='w-4 h-4 text-yellow-600 ml-2' />
-                  <span className='font-medium text-yellow-800'>غير معينين</span>
+                  <span className='font-medium text-yellow-800'>
+                    غير معينين
+                  </span>
                 </div>
-                <span className='text-lg font-bold text-yellow-800'>{analytics.userStatistics.unassignedStudents}</span>
+                <span className='text-lg font-bold text-yellow-800'>
+                  {analytics.userStatistics.unassignedStudents}
+                </span>
               </div>
             )}
           </div>
@@ -332,13 +379,18 @@ export default function CEODashboard() {
       <QuickActionCard title='أداء المسارات'>
         <div className='space-y-4'>
           {analytics.trackPerformance.slice(0, 6).map((track) => (
-            <div key={track.id} className='p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow'>
+            <div
+              key={track.id}
+              className='p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow'>
               <div className='flex items-center justify-between mb-3'>
                 <h4 className='font-medium text-gray-900'>{track.name}</h4>
-                <span className={`px-2 py-1 text-xs rounded-full ${
-                  track.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                }`}>
-                  {track.isActive ? 'نشط' : 'غير نشط'}
+                <span
+                  className={`px-2 py-1 text-xs rounded-full ${
+                    track.isActive
+                      ? "bg-green-100 text-green-800"
+                      : "bg-gray-100 text-gray-800"
+                  }`}>
+                  {track.isActive ? "نشط" : "غير نشط"}
                 </span>
               </div>
               <div className='grid grid-cols-3 gap-4 text-sm'>
@@ -367,7 +419,9 @@ export default function CEODashboard() {
             <p className='text-sm font-medium text-gray-600'>جلسات اليوم</p>
             <Calendar className='w-5 h-5 text-blue-600' />
           </div>
-          <p className='text-2xl font-bold text-gray-900 mb-1'>{analytics.sessionStatistics.todaySessions}</p>
+          <p className='text-2xl font-bold text-gray-900 mb-1'>
+            {analytics.sessionStatistics.todaySessions}
+          </p>
           <p className='text-xs text-gray-500'>جلسة مجدولة</p>
         </div>
 
@@ -376,16 +430,22 @@ export default function CEODashboard() {
             <p className='text-sm font-medium text-gray-600'>الجلسات القادمة</p>
             <ArrowUp className='w-5 h-5 text-green-600' />
           </div>
-          <p className='text-2xl font-bold text-gray-900 mb-1'>{analytics.sessionStatistics.upcomingSessions}</p>
+          <p className='text-2xl font-bold text-gray-900 mb-1'>
+            {analytics.sessionStatistics.upcomingSessions}
+          </p>
           <p className='text-xs text-gray-500'>في المستقبل</p>
         </div>
 
         <div className='bg-white rounded-lg shadow p-6'>
           <div className='flex items-center justify-between mb-2'>
-            <p className='text-sm font-medium text-gray-600'>الجلسات المكتملة</p>
+            <p className='text-sm font-medium text-gray-600'>
+              الجلسات المكتملة
+            </p>
             <CheckCircle className='w-5 h-5 text-purple-600' />
           </div>
-          <p className='text-2xl font-bold text-gray-900 mb-1'>{analytics.sessionStatistics.completedSessions}</p>
+          <p className='text-2xl font-bold text-gray-900 mb-1'>
+            {analytics.sessionStatistics.completedSessions}
+          </p>
           <p className='text-xs text-gray-500'>تم إنجازها</p>
         </div>
 
@@ -394,7 +454,9 @@ export default function CEODashboard() {
             <p className='text-sm font-medium text-gray-600'>إجمالي الجلسات</p>
             <BarChart3 className='w-5 h-5 text-indigo-600' />
           </div>
-          <p className='text-2xl font-bold text-gray-900 mb-1'>{analytics.sessionStatistics.totalSessions}</p>
+          <p className='text-2xl font-bold text-gray-900 mb-1'>
+            {analytics.sessionStatistics.totalSessions}
+          </p>
           <p className='text-xs text-gray-500'>في النظام</p>
         </div>
       </div>

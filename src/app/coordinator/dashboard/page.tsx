@@ -8,6 +8,10 @@ import {
   StatCard,
   QuickActionCard,
 } from "@/app/components/dashboard/DashboardComponents";
+import TrackModal from "@/app/components/coordinator/TrackModal";
+import SessionSchedulingModal from "@/app/components/coordinator/SessionSchedulingModal";
+import InstructorManagementModal from "@/app/components/coordinator/InstructorManagementModal";
+import AttendanceReportsModal from "@/app/components/coordinator/AttendanceReportsModal";
 import {
   UserCheck,
   BookOpen,
@@ -78,53 +82,70 @@ export default function CoordinatorDashboard() {
   const [upcomingSessions, setUpcomingSessions] = useState<LiveSession[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Modal states
+  const [modals, setModals] = useState({
+    trackModal: false,
+    sessionModal: false,
+    instructorModal: false,
+    reportsModal: false,
+  });
+
+  const openModal = (modalName: keyof typeof modals) => {
+    setModals((prev) => ({ ...prev, [modalName]: true }));
+  };
+
+  const closeModal = (modalName: keyof typeof modals) => {
+    setModals((prev) => ({ ...prev, [modalName]: false }));
+  };
+
+  const handleModalSuccess = async () => {
+    // Refresh data when modal operations succeed
+    await fetchData();
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-
-        // Fetch tracks
-        const tracksResponse = await fetch("/api/tracks");
-        if (tracksResponse.ok) {
-          const tracksData = await tracksResponse.json();
-          setTracks(tracksData);
-        }
-
-        // Fetch today's sessions
-        const today = new Date().toISOString().split("T")[0];
-        const todaySessionsResponse = await fetch(
-          `/api/sessions?date=${today}`
-        );
-        if (todaySessionsResponse.ok) {
-          const todaySessionsData = await todaySessionsResponse.json();
-          setTodaySessions(todaySessionsData);
-        }
-
-        // Fetch upcoming sessions (next 7 days)
-        const nextWeek = new Date();
-        nextWeek.setDate(nextWeek.getDate() + 7);
-        const upcomingResponse = await fetch(
-          `/api/sessions?startDate=${today}&endDate=${
-            nextWeek.toISOString().split("T")[0]
-          }`
-        );
-        if (upcomingResponse.ok) {
-          const upcomingData = await upcomingResponse.json();
-          setUpcomingSessions(
-            upcomingData.filter(
-              (session: LiveSession) => session.date !== today
-            )
-          );
-        }
-      } catch (error) {
-        console.error("Error fetching coordinator data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+
+      // Fetch tracks
+      const tracksResponse = await fetch("/api/tracks");
+      if (tracksResponse.ok) {
+        const tracksData = await tracksResponse.json();
+        setTracks(tracksData);
+      }
+
+      // Fetch today's sessions
+      const today = new Date().toISOString().split("T")[0];
+      const todaySessionsResponse = await fetch(`/api/sessions?date=${today}`);
+      if (todaySessionsResponse.ok) {
+        const todaySessionsData = await todaySessionsResponse.json();
+        setTodaySessions(todaySessionsData);
+      }
+
+      // Fetch upcoming sessions (next 7 days)
+      const nextWeek = new Date();
+      nextWeek.setDate(nextWeek.getDate() + 7);
+      const upcomingResponse = await fetch(
+        `/api/sessions?startDate=${today}&endDate=${
+          nextWeek.toISOString().split("T")[0]
+        }`
+      );
+      if (upcomingResponse.ok) {
+        const upcomingData = await upcomingResponse.json();
+        setUpcomingSessions(
+          upcomingData.filter((session: LiveSession) => session.date !== today)
+        );
+      }
+    } catch (error) {
+      console.error("Error fetching coordinator data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const totalSessions = tracks.reduce(
     (sum, track) => sum + track._count.liveSessions,
@@ -389,23 +410,54 @@ export default function CoordinatorDashboard() {
 
       {/* Quick Actions */}
       <div className='grid grid-cols-1 md:grid-cols-4 gap-6 mt-8'>
-        <button className='flex items-center justify-center p-6 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl'>
+        <button
+          onClick={() => openModal("trackModal")}
+          className='flex items-center justify-center p-6 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl'>
           <Plus className='w-6 h-6 ml-2' />
           إنشاء مسار جديد
         </button>
-        <button className='flex items-center justify-center p-6 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-lg hover:shadow-xl'>
+        <button
+          onClick={() => openModal("sessionModal")}
+          className='flex items-center justify-center p-6 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-lg hover:shadow-xl'>
           <Calendar className='w-6 h-6 ml-2' />
           جدولة جلسة
         </button>
-        <button className='flex items-center justify-center p-6 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-lg hover:shadow-xl'>
+        <button
+          onClick={() => openModal("reportsModal")}
+          className='flex items-center justify-center p-6 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-lg hover:shadow-xl'>
           <BarChart3 className='w-6 h-6 ml-2' />
           تقارير الحضور
         </button>
-        <button className='flex items-center justify-center p-6 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-lg hover:shadow-xl'>
+        <button
+          onClick={() => openModal("instructorModal")}
+          className='flex items-center justify-center p-6 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-lg hover:shadow-xl'>
           <UserCheck className='w-6 h-6 ml-2' />
           إدارة المعلمين
         </button>
       </div>
+
+      {/* Modals */}
+      <TrackModal
+        isOpen={modals.trackModal}
+        onClose={() => closeModal("trackModal")}
+        onSuccess={handleModalSuccess}
+      />
+
+      <SessionSchedulingModal
+        isOpen={modals.sessionModal}
+        onClose={() => closeModal("sessionModal")}
+        onSuccess={handleModalSuccess}
+      />
+
+      <InstructorManagementModal
+        isOpen={modals.instructorModal}
+        onClose={() => closeModal("instructorModal")}
+      />
+
+      <AttendanceReportsModal
+        isOpen={modals.reportsModal}
+        onClose={() => closeModal("reportsModal")}
+      />
     </DashboardLayout>
   );
 }

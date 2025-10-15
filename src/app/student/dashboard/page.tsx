@@ -8,6 +8,12 @@ import {
   StatCard,
   QuickActionCard,
 } from "@/app/components/dashboard/DashboardComponents";
+import SessionsModal from "@/app/components/student/SessionsModal";
+import ProgressModal from "@/app/components/student/ProgressModal";
+import WeeklyScheduleModal from "@/app/components/student/WeeklyScheduleModal";
+import AchievementsModal from "@/app/components/student/AchievementsModal";
+import AttendanceModal from "@/app/components/student/AttendanceModal";
+import AssessmentsModal from "@/app/components/student/AssessmentsModal";
 import {
   BookOpen,
   Users,
@@ -96,6 +102,18 @@ export default function StudentDashboard() {
     AttendanceRecord[]
   >([]);
   const [loading, setLoading] = useState(true);
+
+  // Modal states
+  const [sessionsModalOpen, setSessionsModalOpen] = useState(false);
+  const [progressModalOpen, setProgressModalOpen] = useState(false);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [achievementsModalOpen, setAchievementsModalOpen] = useState(false);
+  const [attendanceModalOpen, setAttendanceModalOpen] = useState(false);
+  const [assessmentsModalOpen, setAssessmentsModalOpen] = useState(false);
+
+  // Selected track for sessions modal
+  const [selectedTrackId, setSelectedTrackId] = useState<string>("");
+  const [selectedTrackName, setSelectedTrackName] = useState<string>("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -380,7 +398,15 @@ export default function StudentDashboard() {
 
             {upcomingSessions && upcomingSessions.length > 5 && (
               <div className='text-center py-4'>
-                <button className='text-blue-600 hover:text-blue-800 font-medium'>
+                <button
+                  onClick={() => {
+                    if (studentData?.grade?.tracks?.[0]) {
+                      setSelectedTrackId(studentData.grade.tracks[0].id);
+                      setSelectedTrackName(studentData.grade.tracks[0].name);
+                      setSessionsModalOpen(true);
+                    }
+                  }}
+                  className='text-blue-600 hover:text-blue-800 font-medium'>
                   عرض جميع الجلسات القادمة ({upcomingSessions.length})
                 </button>
               </div>
@@ -447,7 +473,9 @@ export default function StudentDashboard() {
 
             {attendanceHistory && attendanceHistory.length > 5 && (
               <div className='text-center py-4'>
-                <button className='text-blue-600 hover:text-blue-800 font-medium'>
+                <button
+                  onClick={() => setAttendanceModalOpen(true)}
+                  className='text-blue-600 hover:text-blue-800 font-medium'>
                   عرض سجل الحضور الكامل ({attendanceHistory.length})
                 </button>
               </div>
@@ -458,23 +486,109 @@ export default function StudentDashboard() {
 
       {/* Quick Actions */}
       <div className='grid grid-cols-1 md:grid-cols-4 gap-6 mt-8'>
-        <button className='flex items-center justify-center p-6 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl'>
+        <button
+          onClick={() => setScheduleModalOpen(true)}
+          className='flex items-center justify-center p-6 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl'>
           <Calendar className='w-6 h-6 ml-2' />
           جدولي الأسبوعي
         </button>
-        <button className='flex items-center justify-center p-6 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-lg hover:shadow-xl'>
+        <button
+          onClick={() => setAchievementsModalOpen(true)}
+          className='flex items-center justify-center p-6 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-lg hover:shadow-xl'>
           <Trophy className='w-6 h-6 ml-2' />
           إنجازاتي
         </button>
-        <button className='flex items-center justify-center p-6 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-lg hover:shadow-xl'>
+        <button
+          onClick={() => setProgressModalOpen(true)}
+          className='flex items-center justify-center p-6 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-lg hover:shadow-xl'>
           <BarChart3 className='w-6 h-6 ml-2' />
           تقدمي
         </button>
-        <button className='flex items-center justify-center p-6 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-lg hover:shadow-xl'>
+        <button
+          onClick={() => setAssessmentsModalOpen(true)}
+          className='flex items-center justify-center p-6 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-lg hover:shadow-xl'>
           <Star className='w-6 h-6 ml-2' />
           التقييمات
         </button>
       </div>
+
+      {/* Additional Quick Actions */}
+      <div className='grid grid-cols-1 md:grid-cols-3 gap-6 mt-6'>
+        <button
+          onClick={() => setAttendanceModalOpen(true)}
+          className='flex items-center justify-center p-4 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors shadow-lg hover:shadow-xl'>
+          <UserCheck className='w-5 h-5 ml-2' />
+          سجل الحضور المفصل
+        </button>
+        <button
+          onClick={() => {
+            if (studentData?.grade?.tracks?.[0]) {
+              setSelectedTrackId(studentData.grade.tracks[0].id);
+              setSelectedTrackName(studentData.grade.tracks[0].name);
+              setSessionsModalOpen(true);
+            }
+          }}
+          className='flex items-center justify-center p-4 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors shadow-lg hover:shadow-xl'>
+          <Eye className='w-5 h-5 ml-2' />
+          جلسات المسار
+        </button>
+        <button
+          onClick={() => setProgressModalOpen(true)}
+          className='flex items-center justify-center p-4 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors shadow-lg hover:shadow-xl'>
+          <TrendingUp className='w-5 h-5 ml-2' />
+          تحليل الأداء
+        </button>
+      </div>
+
+      {/* Modal Components */}
+      {sessionsModalOpen && (
+        <SessionsModal
+          isOpen={sessionsModalOpen}
+          onClose={() => setSessionsModalOpen(false)}
+          trackId={selectedTrackId}
+          trackName={selectedTrackName}
+        />
+      )}
+
+      {progressModalOpen && (
+        <ProgressModal
+          isOpen={progressModalOpen}
+          onClose={() => setProgressModalOpen(false)}
+          studentId={session?.user?.id || ""}
+        />
+      )}
+
+      {scheduleModalOpen && (
+        <WeeklyScheduleModal
+          isOpen={scheduleModalOpen}
+          onClose={() => setScheduleModalOpen(false)}
+          studentId={session?.user?.id || ""}
+        />
+      )}
+
+      {achievementsModalOpen && (
+        <AchievementsModal
+          isOpen={achievementsModalOpen}
+          onClose={() => setAchievementsModalOpen(false)}
+          studentId={session?.user?.id || ""}
+        />
+      )}
+
+      {attendanceModalOpen && (
+        <AttendanceModal
+          isOpen={attendanceModalOpen}
+          onClose={() => setAttendanceModalOpen(false)}
+          studentId={session?.user?.id || ""}
+        />
+      )}
+
+      {assessmentsModalOpen && (
+        <AssessmentsModal
+          isOpen={assessmentsModalOpen}
+          onClose={() => setAssessmentsModalOpen(false)}
+          studentId={session?.user?.id || ""}
+        />
+      )}
     </DashboardLayout>
   );
 }

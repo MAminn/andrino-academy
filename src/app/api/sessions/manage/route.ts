@@ -21,10 +21,25 @@ export async function POST(request: NextRequest) {
     const { action, sessionData } = body;
 
     if (action === "create") {
-      const { title, description, date, startTime, endTime, trackId, instructorId } = sessionData;
+      const {
+        title,
+        description,
+        date,
+        startTime,
+        endTime,
+        trackId,
+        instructorId,
+      } = sessionData;
 
       // Validate required fields
-      if (!title || !date || !startTime || !endTime || !trackId || !instructorId) {
+      if (
+        !title ||
+        !date ||
+        !startTime ||
+        !endTime ||
+        !trackId ||
+        !instructorId
+      ) {
         return NextResponse.json(
           { error: "Missing required fields" },
           { status: 400 }
@@ -47,7 +62,10 @@ export async function POST(request: NextRequest) {
       });
 
       if (!instructor) {
-        return NextResponse.json({ error: "Instructor not found" }, { status: 404 });
+        return NextResponse.json(
+          { error: "Instructor not found" },
+          { status: 404 }
+        );
       }
 
       // Check for scheduling conflicts
@@ -60,22 +78,22 @@ export async function POST(request: NextRequest) {
             {
               AND: [
                 { startTime: { lte: startTime } },
-                { endTime: { gt: startTime } }
-              ]
+                { endTime: { gt: startTime } },
+              ],
             },
             {
               AND: [
                 { startTime: { lt: endTime } },
-                { endTime: { gte: endTime } }
-              ]
+                { endTime: { gte: endTime } },
+              ],
             },
             {
               AND: [
                 { startTime: { gte: startTime } },
-                { endTime: { lte: endTime } }
-              ]
-            }
-          ]
+                { endTime: { lte: endTime } },
+              ],
+            },
+          ],
         },
       });
 
@@ -108,11 +126,13 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      return NextResponse.json({ 
-        session: newSession,
-        message: "Session created successfully"
-      }, { status: 201 });
-
+      return NextResponse.json(
+        {
+          session: newSession,
+          message: "Session created successfully",
+        },
+        { status: 201 }
+      );
     } else if (action === "update") {
       const { sessionId, ...updateData } = sessionData;
 
@@ -129,7 +149,10 @@ export async function POST(request: NextRequest) {
       });
 
       if (!existingSession) {
-        return NextResponse.json({ error: "Session not found" }, { status: 404 });
+        return NextResponse.json(
+          { error: "Session not found" },
+          { status: 404 }
+        );
       }
 
       // Update the session
@@ -148,16 +171,14 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         session: updatedSession,
-        message: "Session updated successfully"
+        message: "Session updated successfully",
       });
-
     } else {
       return NextResponse.json(
         { error: "Invalid action. Use 'create' or 'update'" },
         { status: 400 }
       );
     }
-
   } catch (error) {
     console.error("Error managing session:", error);
     return NextResponse.json(
@@ -202,8 +223,10 @@ export async function DELETE(request: NextRequest) {
 
     // Check if session has already started
     const now = new Date();
-    const sessionDateTime = new Date(`${existingSession.date}T${existingSession.startTime}`);
-    
+    const sessionDateTime = new Date(
+      `${existingSession.date}T${existingSession.startTime}`
+    );
+
     if (sessionDateTime <= now && existingSession.status === "active") {
       return NextResponse.json(
         { error: "Cannot delete an active session" },
@@ -222,9 +245,8 @@ export async function DELETE(request: NextRequest) {
     });
 
     return NextResponse.json({
-      message: "Session deleted successfully"
+      message: "Session deleted successfully",
     });
-
   } catch (error) {
     console.error("Error deleting session:", error);
     return NextResponse.json(

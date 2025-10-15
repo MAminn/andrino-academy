@@ -456,8 +456,8 @@ model LiveSession {
   date         DateTime
   startTime    String   // Format: "HH:mm" (e.g., "14:30")
   endTime      String   // Format: "HH:mm" (e.g., "16:00")
-  meetLink     String?  // Google Meet or external link
-  status       String   @default("scheduled") // scheduled, in_progress, completed, cancelled
+  externalLink String?  // External meeting URL (Zoom, Google Meet, Teams, etc.)
+  status       SessionStatus @default(DRAFT) // DRAFT, SCHEDULED, READY, ACTIVE, COMPLETED, CANCELLED
   materials    String?  // JSON string for session materials/links
   notes        String?  // Instructor notes
   createdAt    DateTime @default(now())
@@ -495,4 +495,15 @@ model SessionAttendance {
   @@index([studentId])
   @@index([status])
   @@map("SessionAttendance")
+}
+
+// Session Status Enum for External Coordination Platform
+enum SessionStatus {
+  DRAFT      // Session created without external link
+  SCHEDULED  // Session scheduled with date/time but no external link
+  READY      // Session has external link and is ready to start
+  ACTIVE     // Session is currently in progress (external link active)
+  PAUSED     // Session temporarily paused
+  COMPLETED  // Session finished successfully
+  CANCELLED  // Session was cancelled
 }

@@ -56,10 +56,7 @@ export async function GET() {
           },
         },
       },
-      orderBy: [
-        { grade: { order: "asc" } },
-        { name: "asc" },
-      ],
+      orderBy: [{ grade: { order: "asc" } }, { name: "asc" }],
     });
 
     // Get today's sessions with detailed info
@@ -103,10 +100,7 @@ export async function GET() {
           select: { attendances: true },
         },
       },
-      orderBy: [
-        { date: "asc" },
-        { startTime: "asc" },
-      ],
+      orderBy: [{ date: "asc" }, { startTime: "asc" }],
     });
 
     // Get instructor workload analysis
@@ -136,11 +130,13 @@ export async function GET() {
     });
 
     // Calculate instructor workload
-    const instructorWorkload = instructors.map(instructor => {
+    const instructorWorkload = instructors.map((instructor) => {
       const totalTracks = instructor.instructedTracks.length;
       const totalUpcomingSessions = instructor.instructedSessions.length;
-      const activeSessions = instructor.instructedSessions.filter(s => s.status === "active").length;
-      
+      const activeSessions = instructor.instructedSessions.filter(
+        (s) => s.status === "active"
+      ).length;
+
       return {
         id: instructor.id,
         name: instructor.name,
@@ -148,37 +144,52 @@ export async function GET() {
         totalTracks,
         totalUpcomingSessions,
         activeSessions,
-        workloadScore: Math.min(100, (totalUpcomingSessions * 10) + (totalTracks * 5)),
+        workloadScore: Math.min(
+          100,
+          totalUpcomingSessions * 10 + totalTracks * 5
+        ),
       };
     });
 
     // Get session status distribution
     const sessionStats = {
       total: await prisma.liveSession.count(),
-      scheduled: await prisma.liveSession.count({ where: { status: "scheduled" } }),
+      scheduled: await prisma.liveSession.count({
+        where: { status: "scheduled" },
+      }),
       active: await prisma.liveSession.count({ where: { status: "active" } }),
-      completed: await prisma.liveSession.count({ where: { status: "completed" } }),
-      cancelled: await prisma.liveSession.count({ where: { status: "cancelled" } }),
+      completed: await prisma.liveSession.count({
+        where: { status: "completed" },
+      }),
+      cancelled: await prisma.liveSession.count({
+        where: { status: "cancelled" },
+      }),
     };
 
     // Get attendance analytics
-    const attendanceStats = await prisma.sessionAttendance.groupBy({
-      by: ['status'],
-      _count: {
-        status: true,
-      },
-    }).catch(() => []);
+    const attendanceStats = await prisma.sessionAttendance
+      .groupBy({
+        by: ["status"],
+        _count: {
+          status: true,
+        },
+      })
+      .catch(() => []);
 
     const attendanceData = {
       total: attendanceStats.reduce((sum, stat) => sum + stat._count.status, 0),
-      present: attendanceStats.find(s => s.status === 'present')?._count.status || 0,
-      absent: attendanceStats.find(s => s.status === 'absent')?._count.status || 0,
-      late: attendanceStats.find(s => s.status === 'late')?._count.status || 0,
+      present:
+        attendanceStats.find((s) => s.status === "present")?._count.status || 0,
+      absent:
+        attendanceStats.find((s) => s.status === "absent")?._count.status || 0,
+      late:
+        attendanceStats.find((s) => s.status === "late")?._count.status || 0,
     };
 
-    const attendanceRate = attendanceData.total > 0 
-      ? Math.round((attendanceData.present / attendanceData.total) * 100)
-      : 0;
+    const attendanceRate =
+      attendanceData.total > 0
+        ? Math.round((attendanceData.present / attendanceData.total) * 100)
+        : 0;
 
     // Get grade distribution
     const gradeStats = await prisma.grade.findMany({
@@ -210,22 +221,27 @@ export async function GET() {
     const analytics = {
       trackStatistics: {
         total: tracks.length,
-        active: tracks.filter(t => t.isActive).length,
-        inactive: tracks.filter(t => !t.isActive).length,
-        byGrade: gradeStats.map(grade => ({
+        active: tracks.filter((t) => t.isActive).length,
+        inactive: tracks.filter((t) => !t.isActive).length,
+        byGrade: gradeStats.map((grade) => ({
           gradeId: grade.id,
           gradeName: grade.name,
           trackCount: grade._count.tracks,
           studentCount: grade._count.students,
-          totalSessions: grade.tracks.reduce((sum, track) => sum + track._count.liveSessions, 0),
+          totalSessions: grade.tracks.reduce(
+            (sum, track) => sum + track._count.liveSessions,
+            0
+          ),
         })),
       },
       sessionStatistics: {
         today: {
           total: todaySessions.length,
-          scheduled: todaySessions.filter(s => s.status === "scheduled").length,
-          active: todaySessions.filter(s => s.status === "active").length,
-          completed: todaySessions.filter(s => s.status === "completed").length,
+          scheduled: todaySessions.filter((s) => s.status === "scheduled")
+            .length,
+          active: todaySessions.filter((s) => s.status === "active").length,
+          completed: todaySessions.filter((s) => s.status === "completed")
+            .length,
           totalHours: totalScheduledHours,
         },
         upcoming: {
@@ -237,9 +253,15 @@ export async function GET() {
       instructorAnalytics: {
         total: instructors.length,
         workload: instructorWorkload,
-        averageWorkload: instructorWorkload.length > 0 
-          ? Math.round(instructorWorkload.reduce((sum, i) => sum + i.workloadScore, 0) / instructorWorkload.length)
-          : 0,
+        averageWorkload:
+          instructorWorkload.length > 0
+            ? Math.round(
+                instructorWorkload.reduce(
+                  (sum, i) => sum + i.workloadScore,
+                  0
+                ) / instructorWorkload.length
+              )
+            : 0,
       },
       attendanceAnalytics: {
         ...attendanceData,
@@ -248,7 +270,12 @@ export async function GET() {
       realtimeMetrics: {
         lastUpdated: now.toISOString(),
         activeSessions: sessionStats.active,
-        schedulingEfficiency: Math.min(100, Math.round((todaySessions.length / Math.max(instructors.length, 1)) * 100)),
+        schedulingEfficiency: Math.min(
+          100,
+          Math.round(
+            (todaySessions.length / Math.max(instructors.length, 1)) * 100
+          )
+        ),
       },
     };
 

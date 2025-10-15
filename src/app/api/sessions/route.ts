@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth-config";
 import { prisma } from "@/lib/prisma";
+import { SessionStatus } from "@/types/api";
 
 // GET /api/sessions - Get sessions (with optional filters)
 export async function GET(request: NextRequest) {
@@ -19,12 +20,14 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status");
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
+    const upcoming = searchParams.get("upcoming");
+    const today = searchParams.get("today");
 
     // Build where clause
     const whereClause: {
       trackId?: string | { in: string[] };
       instructorId?: string;
-      status?: string;
+      status?: SessionStatus;
       date?: { gte?: Date; lte?: Date };
     } = {};
 
@@ -37,7 +40,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (status) {
-      whereClause.status = status;
+      whereClause.status = status as SessionStatus;
     }
 
     // Date range filter
@@ -49,6 +52,30 @@ export async function GET(request: NextRequest) {
       if (endDate) {
         whereClause.date.lte = new Date(endDate);
       }
+    }
+
+    // Handle special date filters
+    if (upcoming === "true") {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+
+      whereClause.date = {
+        gte: tomorrow,
+      };
+    }
+
+    if (today === "true") {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+
+      whereClause.date = {
+        gte: todayStart,
+        lte: todayEnd,
+      };
     }
 
     // Role-based filtering
@@ -317,10 +344,10 @@ export async function POST(request: NextRequest) {
         date: sessionDate,
         startTime,
         endTime,
-        meetLink,
+        externalLink: meetLink,
         materials,
         notes,
-        status: "scheduled",
+        status: "SCHEDULED",
       },
       include: {
         track: {

@@ -2,20 +2,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth-config";
 import { prisma } from "@/lib/prisma";
+import {
+  createSuccessResponse,
+  ErrorResponses,
+  withDatabaseErrorHandling,
+} from "@/lib/api-response";
 
 // GET /api/tracks - Get tracks (with optional grade filter)
 export async function GET(request: NextRequest) {
-  try {
+  const result = await withDatabaseErrorHandling(async () => {
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return ErrorResponses.unauthorized();
     }
 
     // Only manager, coordinator, instructor, and CEO can view tracks
     const allowedRoles = ["manager", "coordinator", "instructor", "ceo"];
     if (!allowedRoles.includes(session.user.role)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return ErrorResponses.forbidden();
     }
 
     const { searchParams } = new URL(request.url);
@@ -71,14 +76,10 @@ export async function GET(request: NextRequest) {
       orderBy: [{ grade: { order: "asc" } }, { order: "asc" }],
     });
 
-    return NextResponse.json({ tracks });
-  } catch (error) {
-    console.error("Error fetching tracks:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
-  }
+    return createSuccessResponse(tracks, "تم استرداد المسارات بنجاح");
+  });
+
+  return result instanceof NextResponse ? result : result;
 }
 
 // POST /api/tracks - Create a new track (Manager only)
@@ -90,8 +91,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Only manager and CEO can create tracks
-    if (!["manager", "ceo"].includes(session.user.role)) {
+    // Only manager, coordinator, and CEO can create tracks
+    if (!["manager", "coordinator", "ceo"].includes(session.user.role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -121,7 +122,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!coordinatorId) {
+    // Auto-assign coordinator if not provided and current user is coordinator
+    let finalCoordinatorId = coordinatorId;
+    if (!finalCoordinatorId && session.user.role === "coordinator") {
+      finalCoordinatorId = session.user.id;
+    }
+
+    if (!finalCoordinatorId) {
       return NextResponse.json(
         { error: "Coordinator ID is required" },
         { status: 400 }
@@ -151,7 +158,7 @@ export async function POST(request: NextRequest) {
 
     // Verify coordinator exists and has coordinator role
     const coordinator = await prisma.user.findUnique({
-      where: { id: coordinatorId },
+      where: { id: finalCoordinatorId },
     });
 
     if (!coordinator || coordinator.role !== "coordinator") {
@@ -177,7 +184,7 @@ export async function POST(request: NextRequest) {
         description,
         gradeId,
         instructorId,
-        coordinatorId,
+        coordinatorId: finalCoordinatorId,
         order: trackOrder,
         isActive: true,
       },

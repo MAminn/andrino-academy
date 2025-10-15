@@ -2,6 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import DashboardLayout from "@/app/components/dashboard/DashboardLayout";
 import {
   WelcomeCard,
@@ -84,10 +85,28 @@ interface Track {
 
 export default function ManagerDashboard() {
   const { data: session } = useSession();
+  const router = useRouter();
   const [grades, setGrades] = useState<Grade[]>([]);
   const [unassignedStudents, setUnassignedStudents] = useState<Student[]>([]);
   const [recentTracks, setRecentTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Navigation functions
+  const navigateToGrades = () => {
+    router.push("/manager/grades");
+  };
+
+  const navigateToTracks = () => {
+    router.push("/manager/tracks");
+  };
+
+  const navigateToGradeDetails = (gradeId: string) => {
+    router.push(`/manager/grades?view=${gradeId}`);
+  };
+
+  const navigateToTrackDetails = (trackId: string) => {
+    router.push(`/manager/tracks?view=${trackId}`);
+  };
 
   // Modal states
   const [gradeModalOpen, setGradeModalOpen] = useState(false);
@@ -129,28 +148,35 @@ export default function ManagerDashboard() {
         const gradesResponse = await fetch("/api/grades");
         if (gradesResponse.ok) {
           const gradesData = await gradesResponse.json();
-          setGrades(gradesData.grades);
+          // Handle both response formats: { grades: [...] } and { data: [...] }
+          const grades = gradesData.grades || gradesData.data || [];
+          setGrades(grades);
         }
 
         // Fetch unassigned students
         const studentsResponse = await fetch("/api/students?unassigned=true");
         if (studentsResponse.ok) {
           const studentsData = await studentsResponse.json();
-          setUnassignedStudents(studentsData.students);
+          setUnassignedStudents(studentsData.students || []);
         }
 
         // Fetch recent tracks
         const tracksResponse = await fetch("/api/tracks");
         if (tracksResponse.ok) {
           const tracksData = await tracksResponse.json();
-          setRecentTracks(tracksData.tracks.slice(0, 5)); // Latest 5 tracks
+          // Handle both response formats: { tracks: [...] } and { data: [...] }
+          const tracks = tracksData.tracks || tracksData.data || [];
+          setRecentTracks(tracks.slice(0, 5)); // Latest 5 tracks
         }
 
         // Fetch instructors and coordinators for forms
         const usersResponse = await fetch("/api/students"); // This endpoint returns all users
         if (usersResponse.ok) {
           const usersData = await usersResponse.json();
-          const allUsers = usersData.students as User[]; // Note: This API returns all users, not just students
+          // Handle both response formats: { students: [...] } and { data: [...] }
+          const allUsers = (usersData.students ||
+            usersData.data ||
+            []) as User[]; // Note: This API returns all users, not just students
 
           setInstructors(
             allUsers
@@ -404,11 +430,7 @@ export default function ManagerDashboard() {
                   </div>
                   <div className='flex items-center space-x-2 space-x-reverse'>
                     <button
-                      onClick={() => {
-                        setSelectedGrade(grade);
-                        setGradeModalMode("edit");
-                        setGradeModalOpen(true);
-                      }}
+                      onClick={() => navigateToGradeDetails(grade.id)}
                       className='p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors'
                       title='عرض تفاصيل المستوى'>
                       <Eye className='w-4 h-4' />
@@ -439,16 +461,24 @@ export default function ManagerDashboard() {
                   </div>
                 </div>
               ))}
-              <button
-                onClick={() => {
-                  setGradeModalMode("create");
-                  setSelectedGrade(undefined);
-                  setGradeModalOpen(true);
-                }}
-                className='w-full flex items-center justify-center py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors'>
-                <Plus className='w-5 h-5 ml-2' />
-                إنشاء مستوى جديد
-              </button>
+              <div className='grid grid-cols-2 gap-2'>
+                <button
+                  onClick={() => {
+                    setGradeModalMode("create");
+                    setSelectedGrade(undefined);
+                    setGradeModalOpen(true);
+                  }}
+                  className='flex items-center justify-center py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors'>
+                  <Plus className='w-5 h-5 ml-2' />
+                  إنشاء مستوى
+                </button>
+                <button
+                  onClick={navigateToGrades}
+                  className='flex items-center justify-center py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors'>
+                  <Eye className='w-5 h-5 ml-2' />
+                  عرض الكل
+                </button>
+              </div>
             </div>
           )}
         </QuickActionCard>
@@ -525,9 +555,17 @@ export default function ManagerDashboard() {
                   className='p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow'>
                   <div className='flex items-center justify-between mb-2'>
                     <h4 className='font-medium text-gray-900'>{track.name}</h4>
-                    <span className='px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full'>
-                      {track.grade.name}
-                    </span>
+                    <div className='flex items-center gap-2'>
+                      <span className='px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full'>
+                        {track.grade.name}
+                      </span>
+                      <button
+                        onClick={() => navigateToTrackDetails(track.id)}
+                        className='p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors'
+                        title='عرض تفاصيل المسار'>
+                        <Eye className='w-4 h-4' />
+                      </button>
+                    </div>
                   </div>
                   <div className='text-sm text-gray-600 space-y-1'>
                     <div className='flex items-center justify-between'>
@@ -551,6 +589,24 @@ export default function ManagerDashboard() {
                   </div>
                 </div>
               ))}
+              <div className='grid grid-cols-2 gap-2 mt-4'>
+                <button
+                  onClick={() => {
+                    setTrackModalMode("create");
+                    setSelectedTrack(undefined);
+                    setTrackModalOpen(true);
+                  }}
+                  className='flex items-center justify-center py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-green-400 hover:text-green-600 transition-colors'>
+                  <Plus className='w-5 h-5 ml-2' />
+                  إنشاء مسار
+                </button>
+                <button
+                  onClick={navigateToTracks}
+                  className='flex items-center justify-center py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors'>
+                  <Eye className='w-5 h-5 ml-2' />
+                  عرض الكل
+                </button>
+              </div>
             </div>
           )}
         </QuickActionCard>

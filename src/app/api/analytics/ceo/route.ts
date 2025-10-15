@@ -59,56 +59,62 @@ export async function GET() {
     ]);
 
     // Calculate growth percentages
-    const studentGrowth = studentsLastMonth > 0 
-      ? Math.round(((studentsThisMonth - studentsLastMonth) / studentsLastMonth) * 100)
-      : studentsThisMonth > 0 ? 100 : 0;
+    const studentGrowth =
+      studentsLastMonth > 0
+        ? Math.round(
+            ((studentsThisMonth - studentsLastMonth) / studentsLastMonth) * 100
+          )
+        : studentsThisMonth > 0
+        ? 100
+        : 0;
 
     // Get grade and track statistics
-    const [
-      totalGrades,
-      activeGrades,
-      totalTracks,
-      activeTracks,
-    ] = await Promise.all([
-      prisma.grade.count(),
-      prisma.grade.count({ where: { isActive: true } }),
-      prisma.track.count(),
-      prisma.track.count({ where: { isActive: true } }),
-    ]);
+    const [totalGrades, activeGrades, totalTracks, activeTracks] =
+      await Promise.all([
+        prisma.grade.count(),
+        prisma.grade.count({ where: { isActive: true } }),
+        prisma.track.count(),
+        prisma.track.count({ where: { isActive: true } }),
+      ]);
 
     // Get session statistics
-    const [
-      totalSessions,
-      upcomingSessions,
-      todaySessions,
-      completedSessions,
-    ] = await Promise.all([
-      prisma.liveSession.count(),
-      prisma.liveSession.count({
-        where: { date: { gte: now } },
-      }),
-      prisma.liveSession.count({
-        where: {
-          date: {
-            gte: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
-            lt: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1),
+    const [totalSessions, upcomingSessions, todaySessions, completedSessions] =
+      await Promise.all([
+        prisma.liveSession.count(),
+        prisma.liveSession.count({
+          where: { date: { gte: now } },
+        }),
+        prisma.liveSession.count({
+          where: {
+            date: {
+              gte: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
+              lt: new Date(
+                now.getFullYear(),
+                now.getMonth(),
+                now.getDate() + 1
+              ),
+            },
           },
-        },
-      }),
-      prisma.liveSession.count({
-        where: { date: { lt: now } },
-      }),
-    ]);
+        }),
+        prisma.liveSession.count({
+          where: { date: { lt: now } },
+        }),
+      ]);
 
     // Get attendance statistics
-    const totalAttendance = await prisma.sessionAttendance.count().catch(() => 0);
-    const presentAttendance = await prisma.sessionAttendance.count({
-      where: { status: "present" },
-    }).catch(() => 0);
+    const totalAttendance = await prisma.sessionAttendance
+      .count()
+      .catch(() => 0);
+    const presentAttendance = await prisma.sessionAttendance
+      .count({
+        where: { status: "present" },
+      })
+      .catch(() => 0);
 
-    const attendanceRate = totalAttendance > 0 
-      ? Math.round((presentAttendance / totalAttendance) * 100)
-      : 0;
+    const attendanceRate =
+      totalAttendance > 0
+        ? Math.round((presentAttendance / totalAttendance) * 100)
+        : 0;
 
     // Get students by grade for distribution analysis
     const studentsByGrade = await prisma.grade.findMany({
@@ -152,7 +158,9 @@ export async function GET() {
     const healthScore = Math.round(
       ((activeGrades / Math.max(totalGrades, 1)) * 0.3 +
         (activeTracks / Math.max(totalTracks, 1)) * 0.3 +
-        ((totalStudents - unassignedStudents) / Math.max(totalStudents, 1)) * 0.4) * 100
+        ((totalStudents - unassignedStudents) / Math.max(totalStudents, 1)) *
+          0.4) *
+        100
     );
 
     const analytics = {
@@ -174,7 +182,7 @@ export async function GET() {
         totalTracks,
         activeTracks,
         inactiveTracks,
-        studentsByGrade: studentsByGrade.map(grade => ({
+        studentsByGrade: studentsByGrade.map((grade) => ({
           name: grade.name,
           studentCount: grade._count.students,
           isActive: grade.isActive,
@@ -189,7 +197,7 @@ export async function GET() {
         totalAttendance,
         presentAttendance,
       },
-      trackPerformance: trackStats.map(track => ({
+      trackPerformance: trackStats.map((track) => ({
         id: track.id,
         name: track.name,
         gradeName: track.grade.name,
@@ -200,9 +208,17 @@ export async function GET() {
       systemHealth: {
         score: healthScore,
         indicators: {
-          activeGrades: Math.round((activeGrades / Math.max(totalGrades, 1)) * 100),
-          activeTracks: Math.round((activeTracks / Math.max(totalTracks, 1)) * 100),
-          assignedStudents: Math.round(((totalStudents - unassignedStudents) / Math.max(totalStudents, 1)) * 100),
+          activeGrades: Math.round(
+            (activeGrades / Math.max(totalGrades, 1)) * 100
+          ),
+          activeTracks: Math.round(
+            (activeTracks / Math.max(totalTracks, 1)) * 100
+          ),
+          assignedStudents: Math.round(
+            ((totalStudents - unassignedStudents) /
+              Math.max(totalStudents, 1)) *
+              100
+          ),
           attendanceRate,
         },
       },
