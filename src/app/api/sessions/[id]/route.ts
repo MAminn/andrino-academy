@@ -16,7 +16,7 @@ import {
 // GET /api/sessions/[id] - Get a specific session
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const result = await withDatabaseErrorHandling(async () => {
     const session = await getServerSession(authOptions);
@@ -25,8 +25,10 @@ export async function GET(
       return ErrorResponses.unauthorized();
     }
 
+    const { id } = await params;
+
     const liveSession = await prisma.liveSession.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         track: {
           include: {
@@ -96,7 +98,7 @@ export async function GET(
 // PUT /api/sessions/[id] - Update a specific session
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const result = await withDatabaseErrorHandling(async () => {
     const session = await getServerSession(authOptions);
@@ -104,6 +106,8 @@ export async function PUT(
     if (!session) {
       return ErrorResponses.unauthorized();
     }
+
+    const { id } = await params;
 
     const body = await request.json();
     const {
@@ -120,7 +124,7 @@ export async function PUT(
 
     // Check if session exists
     const existingSession = await prisma.liveSession.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         track: {
           include: {
@@ -188,7 +192,7 @@ export async function PUT(
 
       const conflictingSessions = await prisma.liveSession.findMany({
         where: {
-          id: { not: params.id }, // Exclude current session
+          id: { not: id }, // Exclude current session
           trackId: existingSession.trackId,
           date: checkDate,
           OR: [
@@ -258,7 +262,7 @@ export async function PUT(
         | "CANCELLED";
 
     const updatedSession = await prisma.liveSession.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       include: {
         track: {
@@ -286,7 +290,7 @@ export async function PUT(
 // PATCH /api/sessions/[id] - Partially update a session (for quick updates like meetLink)
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const result = await withDatabaseErrorHandling(async () => {
     const session = await getServerSession(authOptions);
@@ -294,6 +298,8 @@ export async function PATCH(
     if (!session) {
       return ErrorResponses.unauthorized();
     }
+
+    const { id } = await params;
 
     const body = await request.json();
     const { meetLink, externalLink } = body;
@@ -303,7 +309,7 @@ export async function PATCH(
 
     // Check if session exists
     const existingSession = await prisma.liveSession.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         track: {
           include: {
@@ -347,7 +353,7 @@ export async function PATCH(
 
     // Update external link and status
     const updatedSession = await prisma.liveSession.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         externalLink: linkToUpdate?.trim() || null,
         status: newStatus as
@@ -388,7 +394,7 @@ export async function PATCH(
 // DELETE /api/sessions/[id] - Delete a specific session
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const result = await withDatabaseErrorHandling(async () => {
     const session = await getServerSession(authOptions);
@@ -397,9 +403,11 @@ export async function DELETE(
       return ErrorResponses.unauthorized();
     }
 
+    const { id } = await params;
+
     // Check if session exists
     const existingSession = await prisma.liveSession.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         track: {
           include: {
@@ -439,7 +447,7 @@ export async function DELETE(
     }
 
     await prisma.liveSession.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return createSuccessResponse(null, "تم حذف الجلسة بنجاح");

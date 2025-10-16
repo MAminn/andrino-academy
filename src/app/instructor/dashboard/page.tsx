@@ -21,6 +21,8 @@ import {
   QuickActionCard,
 } from "@/app/components/dashboard/DashboardComponents";
 import { useSessionStore, useTrackStore, useUIStore } from "@/stores";
+import SessionLinkModal from "@/app/components/instructor/SessionLinkModal";
+import AttendanceModal from "@/app/components/AttendanceModal";
 import {
   BookOpen,
   Calendar,
@@ -34,7 +36,9 @@ import {
   ExternalLink,
   Play,
   Pause,
+  AlertCircle,
 } from "lucide-react";
+import { canStartSession } from "@/lib/sessionValidation";
 
 export default function InstructorDashboard() {
   const { data: session } = useSession();
@@ -127,12 +131,34 @@ export default function InstructorDashboard() {
   };
 
   const handleStartSession = async (sessionId: string) => {
+    // Find the session to check external link
+    const session = sessions?.find((s) => s.id === sessionId);
+
+    // ✅ CRITICAL VALIDATION: Cannot start without valid external link
+    if (!canStartSession(session?.externalLink)) {
+      addNotification({
+        type: "error",
+        message: "⚠️ لا يمكن بدء الجلسة بدون رابط خارجي صحيح (Zoom/Meet/Teams)",
+      });
+
+      // Auto-open link modal to help instructor
+      setModalData({ selectedSessionId: sessionId });
+      openModal("sessionLinkModal");
+      return;
+    }
+
+    // Proceed with starting the session
     const success = await updateSession(sessionId, { status: "ACTIVE" });
     if (success) {
       addNotification({
         type: "success",
-        message: "تم بدء الجلسة بنجاح",
+        message: "✅ تم بدء الجلسة بنجاح - الطلاب يمكنهم الانضمام الآن",
       });
+
+      // Automatically open the external meeting in new tab
+      if (session?.externalLink) {
+        handleJoinExternalSession(session.externalLink);
+      }
     }
   };
 
@@ -330,23 +356,49 @@ export default function InstructorDashboard() {
                   </span>
                 </div>
 
+                {/* External Link Status Indicator */}
+                {!session.externalLink &&
+                  session.status !== "COMPLETED" &&
+                  session.status !== "CANCELLED" && (
+                    <div className='flex items-center gap-1 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-1 mb-2'>
+                      <AlertCircle className='w-3 h-3' />
+                      <span>لم يتم إضافة رابط خارجي</span>
+                    </div>
+                  )}
+                {session.externalLink && (
+                  <div className='flex items-center gap-1 text-xs text-green-600 bg-green-50 border border-green-200 rounded px-2 py-1 mb-2'>
+                    <Link className='w-3 h-3' />
+                    <span>رابط متوفر ✓</span>
+                  </div>
+                )}
+
                 <div className='flex gap-2 mt-3'>
-                  {session.status === "DRAFT" ||
-                  session.status === "SCHEDULED" ? (
-                    <button
-                      onClick={() => handleAddSessionLink(session.id)}
-                      className='bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700 transition-colors flex items-center gap-1'>
-                      <Link className='w-3 h-3' />
-                      إضافة رابط
-                    </button>
-                  ) : session.status === "READY" ? (
-                    <button
-                      onClick={() => handleStartSession(session.id)}
-                      className='bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700 transition-colors flex items-center gap-1'>
-                      <Play className='w-3 h-3' />
-                      بدء الجلسة
-                    </button>
-                  ) : session.status === "ACTIVE" ? (
+                  {/* Add Link Button - Always show if no link or session not active/completed */}
+                  {!session.externalLink &&
+                    session.status !== "ACTIVE" &&
+                    session.status !== "COMPLETED" && (
+                      <button
+                        onClick={() => handleAddSessionLink(session.id)}
+                        className='bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700 transition-colors flex items-center gap-1'>
+                        <Link className='w-3 h-3' />
+                        إضافة رابط
+                      </button>
+                    )}
+
+                  {/* Start Button - Show only if has link and status allows */}
+                  {session.externalLink &&
+                    (session.status === "READY" ||
+                      session.status === "SCHEDULED") && (
+                      <button
+                        onClick={() => handleStartSession(session.id)}
+                        className='bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700 transition-colors flex items-center gap-1'>
+                        <Play className='w-3 h-3' />
+                        بدء الجلسة
+                      </button>
+                    )}
+
+                  {/* Active Session Controls */}
+                  {session.status === "ACTIVE" && (
                     <>
                       <button
                         onClick={() =>
@@ -363,14 +415,17 @@ export default function InstructorDashboard() {
                         إنهاء
                       </button>
                     </>
-                  ) : null}
+                  )}
 
-                  <button
-                    onClick={() => handleEditSession(session.id)}
-                    className='bg-gray-600 text-white px-3 py-1 rounded text-xs hover:bg-gray-700 transition-colors flex items-center gap-1'>
-                    <Edit className='w-3 h-3' />
-                    تعديل
-                  </button>
+                  {/* Edit Button */}
+                  {session.status !== "COMPLETED" && (
+                    <button
+                      onClick={() => handleEditSession(session.id)}
+                      className='bg-gray-600 text-white px-3 py-1 rounded text-xs hover:bg-gray-700 transition-colors flex items-center gap-1'>
+                      <Edit className='w-3 h-3' />
+                      تعديل
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -455,6 +510,36 @@ export default function InstructorDashboard() {
           </div>
         </div>
       )}
+
+      {/* Modals */}
+      <SessionLinkModal
+        isOpen={useUIStore.getState().modals.sessionLinkModal}
+        onClose={() => useUIStore.getState().closeModal("sessionLinkModal")}
+        sessionId={useUIStore.getState().modalData?.selectedSessionId || ""}
+        sessionTitle={
+          sessions?.find(
+            (s) => s.id === useUIStore.getState().modalData?.selectedSessionId
+          )?.title || ""
+        }
+        currentLink={
+          sessions?.find(
+            (s) => s.id === useUIStore.getState().modalData?.selectedSessionId
+          )?.externalLink
+        }
+        onLinkUpdated={async (newLink: string) => {
+          const sessionId = useUIStore.getState().modalData?.selectedSessionId;
+          if (sessionId) {
+            await updateSession(sessionId, { externalLink: newLink });
+            await fetchSessions({ instructorId: session?.user?.id });
+          }
+        }}
+      />
+
+      <AttendanceModal
+        sessionId={useUIStore.getState().modalData?.selectedSessionId || ""}
+        isOpen={useUIStore.getState().modals.attendanceModal}
+        onClose={() => useUIStore.getState().closeModal("attendanceModal")}
+      />
     </DashboardLayout>
   );
 }

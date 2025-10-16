@@ -134,7 +134,7 @@ export async function GET() {
       const totalTracks = instructor.instructedTracks.length;
       const totalUpcomingSessions = instructor.instructedSessions.length;
       const activeSessions = instructor.instructedSessions.filter(
-        (s) => s.status === "active"
+        (s) => s.status === "ACTIVE"
       ).length;
 
       return {
@@ -155,14 +155,14 @@ export async function GET() {
     const sessionStats = {
       total: await prisma.liveSession.count(),
       scheduled: await prisma.liveSession.count({
-        where: { status: "scheduled" },
+        where: { status: "SCHEDULED" },
       }),
-      active: await prisma.liveSession.count({ where: { status: "active" } }),
+      active: await prisma.liveSession.count({ where: { status: "ACTIVE" } }),
       completed: await prisma.liveSession.count({
-        where: { status: "completed" },
+        where: { status: "COMPLETED" },
       }),
       cancelled: await prisma.liveSession.count({
-        where: { status: "cancelled" },
+        where: { status: "CANCELLED" },
       }),
     };
 
@@ -237,10 +237,10 @@ export async function GET() {
       sessionStatistics: {
         today: {
           total: todaySessions.length,
-          scheduled: todaySessions.filter((s) => s.status === "scheduled")
+          scheduled: todaySessions.filter((s) => s.status === "SCHEDULED")
             .length,
-          active: todaySessions.filter((s) => s.status === "active").length,
-          completed: todaySessions.filter((s) => s.status === "completed")
+          active: todaySessions.filter((s) => s.status === "ACTIVE").length,
+          completed: todaySessions.filter((s) => s.status === "COMPLETED")
             .length,
           totalHours: totalScheduledHours,
         },

@@ -63,7 +63,11 @@ const useTrackStore = create<TrackStore>()(
             throw new Error("Failed to fetch tracks");
           }
 
-          const { tracks } = await response.json();
+          const responseData = await response.json();
+          console.log("Tracks API Response:", responseData);
+          // Handle both response formats: { tracks: [...] } and { data: [...] }
+          const tracks = responseData.tracks || responseData.data || [];
+          console.log("Parsed tracks:", tracks);
           set({ tracks, loading: false });
         } catch (error) {
           set({

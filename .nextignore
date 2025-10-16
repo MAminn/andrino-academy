@@ -1,0 +1,4 @@
+# Exclude Windows system folders from Next.js file tracing
+**/Application Data/**
+C:/Users/**/Application Data/**
+**/AppData/**

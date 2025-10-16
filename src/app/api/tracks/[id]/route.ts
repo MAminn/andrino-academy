@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 // GET /api/tracks/[id] - Get a specific track
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -21,8 +21,11 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    // Await params in Next.js 15
+    const { id } = await params;
+
     const track = await prisma.track.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         grade: {
           select: { id: true, name: true, description: true },
@@ -82,7 +85,7 @@ export async function GET(
 // PUT /api/tracks/[id] - Update a specific track
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -100,9 +103,12 @@ export async function PUT(
     const { name, description, instructorId, coordinatorId, order, isActive } =
       body;
 
+    // Await params in Next.js 15
+    const { id } = await params;
+
     // Check if track exists
     const existingTrack = await prisma.track.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!existingTrack) {
@@ -163,7 +169,7 @@ export async function PUT(
     if (isActive !== undefined) updateData.isActive = isActive;
 
     const track = await prisma.track.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       include: {
         grade: {
@@ -194,7 +200,7 @@ export async function PUT(
 // DELETE /api/tracks/[id] - Delete a specific track
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -208,9 +214,12 @@ export async function DELETE(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    // Await params in Next.js 15
+    const { id } = await params;
+
     // Check if track exists
     const existingTrack = await prisma.track.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         _count: {
           select: { liveSessions: true },
@@ -231,7 +240,7 @@ export async function DELETE(
     }
 
     await prisma.track.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ message: "Track deleted successfully" });

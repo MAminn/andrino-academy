@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 // POST /api/students/[id]/assign-grade - Assign student to grade
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -21,7 +21,8 @@ export async function POST(
     }
 
     const { gradeId } = await request.json();
-    const studentId = params.id;
+    // Await params in Next.js 15
+    const { id: studentId } = await params;
 
     if (!gradeId) {
       return NextResponse.json(

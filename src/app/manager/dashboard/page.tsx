@@ -169,25 +169,29 @@ export default function ManagerDashboard() {
           setRecentTracks(tracks.slice(0, 5)); // Latest 5 tracks
         }
 
-        // Fetch instructors and coordinators for forms
-        const usersResponse = await fetch("/api/students"); // This endpoint returns all users
-        if (usersResponse.ok) {
-          const usersData = await usersResponse.json();
-          // Handle both response formats: { students: [...] } and { data: [...] }
-          const allUsers = (usersData.students ||
-            usersData.data ||
-            []) as User[]; // Note: This API returns all users, not just students
-
+        // Fetch instructors for forms
+        const instructorsResponse = await fetch("/api/users?role=instructor");
+        if (instructorsResponse.ok) {
+          const instructorsData = await instructorsResponse.json();
+          const instructorsList = instructorsData.users || [];
           setInstructors(
-            allUsers
-              .filter((user: User) => user.role === "instructor")
-              .map((user: User) => ({ id: user.id, name: user.name }))
+            instructorsList.map((user: User) => ({
+              id: user.id,
+              name: user.name,
+            }))
           );
+        }
 
+        // Fetch coordinators for forms
+        const coordinatorsResponse = await fetch("/api/users?role=coordinator");
+        if (coordinatorsResponse.ok) {
+          const coordinatorsData = await coordinatorsResponse.json();
+          const coordinatorsList = coordinatorsData.users || [];
           setCoordinators(
-            allUsers
-              .filter((user: User) => user.role === "coordinator")
-              .map((user: User) => ({ id: user.id, name: user.name }))
+            coordinatorsList.map((user: User) => ({
+              id: user.id,
+              name: user.name,
+            }))
           );
         }
       } catch (error) {
@@ -262,7 +266,8 @@ export default function ManagerDashboard() {
     const tracksResponse = await fetch("/api/tracks");
     if (tracksResponse.ok) {
       const tracksData = await tracksResponse.json();
-      setRecentTracks(tracksData.tracks.slice(0, 5));
+      const tracks = tracksData.tracks || tracksData.data || [];
+      setRecentTracks(tracks.slice(0, 5));
     }
   };
 

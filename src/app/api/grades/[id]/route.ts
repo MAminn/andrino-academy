@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 // GET /api/grades/[id] - Get a specific grade
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -21,8 +21,11 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    // Await params in Next.js 15
+    const { id } = await params;
+
     const grade = await prisma.grade.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         tracks: {
           include: {
@@ -83,7 +86,7 @@ export async function GET(
 // PUT /api/grades/[id] - Update a specific grade (Manager only)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -100,9 +103,12 @@ export async function PUT(
     const body = await request.json();
     const { name, description, order, isActive } = body;
 
+    // Await params in Next.js 15
+    const { id } = await params;
+
     // Check if grade exists
     const existingGrade = await prisma.grade.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!existingGrade) {
@@ -144,7 +150,7 @@ export async function PUT(
     if (isActive !== undefined) updateData.isActive = isActive;
 
     const grade = await prisma.grade.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       include: {
         _count: {
@@ -169,7 +175,7 @@ export async function PUT(
 // DELETE /api/grades/[id] - Delete a specific grade (Manager only)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -183,9 +189,12 @@ export async function DELETE(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    // Await params in Next.js 15
+    const { id } = await params;
+
     // Check if grade exists
     const existingGrade = await prisma.grade.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         _count: {
           select: {
@@ -216,7 +225,7 @@ export async function DELETE(
     }
 
     await prisma.grade.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ message: "Grade deleted successfully" });

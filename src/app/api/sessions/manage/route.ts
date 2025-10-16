@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
           endTime,
           trackId,
           instructorId,
-          status: "scheduled",
+          status: "SCHEDULED",
         },
         include: {
           track: {
@@ -227,7 +227,7 @@ export async function DELETE(request: NextRequest) {
       `${existingSession.date}T${existingSession.startTime}`
     );
 
-    if (sessionDateTime <= now && existingSession.status === "active") {
+    if (sessionDateTime <= now && existingSession.status === "ACTIVE") {
       return NextResponse.json(
         { error: "Cannot delete an active session" },
         { status: 400 }

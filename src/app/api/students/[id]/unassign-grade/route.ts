@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 // POST /api/students/[id]/unassign-grade - Unassign student from grade
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -20,7 +20,8 @@ export async function POST(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const studentId = params.id;
+    // Await params in Next.js 15
+    const { id: studentId } = await params;
 
     // Check if student exists
     const student = await prisma.user.findFirst({

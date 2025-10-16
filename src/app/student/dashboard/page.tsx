@@ -66,6 +66,7 @@ interface LiveSession {
   startTime: string;
   endTime: string;
   status: string;
+  externalLink?: string;
   track: {
     id: string;
     name: string;
@@ -103,6 +104,11 @@ export default function StudentDashboard() {
   >([]);
   const [loading, setLoading] = useState(true);
 
+  // Real-time update states
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [hasNewContent, setHasNewContent] = useState(false);
+
   // Modal states
   const [sessionsModalOpen, setSessionsModalOpen] = useState(false);
   const [progressModalOpen, setProgressModalOpen] = useState(false);
@@ -125,7 +131,12 @@ export default function StudentDashboard() {
           `/api/students/${session?.user?.id}`
         );
         if (studentResponse.ok) {
-          const studentInfo = await studentResponse.json();
+          const responseData = await studentResponse.json();
+          // API returns { student } with assignedGrade, map to grade for compatibility
+          const studentInfo = responseData.student || responseData;
+          if (studentInfo.assignedGrade) {
+            studentInfo.grade = studentInfo.assignedGrade;
+          }
           setStudentData(studentInfo);
         }
 
@@ -216,6 +227,50 @@ export default function StudentDashboard() {
         icon={<BookOpen className='w-16 h-16 text-blue-200' />}
       />
 
+      {/* Active Session Banner - PRIORITY DISPLAY */}
+      {upcomingSessions.filter((s) => s.status === "ACTIVE" && s.externalLink)
+        .length > 0 && (
+        <div className='bg-gradient-to-r from-green-500 to-emerald-600 border-4 border-green-700 rounded-xl p-6 mb-6 shadow-2xl animate-pulse'>
+          <div className='flex items-center justify-between'>
+            <div className='flex items-center gap-4'>
+              <div className='bg-white rounded-full p-3 animate-bounce'>
+                <Play className='w-8 h-8 text-green-600' />
+              </div>
+              <div>
+                <h2 className='text-2xl font-bold text-white mb-1'>
+                  🔴 جلسة مباشرة الآن!
+                </h2>
+                <p className='text-green-100 text-lg'>
+                  {upcomingSessions.find((s) => s.status === "ACTIVE")?.title ||
+                    "جلسة حية"}
+                </p>
+                <p className='text-green-50 text-sm mt-1'>
+                  المدرب:{" "}
+                  {upcomingSessions.find((s) => s.status === "ACTIVE")?.track
+                    ?.instructor?.name || "غير محدد"}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                const activeSession = upcomingSessions.find(
+                  (s) => s.status === "ACTIVE" && s.externalLink
+                );
+                if (activeSession?.externalLink) {
+                  window.open(
+                    activeSession.externalLink,
+                    "_blank",
+                    "noopener,noreferrer"
+                  );
+                }
+              }}
+              className='bg-white text-green-700 px-8 py-4 rounded-lg font-bold text-lg hover:bg-green-50 transition-all shadow-lg hover:shadow-xl transform hover:scale-105'>
+              انضم للجلسة الآن →
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Grade Assignment Check */}
       {!studentData?.grade && (
         <div className='bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6'>
@@ -273,7 +328,7 @@ export default function StudentDashboard() {
                 <div className='flex items-center justify-between mb-2'>
                   <h3 className='font-semibold text-lg'>{track.name}</h3>
                   <span className='text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded'>
-                    {track.instructor.name}
+                    {track.instructor?.name || "غير محدد"}
                   </span>
                 </div>
 
@@ -358,17 +413,17 @@ export default function StudentDashboard() {
                   </div>
                   <div className='flex items-center'>
                     <BookOpen className='w-4 h-4 ml-2' />
-                    {session.track.name}
+                    {session.track?.name || "غير محدد"}
                   </div>
                   <div className='flex items-center'>
                     <UserCheck className='w-4 h-4 ml-2' />
-                    {session.track.instructor.name}
+                    {session.track?.instructor?.name || "غير محدد"}
                   </div>
                 </div>
 
                 <div className='flex justify-between items-center'>
                   <span className='text-sm text-gray-500'>
-                    {session.track.grade.name}
+                    {session.track?.grade?.name || "غير محدد"}
                   </span>
                   <div className='flex gap-2'>
                     <span
@@ -385,8 +440,16 @@ export default function StudentDashboard() {
                         ? "مجدولة"
                         : "مكتملة"}
                     </span>
-                    {session.status === "active" && (
-                      <button className='flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors'>
+                    {session.status === "active" && session.externalLink && (
+                      <button
+                        onClick={() =>
+                          window.open(
+                            session.externalLink,
+                            "_blank",
+                            "noopener,noreferrer"
+                          )
+                        }
+                        className='flex items-center gap-1 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors font-medium'>
                         <Play className='w-4 h-4' />
                         انضمام
                       </button>

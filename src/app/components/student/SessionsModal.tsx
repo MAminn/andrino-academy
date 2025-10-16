@@ -32,7 +32,7 @@ interface SessionDetail {
     markedAt: string;
   };
   materials?: string[];
-  meetLink?: string;
+  externalLink?: string;
 }
 
 export default function SessionsModal({
@@ -158,9 +158,9 @@ export default function SessionsModal({
     });
   };
 
-  const handleJoinSession = (meetLink: string) => {
-    if (meetLink) {
-      window.open(meetLink, "_blank");
+  const handleJoinSession = (externalLink: string) => {
+    if (externalLink) {
+      window.open(externalLink, "_blank", "noopener,noreferrer");
     }
   };
 
@@ -335,17 +335,21 @@ export default function SessionsModal({
                       المعرف: {session.id}
                     </div>
                     <div className='flex gap-2'>
-                      {session.status === "active" && session.meetLink && (
+                      {session.status === "active" && session.externalLink && (
                         <button
-                          onClick={() => handleJoinSession(session.meetLink!)}
+                          onClick={() =>
+                            handleJoinSession(session.externalLink!)
+                          }
                           className='flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors'>
                           <Play className='w-4 h-4' />
                           انضم للجلسة
                         </button>
                       )}
-                      {session.meetLink && session.status !== "active" && (
+                      {session.externalLink && session.status !== "active" && (
                         <button
-                          onClick={() => handleJoinSession(session.meetLink!)}
+                          onClick={() =>
+                            handleJoinSession(session.externalLink!)
+                          }
                           className='flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors'>
                           <Eye className='w-4 h-4' />
                           رابط الجلسة

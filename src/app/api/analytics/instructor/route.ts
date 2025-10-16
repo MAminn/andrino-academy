@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
 
     const completedSessions = instructorTracks.reduce(
       (sum, track) =>
-        sum + track.liveSessions.filter((s) => s.status === "completed").length,
+        sum + track.liveSessions.filter((s) => s.status === "COMPLETED").length,
       0
     );
 
@@ -186,7 +186,7 @@ export async function GET(request: NextRequest) {
       const sessions = track.liveSessions;
       const totalTrackSessions = sessions.length;
       const completedTrackSessions = sessions.filter(
-        (s) => s.status === "completed"
+        (s) => s.status === "COMPLETED"
       ).length;
       const avgAttendancePerSession =
         sessions.length > 0

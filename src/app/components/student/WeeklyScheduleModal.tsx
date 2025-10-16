@@ -28,7 +28,7 @@ interface ScheduleSession {
   instructor: string;
   status: string;
   attendanceStatus?: string;
-  meetLink?: string;
+  externalLink?: string;
 }
 
 interface WeeklySchedule {
@@ -197,9 +197,9 @@ export default function WeeklyScheduleModal({
     }
   };
 
-  const handleJoinSession = (meetLink: string) => {
-    if (meetLink) {
-      window.open(meetLink, "_blank");
+  const handleJoinSession = (externalLink: string) => {
+    if (externalLink) {
+      window.open(externalLink, "_blank", "noopener,noreferrer");
     }
   };
 
@@ -377,10 +377,10 @@ export default function WeeklyScheduleModal({
                               </div>
 
                               {session.status === "active" &&
-                                session.meetLink && (
+                                session.externalLink && (
                                   <button
                                     onClick={() =>
-                                      handleJoinSession(session.meetLink!)
+                                      handleJoinSession(session.externalLink!)
                                     }
                                     className='w-full mt-2 px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 transition-colors'>
                                     انضم الآن

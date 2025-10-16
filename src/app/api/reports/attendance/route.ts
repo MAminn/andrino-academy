@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
+import { Prisma, SessionStatus } from "@/generated/prisma";
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,12 +25,7 @@ export async function GET(request: NextRequest) {
     const format = searchParams.get("format");
 
     // Build where clause for filtering
-    const whereClause: {
-      date?: { gte?: Date; lt?: Date };
-      trackId?: string;
-      track?: { gradeId?: string };
-      status?: string;
-    } = {};
+    const whereClause: Prisma.LiveSessionWhereInput = {};
 
     // Date range filter
     if (dateFrom || dateTo) {
@@ -58,7 +54,7 @@ export async function GET(request: NextRequest) {
 
     // Status filter
     if (status) {
-      whereClause.status = status;
+      whereClause.status = status as SessionStatus;
     }
 
     // Fetch sessions with attendance data
@@ -67,13 +63,19 @@ export async function GET(request: NextRequest) {
       include: {
         track: {
           include: {
-            grade: true,
-            instructor: true,
+            grade: {
+              select: { id: true, name: true, description: true },
+            },
+            instructor: {
+              select: { id: true, name: true, email: true },
+            },
           },
         },
         attendances: {
           include: {
-            student: true,
+            student: {
+              select: { id: true, name: true, email: true },
+            },
           },
         },
       },
@@ -155,13 +157,13 @@ export async function GET(request: NextRequest) {
         report.absentCount,
         report.lateCount,
         report.attendanceRate,
-        report.status === "completed"
+        report.status === "COMPLETED"
           ? "مكتملة"
-          : report.status === "active"
+          : report.status === "ACTIVE"
           ? "جارية"
-          : report.status === "scheduled"
+          : report.status === "SCHEDULED"
           ? "مجدولة"
-          : report.status === "cancelled"
+          : report.status === "CANCELLED"
           ? "ملغاة"
           : report.status,
       ]);

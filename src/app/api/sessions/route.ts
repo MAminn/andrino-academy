@@ -153,6 +153,9 @@ export async function GET(request: NextRequest) {
             grade: {
               select: { id: true, name: true },
             },
+            instructor: {
+              select: { id: true, name: true, email: true },
+            },
           },
         },
         instructor: {
