@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export async function GET(
   request: NextRequest,
@@ -14,7 +12,7 @@ export async function GET(
     const student = await prisma.user.findUnique({
       where: { id },
       include: {
-        grade: {
+        assignedGrade: {
           include: {
             tracks: {
               include: {
@@ -37,7 +35,7 @@ export async function GET(
     }
 
     // Calculate achievement data
-    const tracks = student.grade?.tracks || [];
+    const tracks = student.assignedGrade?.tracks || [];
     let totalSessions = 0;
     let attendedSessions = 0;
     let completedTracks = 0;

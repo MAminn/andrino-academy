@@ -12,6 +12,9 @@ import TrackModal from "@/app/components/coordinator/TrackModal";
 import SessionSchedulingModal from "@/app/components/coordinator/SessionSchedulingModal";
 import InstructorManagementModal from "@/app/components/coordinator/InstructorManagementModal";
 import AttendanceReportsModal from "@/app/components/coordinator/AttendanceReportsModal";
+import SessionDetailsModal from "@/app/components/coordinator/SessionDetailsModal";
+import AttendanceManagementModal from "@/app/components/coordinator/AttendanceManagementModal";
+import TrackDetailsModal from "@/app/components/coordinator/TrackDetailsModal";
 import {
   UserCheck,
   BookOpen,
@@ -90,12 +93,36 @@ export default function CoordinatorDashboard() {
     reportsModal: false,
   });
 
+  // Selected IDs for modals
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
+    null
+  );
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
+  const [showSessionDetails, setShowSessionDetails] = useState(false);
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
+  const [showTrackDetails, setShowTrackDetails] = useState(false);
+
+  // Edit session state for SessionSchedulingModal
+  const [editSession, setEditSession] = useState<{
+    id: string;
+    title: string;
+    description?: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    trackId: string;
+  } | null>(null);
+
   const openModal = (modalName: keyof typeof modals) => {
     setModals((prev) => ({ ...prev, [modalName]: true }));
   };
 
   const closeModal = (modalName: keyof typeof modals) => {
     setModals((prev) => ({ ...prev, [modalName]: false }));
+    // Clear edit session when closing session modal
+    if (modalName === "sessionModal") {
+      setEditSession(null);
+    }
   };
 
   const handleModalSuccess = async () => {
@@ -114,16 +141,18 @@ export default function CoordinatorDashboard() {
       // Fetch tracks
       const tracksResponse = await fetch("/api/tracks");
       if (tracksResponse.ok) {
-        const tracksData = await tracksResponse.json();
-        setTracks(tracksData);
+        const result = await tracksResponse.json();
+        // API returns { success, data, message, timestamp }
+        setTracks(Array.isArray(result.data) ? result.data : result.data || []);
       }
 
       // Fetch today's sessions
       const today = new Date().toISOString().split("T")[0];
       const todaySessionsResponse = await fetch(`/api/sessions?date=${today}`);
       if (todaySessionsResponse.ok) {
-        const todaySessionsData = await todaySessionsResponse.json();
-        setTodaySessions(todaySessionsData);
+        const result = await todaySessionsResponse.json();
+        // API returns { sessions }
+        setTodaySessions(Array.isArray(result.sessions) ? result.sessions : []);
       }
 
       // Fetch upcoming sessions (next 7 days)
@@ -135,9 +164,11 @@ export default function CoordinatorDashboard() {
         }`
       );
       if (upcomingResponse.ok) {
-        const upcomingData = await upcomingResponse.json();
+        const result = await upcomingResponse.json();
+        // API returns { sessions }
+        const sessions = Array.isArray(result.sessions) ? result.sessions : [];
         setUpcomingSessions(
-          upcomingData.filter((session: LiveSession) => session.date !== today)
+          sessions.filter((session: LiveSession) => session.date !== today)
         );
       }
     } catch (error) {
@@ -147,10 +178,10 @@ export default function CoordinatorDashboard() {
     }
   };
 
-  const totalSessions = tracks.reduce(
-    (sum, track) => sum + track._count.liveSessions,
-    0
-  );
+  // Defensive programming: ensure tracks is an array before using reduce
+  const totalSessions = Array.isArray(tracks)
+    ? tracks.reduce((sum, track) => sum + (track._count?.liveSessions || 0), 0)
+    : 0;
 
   const formatTime = (timeString: string) => {
     return new Date(`2000-01-01T${timeString}`).toLocaleTimeString("ar-SA", {
@@ -158,6 +189,57 @@ export default function CoordinatorDashboard() {
       minute: "2-digit",
       hour12: true,
     });
+  };
+
+  // Handler functions for session actions
+  const handleViewSession = (sessionId: string) => {
+    setSelectedSessionId(sessionId);
+    setShowSessionDetails(true);
+  };
+
+  const handleAttendance = (sessionId: string) => {
+    setSelectedSessionId(sessionId);
+    setShowAttendanceModal(true);
+  };
+
+  const handleViewTrack = (trackId: string) => {
+    setSelectedTrackId(trackId);
+    setShowTrackDetails(true);
+  };
+
+  const handleNewSession = (trackId: string) => {
+    // Open session creation modal with track pre-selected
+    console.log("Create new session for track:", trackId);
+    openModal("sessionModal");
+    // TODO: Pass trackId to SessionSchedulingModal
+  };
+
+  const handleEditSession = (session: LiveSession) => {
+    // Prepare session data for editing
+    setEditSession({
+      id: session.id,
+      title: session.title,
+      description: session.description || "",
+      date: session.date,
+      startTime: session.startTime,
+      endTime: session.endTime,
+      trackId: session.track.id,
+    });
+    openModal("sessionModal");
+  };
+
+  const handleScheduleSession = (session: LiveSession) => {
+    // Open scheduling modal in edit mode for session timing
+    setEditSession({
+      id: session.id,
+      title: session.title,
+      description: session.description || "",
+      date: session.date,
+      startTime: session.startTime,
+      endTime: session.endTime,
+      trackId: session.track.id,
+    });
+    openModal("sessionModal");
   };
 
   if (loading) {
@@ -262,11 +344,15 @@ export default function CoordinatorDashboard() {
                     <span>{session._count.attendance} طالب مسجل</span>
                   </div>
                   <div className='flex gap-2'>
-                    <button className='flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors'>
+                    <button
+                      onClick={() => handleViewSession(session.id)}
+                      className='flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors'>
                       <Eye className='w-4 h-4' />
                       عرض
                     </button>
-                    <button className='flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors'>
+                    <button
+                      onClick={() => handleAttendance(session.id)}
+                      className='flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors'>
                       <CheckSquare className='w-4 h-4' />
                       الحضور
                     </button>
@@ -318,11 +404,15 @@ export default function CoordinatorDashboard() {
                 </div>
 
                 <div className='flex gap-2'>
-                  <button className='flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors'>
+                  <button
+                    onClick={() => handleViewTrack(track.id)}
+                    className='flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors'>
                     <Eye className='w-4 h-4' />
                     عرض
                   </button>
-                  <button className='flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors'>
+                  <button
+                    onClick={() => handleNewSession(track.id)}
+                    className='flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors'>
                     <Plus className='w-4 h-4' />
                     جلسة جديدة
                   </button>
@@ -384,11 +474,15 @@ export default function CoordinatorDashboard() {
                     {session.track.grade.name}
                   </span>
                   <div className='flex gap-2'>
-                    <button className='flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors'>
+                    <button
+                      onClick={() => handleEditSession(session)}
+                      className='flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors cursor-pointer'>
                       <Edit className='w-4 h-4' />
                       تعديل
                     </button>
-                    <button className='flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors'>
+                    <button
+                      onClick={() => handleScheduleSession(session)}
+                      className='flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors cursor-pointer'>
                       <Calendar className='w-4 h-4' />
                       جدولة
                     </button>
@@ -447,11 +541,46 @@ export default function CoordinatorDashboard() {
         isOpen={modals.sessionModal}
         onClose={() => closeModal("sessionModal")}
         onSuccess={handleModalSuccess}
+        editSession={editSession}
       />
 
       <InstructorManagementModal
         isOpen={modals.instructorModal}
         onClose={() => closeModal("instructorModal")}
+      />
+
+      <AttendanceReportsModal
+        isOpen={modals.reportsModal}
+        onClose={() => closeModal("reportsModal")}
+      />
+
+      {/* Detail Modals */}
+      <SessionDetailsModal
+        isOpen={showSessionDetails}
+        onClose={() => {
+          setShowSessionDetails(false);
+          setSelectedSessionId(null);
+        }}
+        sessionId={selectedSessionId}
+      />
+
+      <AttendanceManagementModal
+        isOpen={showAttendanceModal}
+        onClose={() => {
+          setShowAttendanceModal(false);
+          setSelectedSessionId(null);
+          fetchData(); // Refresh data after attendance changes
+        }}
+        sessionId={selectedSessionId}
+      />
+
+      <TrackDetailsModal
+        isOpen={showTrackDetails}
+        onClose={() => {
+          setShowTrackDetails(false);
+          setSelectedTrackId(null);
+        }}
+        trackId={selectedTrackId}
       />
 
       <AttendanceReportsModal

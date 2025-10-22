@@ -27,34 +27,42 @@ export async function GET(request: NextRequest) {
       whereClause.role = role;
     }
 
-    // Build include clause
+    // Build include/select clause based on include parameter
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const includeClause: any = {};
-    if (include === "tracks") {
-      includeClause.instructorTracks = {
-        include: {
-          grade: {
-            select: { id: true, name: true },
-          },
-          _count: {
-            select: { liveSessions: true },
-          },
-        },
-      };
-    }
-
-    const users = await prisma.user.findMany({
+    const queryOptions: any = {
       where: whereClause,
-      select: {
+      orderBy: { name: "asc" },
+    };
+
+    if (include === "tracks") {
+      queryOptions.select = {
         id: true,
         name: true,
         email: true,
         role: true,
         createdAt: true,
-        ...includeClause,
-      },
-      orderBy: { name: "asc" },
-    });
+        instructorTracks: {
+          include: {
+            grade: {
+              select: { id: true, name: true },
+            },
+            _count: {
+              select: { liveSessions: true },
+            },
+          },
+        },
+      };
+    } else {
+      queryOptions.select = {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        createdAt: true,
+      };
+    }
+
+    const users = await prisma.user.findMany(queryOptions);
 
     // Transform data for consistency
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

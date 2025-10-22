@@ -468,12 +468,16 @@ export default function GradesPage() {
 
         {/* Edit Grade Modal for Detail View */}
         {/* Debug editModalOpen and gradeToEdit state */}
-        {console.log("Rendering AdvancedGradeForm with:", {
-          editModalOpen,
-          gradeToEdit,
-          hasGradeToEdit: !!gradeToEdit,
-          gradeToEditName: gradeToEdit?.name,
-        })}
+        {(() => {
+          console.log("Rendering AdvancedGradeForm with:", {
+            editModalOpen,
+            gradeToEdit,
+            hasGradeToEdit: !!gradeToEdit,
+            gradeToEditName: gradeToEdit?.name,
+          });
+          return null;
+        })()}
+
         <AdvancedGradeForm
           isOpen={editModalOpen}
           onClose={() => {

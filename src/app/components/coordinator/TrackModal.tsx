@@ -74,18 +74,19 @@ export default function TrackModal({
   const fetchInitialData = async () => {
     setLoading(true);
     try {
-      // Fetch grades
+      // Fetch grades - API returns { grades: [...] }
       const gradesResponse = await fetch("/api/grades");
       if (gradesResponse.ok) {
-        const gradesData = await gradesResponse.json();
-        setGrades(gradesData.sort((a: Grade, b: Grade) => a.order - b.order));
+        const result = await gradesResponse.json();
+        const gradesArray = result.grades || [];
+        setGrades(gradesArray.sort((a: Grade, b: Grade) => a.order - b.order));
       }
 
-      // Fetch instructors
+      // Fetch instructors - API returns { users: [...] }
       const instructorsResponse = await fetch("/api/users?role=instructor");
       if (instructorsResponse.ok) {
-        const instructorsData = await instructorsResponse.json();
-        setInstructors(instructorsData);
+        const result = await instructorsResponse.json();
+        setInstructors(result.users || []);
       }
     } catch (error) {
       console.error("Error fetching initial data:", error);

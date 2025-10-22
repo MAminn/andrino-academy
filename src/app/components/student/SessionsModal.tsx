@@ -79,21 +79,23 @@ export default function SessionsModal({
 
   const filteredSessions = sessions.filter((session) => {
     if (filter === "all") return true;
-    if (filter === "upcoming") return session.status === "scheduled";
-    if (filter === "completed") return session.status === "completed";
-    if (filter === "active") return session.status === "active";
+    if (filter === "upcoming")
+      return session.status === "SCHEDULED" || session.status === "READY";
+    if (filter === "completed") return session.status === "COMPLETED";
+    if (filter === "active") return session.status === "ACTIVE";
     return true;
   });
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "active":
+      case "ACTIVE":
         return "bg-green-100 text-green-800";
-      case "scheduled":
+      case "SCHEDULED":
+      case "READY":
         return "bg-blue-100 text-blue-800";
-      case "completed":
+      case "COMPLETED":
         return "bg-gray-100 text-gray-800";
-      case "cancelled":
+      case "CANCELLED":
         return "bg-red-100 text-red-800";
       default:
         return "bg-gray-100 text-gray-800";
@@ -102,13 +104,15 @@ export default function SessionsModal({
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case "active":
+      case "ACTIVE":
         return "جارية";
-      case "scheduled":
+      case "SCHEDULED":
         return "مجدولة";
-      case "completed":
+      case "READY":
+        return "جاهزة";
+      case "COMPLETED":
         return "مكتملة";
-      case "cancelled":
+      case "CANCELLED":
         return "ملغاة";
       default:
         return status;
@@ -167,10 +171,12 @@ export default function SessionsModal({
   if (!isOpen) return null;
 
   return (
-    <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'>
-      <div className='bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden'>
+    <div
+      className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'
+      style={{ overflow: "hidden" }}>
+      <div className='bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col'>
         {/* Header */}
-        <div className='flex items-center justify-between p-6 border-b'>
+        <div className='flex items-center justify-between p-6 border-b flex-shrink-0'>
           <div>
             <h2 className='text-xl font-semibold text-gray-900'>
               جلسات المسار
@@ -185,7 +191,7 @@ export default function SessionsModal({
         </div>
 
         {/* Filters */}
-        <div className='p-6 border-b bg-gray-50'>
+        <div className='p-6 border-b bg-gray-50 flex-shrink-0'>
           <div className='flex gap-2 overflow-x-auto'>
             {[
               { key: "all", label: "جميع الجلسات" },
@@ -216,7 +222,9 @@ export default function SessionsModal({
         </div>
 
         {/* Content */}
-        <div className='flex-1 overflow-y-auto p-6'>
+        <div
+          className='flex-1 overflow-y-auto p-6'
+          style={{ minHeight: "200px" }}>
           {loading ? (
             <div className='flex items-center justify-center py-12'>
               <div className='text-center'>

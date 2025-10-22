@@ -62,13 +62,13 @@ export default function InstructorManagementModal({
     setError(null);
 
     try {
-      // Fetch instructors with their tracks
+      // Fetch instructors with their tracks - API returns { users: [...] }
       const instructorsResponse = await fetch(
         "/api/users?role=instructor&include=tracks"
       );
       if (instructorsResponse.ok) {
-        const instructorsData = await instructorsResponse.json();
-        setInstructors(instructorsData);
+        const result = await instructorsResponse.json();
+        setInstructors(result.users || []);
       }
 
       // Fetch coordinator analytics to get workload data

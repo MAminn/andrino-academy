@@ -198,7 +198,7 @@ export default function OptimizedManagerDashboard() {
     <DashboardLayout title='لوحة تحكم المدير الأكاديمي' role='manager'>
       {/* Welcome Card */}
       <WelcomeCard
-        name={session?.user?.name}
+        name={session?.user?.name ?? undefined}
         description='مرحباً بك في لوحة تحكم المدير الأكاديمي. يمكنك إدارة المستويات والمسارات والطلاب من هنا.'
         icon={<GraduationCap className='w-8 h-8' />}
       />
@@ -233,27 +233,32 @@ export default function OptimizedManagerDashboard() {
 
       {/* Quick Actions */}
       <div className='grid grid-cols-1 md:grid-cols-3 gap-6 mb-8'>
-        <QuickActionCard
-          title='إدارة المستويات'
-          description='إنشاء وتعديل المستويات الأكاديمية'
-          icon={<BookOpen className='w-6 h-6' />}
-          onClick={handleCreateGrade}
-          color='bg-blue-600 hover:bg-blue-700'
-        />
-        <QuickActionCard
-          title='إدارة المسارات'
-          description='إنشاء مسارات تعليمية جديدة'
-          icon={<MapPin className='w-6 h-6' />}
-          onClick={handleCreateTrack}
-          color='bg-green-600 hover:bg-green-700'
-        />
-        <QuickActionCard
-          title='تسجيل الطلاب'
-          description='تسجيل الطلاب في المستويات المناسبة'
-          icon={<UserCheck className='w-6 h-6' />}
-          onClick={handleBulkAssignment}
-          color='bg-purple-600 hover:bg-purple-700'
-        />
+        <QuickActionCard title='إدارة المستويات'>
+          <button
+            onClick={handleCreateGrade}
+            className='w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors'>
+            <BookOpen className='w-5 h-5' />
+            إنشاء وتعديل المستويات الأكاديمية
+          </button>
+        </QuickActionCard>
+
+        <QuickActionCard title='إدارة المسارات'>
+          <button
+            onClick={handleCreateTrack}
+            className='w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors'>
+            <MapPin className='w-5 h-5' />
+            إنشاء مسارات تعليمية جديدة
+          </button>
+        </QuickActionCard>
+
+        <QuickActionCard title='تسجيل الطلاب'>
+          <button
+            onClick={handleBulkAssignment}
+            className='w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors'>
+            <UserCheck className='w-5 h-5' />
+            تسجيل الطلاب في المستويات المناسبة
+          </button>
+        </QuickActionCard>
       </div>
 
       {/* Grades Management Section */}

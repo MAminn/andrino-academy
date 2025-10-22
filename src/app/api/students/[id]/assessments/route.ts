@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export async function GET(
   request: NextRequest,
@@ -14,7 +12,7 @@ export async function GET(
     const student = await prisma.user.findUnique({
       where: { id },
       include: {
-        grade: {
+        assignedGrade: {
           include: {
             tracks: {
               include: {
@@ -32,7 +30,7 @@ export async function GET(
     }
 
     // Generate mock assessments based on tracks and sessions
-    const tracks = student.grade?.tracks || [];
+    const tracks = student.assignedGrade?.tracks || [];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const assessments: any[] = [];
     let assessmentId = 1;

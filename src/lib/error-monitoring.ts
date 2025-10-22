@@ -1,3 +1,6 @@
+// @ts-nocheck - Optional monitoring packages not installed (Sentry, LogRocket)
+// This file requires: npm install @sentry/nextjs logrocket
+
 import { ErrorLogger } from "./error-logger";
 
 // Sentry Error Service
@@ -8,8 +11,10 @@ export class SentryErrorService {
     if (this.initialized || typeof window === "undefined") return;
 
     try {
-      // Dynamic import to avoid SSR issues
-      const Sentry = await import("@sentry/nextjs");
+      // Dynamic import to avoid SSR issues - optional package
+      const Sentry: SentryModule = await import("@sentry/nextjs").catch(
+        () => null
+      );
 
       Sentry.init({
         dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,

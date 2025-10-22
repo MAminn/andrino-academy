@@ -117,10 +117,16 @@ export async function PUT(
       startTime,
       endTime,
       meetLink,
+      externalLink,
+      trackId,
+      instructorId,
       materials,
       notes,
       status,
     } = body;
+
+    // Support both meetLink and externalLink for compatibility
+    const linkToUpdate = externalLink || meetLink;
 
     // Check if session exists
     const existingSession = await prisma.liveSession.findUnique({
@@ -160,6 +166,39 @@ export async function PUT(
       return createErrorResponse("عنوان الجلسة غير صحيح", 400);
     }
 
+    // Validate trackId if changing track
+    if (trackId && trackId !== existingSession.trackId) {
+      const newTrack = await prisma.track.findUnique({
+        where: { id: trackId },
+        include: { instructor: true, coordinator: true },
+      });
+
+      if (!newTrack) {
+        return createErrorResponse("المسار المحدد غير موجود", 400);
+      }
+
+      // Check permission for new track
+      const canAccessNewTrack =
+        allowedRoles.includes(session.user.role) ||
+        (session.user.role === "coordinator" &&
+          newTrack.coordinatorId === session.user.id);
+
+      if (!canAccessNewTrack) {
+        return ErrorResponses.forbidden();
+      }
+    }
+
+    // Validate instructorId if provided
+    if (instructorId && instructorId !== existingSession.instructorId) {
+      const instructor = await prisma.user.findUnique({
+        where: { id: instructorId },
+      });
+
+      if (!instructor || instructor.role !== "instructor") {
+        return createErrorResponse("المعلم المحدد غير موجود", 400);
+      }
+    }
+
     // Validate date if provided
     if (date) {
       const sessionDate = new Date(date);
@@ -184,16 +223,17 @@ export async function PUT(
       );
     }
 
-    // Check for time conflicts if date/time is being updated
-    if (date || startTime || endTime) {
+    // Check for time conflicts if date/time/track is being updated
+    if (date || startTime || endTime || trackId) {
       const checkDate = date ? new Date(date) : existingSession.date;
       const checkStartTime = startTime || existingSession.startTime;
       const checkEndTime = endTime || existingSession.endTime;
+      const checkTrackId = trackId || existingSession.trackId;
 
       const conflictingSessions = await prisma.liveSession.findMany({
         where: {
           id: { not: id }, // Exclude current session
-          trackId: existingSession.trackId,
+          trackId: checkTrackId,
           date: checkDate,
           OR: [
             {
@@ -230,7 +270,9 @@ export async function PUT(
       date?: Date;
       startTime?: string;
       endTime?: string;
-      meetLink?: string | null;
+      trackId?: string;
+      instructorId?: string;
+      externalLink?: string | null;
       materials?: string | null;
       notes?: string | null;
       status?:
@@ -248,7 +290,23 @@ export async function PUT(
     if (date !== undefined) updateData.date = new Date(date);
     if (startTime !== undefined) updateData.startTime = startTime;
     if (endTime !== undefined) updateData.endTime = endTime;
-    if (meetLink !== undefined) updateData.meetLink = meetLink;
+
+    // If trackId is being changed, automatically update instructorId to match the new track's instructor
+    if (trackId !== undefined && trackId !== existingSession.trackId) {
+      const newTrack = await prisma.track.findUnique({
+        where: { id: trackId },
+        select: { instructorId: true },
+      });
+      if (newTrack) {
+        updateData.trackId = trackId;
+        updateData.instructorId = newTrack.instructorId; // Auto-assign track's instructor
+      }
+    } else if (instructorId !== undefined) {
+      // Only allow manual instructor change if track isn't changing
+      updateData.instructorId = instructorId;
+    }
+
+    if (linkToUpdate !== undefined) updateData.externalLink = linkToUpdate;
     if (materials !== undefined) updateData.materials = materials;
     if (notes !== undefined) updateData.notes = notes;
     if (status !== undefined)

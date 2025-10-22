@@ -42,6 +42,13 @@ export default function SessionSchedulingModal({
   onSuccess,
   editSession,
 }: SessionModalProps) {
+  interface ConflictItem {
+    id: string;
+    title: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+  }
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -91,8 +98,9 @@ export default function SessionSchedulingModal({
     try {
       const response = await fetch("/api/tracks");
       if (response.ok) {
-        const data = await response.json();
-        setTracks(data);
+        const result = await response.json();
+        // API returns { success, data } wrapped response
+        setTracks(result.data || []);
       } else {
         setError("فشل في تحميل المسارات");
       }
@@ -140,19 +148,34 @@ export default function SessionSchedulingModal({
         : "/api/sessions";
       const method = editSession ? "PUT" : "POST";
 
+      // Prepare the request body
+      const requestBody = editSession
+        ? formData // When editing, send only the form data (don't override status)
+        : {
+            ...formData,
+            status: "SCHEDULED", // Default status only for new sessions
+          };
+
       const response = await fetch(url, {
         method,
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          ...formData,
-          status: "scheduled", // Default status for new sessions
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
+        // If backend provided conflicts array, create a detailed message
+        if (errorData?.conflicts && Array.isArray(errorData.conflicts)) {
+          const conflictsText = (errorData.conflicts as ConflictItem[])
+            .map((c) => `• ${c.title} — ${c.date} ${c.startTime}-${c.endTime}`)
+            .join("\n");
+          throw new Error(
+            `${errorData.error || "فشل في حفظ الجلسة"}\n${conflictsText}`
+          );
+        }
+
         throw new Error(errorData.error || "فشل في حفظ الجلسة");
       }
 

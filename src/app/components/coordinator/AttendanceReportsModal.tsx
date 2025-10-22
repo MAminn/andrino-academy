@@ -114,13 +114,15 @@ export default function AttendanceReportsModal({
       ]);
 
       if (tracksResponse.ok) {
-        const tracksData = await tracksResponse.json();
-        setTracks(tracksData);
+        const result = await tracksResponse.json();
+        // API returns { success, data } wrapped response
+        setTracks(result.data || []);
       }
 
       if (gradesResponse.ok) {
-        const gradesData = await gradesResponse.json();
-        setGrades(gradesData);
+        const result = await gradesResponse.json();
+        // API returns { grades: [...] }
+        setGrades(result.grades || []);
       }
     } catch (error) {
       console.error("Error fetching initial data:", error);

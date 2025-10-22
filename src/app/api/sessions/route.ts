@@ -332,8 +332,17 @@ export async function POST(request: NextRequest) {
     });
 
     if (conflictingSessions.length > 0) {
+      // Map to minimal conflict info to help frontend show details
+      const conflicts = conflictingSessions.map((s) => ({
+        id: s.id,
+        title: s.title,
+        date: s.date.toISOString().split("T")[0],
+        startTime: s.startTime,
+        endTime: s.endTime,
+      }));
+
       return NextResponse.json(
-        { error: "Time conflict with existing session" },
+        { error: "Time conflict with existing session", conflicts },
         { status: 400 }
       );
     }

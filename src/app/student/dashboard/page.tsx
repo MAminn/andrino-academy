@@ -104,11 +104,6 @@ export default function StudentDashboard() {
   >([]);
   const [loading, setLoading] = useState(true);
 
-  // Real-time update states
-  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [hasNewContent, setHasNewContent] = useState(false);
-
   // Modal states
   const [sessionsModalOpen, setSessionsModalOpen] = useState(false);
   const [progressModalOpen, setProgressModalOpen] = useState(false);
@@ -140,31 +135,33 @@ export default function StudentDashboard() {
           setStudentData(studentInfo);
         }
 
-        // Fetch upcoming sessions
+        // Fetch upcoming sessions (API automatically filters by authenticated user role)
         const today = new Date().toISOString().split("T")[0];
         const nextMonth = new Date();
         nextMonth.setMonth(nextMonth.getMonth() + 1);
         const upcomingResponse = await fetch(
           `/api/sessions?startDate=${today}&endDate=${
             nextMonth.toISOString().split("T")[0]
-          }&studentId=${session?.user?.id}`
+          }`
         );
         if (upcomingResponse.ok) {
           const upcomingData = await upcomingResponse.json();
           setUpcomingSessions(upcomingData.sessions || []);
         } else {
+          console.error("Failed to fetch sessions:", upcomingResponse.status);
           setUpcomingSessions([]);
         }
 
-        // Fetch attendance history
-        const attendanceResponse = await fetch(
-          `/api/attendance?studentId=${session?.user?.id}`
-        );
+        // Fetch attendance history (API automatically filters by authenticated student)
+        const attendanceResponse = await fetch(`/api/attendance`);
         if (attendanceResponse.ok) {
           const attendanceData = await attendanceResponse.json();
           setAttendanceHistory(attendanceData.attendances || []);
         } else {
-          console.log("Attendance endpoint not available yet");
+          console.error(
+            "Failed to fetch attendance:",
+            attendanceResponse.status
+          );
           setAttendanceHistory([]);
         }
       } catch (error) {
@@ -340,7 +337,7 @@ export default function StudentDashboard() {
                   <div className='flex items-center'>
                     <CheckCircle className='w-4 h-4 ml-2' />
                     {
-                      track.liveSessions.filter((s) => s.status === "completed")
+                      track.liveSessions.filter((s) => s.status === "COMPLETED")
                         .length
                     }{" "}
                     مكتملة
@@ -348,11 +345,23 @@ export default function StudentDashboard() {
                 </div>
 
                 <div className='flex gap-2'>
-                  <button className='flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors'>
+                  <button
+                    onClick={() => {
+                      setSelectedTrackId(track.id);
+                      setSelectedTrackName(track.name);
+                      setSessionsModalOpen(true);
+                    }}
+                    className='flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors cursor-pointer'>
                     <Eye className='w-4 h-4' />
                     عرض الجلسات
                   </button>
-                  <button className='flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors'>
+                  <button
+                    onClick={() => {
+                      setSelectedTrackId(track.id);
+                      setSelectedTrackName(track.name);
+                      setProgressModalOpen(true);
+                    }}
+                    className='flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors cursor-pointer'>
                     <BarChart3 className='w-4 h-4' />
                     تقدمي
                   </button>
@@ -428,19 +437,26 @@ export default function StudentDashboard() {
                   <div className='flex gap-2'>
                     <span
                       className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        session.status === "active"
+                        session.status === "ACTIVE"
                           ? "bg-green-100 text-green-800"
-                          : session.status === "scheduled"
+                          : session.status === "SCHEDULED" ||
+                            session.status === "READY"
                           ? "bg-blue-100 text-blue-800"
-                          : "bg-gray-100 text-gray-800"
+                          : session.status === "COMPLETED"
+                          ? "bg-gray-100 text-gray-800"
+                          : "bg-yellow-100 text-yellow-800"
                       }`}>
-                      {session.status === "active"
+                      {session.status === "ACTIVE"
                         ? "جارية"
-                        : session.status === "scheduled"
+                        : session.status === "SCHEDULED"
                         ? "مجدولة"
-                        : "مكتملة"}
+                        : session.status === "READY"
+                        ? "جاهزة"
+                        : session.status === "COMPLETED"
+                        ? "مكتملة"
+                        : session.status}
                     </span>
-                    {session.status === "active" && session.externalLink && (
+                    {session.status === "ACTIVE" && session.externalLink && (
                       <button
                         onClick={() =>
                           window.open(

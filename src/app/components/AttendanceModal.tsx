@@ -205,10 +205,12 @@ export default function AttendanceModal({
   if (!isOpen) return null;
 
   return (
-    <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'>
-      <div className='bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] overflow-hidden'>
+    <div
+      className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'
+      style={{ overflow: "hidden" }}>
+      <div className='bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col'>
         {/* Header */}
-        <div className='bg-blue-600 text-white p-6'>
+        <div className='bg-blue-600 text-white p-6 flex-shrink-0'>
           <div className='flex items-center justify-between'>
             <div>
               <h2 className='text-xl font-bold mb-2'>إدارة الحضور</h2>
@@ -241,7 +243,7 @@ export default function AttendanceModal({
           <>
             {/* Stats Cards */}
             {attendanceStats && (
-              <div className='p-6 border-b bg-gray-50'>
+              <div className='p-6 border-b bg-gray-50 flex-shrink-0'>
                 <div className='grid grid-cols-2 md:grid-cols-5 gap-4'>
                   <div className='text-center'>
                     <div className='text-2xl font-bold text-gray-900'>
@@ -278,7 +280,7 @@ export default function AttendanceModal({
             )}
 
             {/* Filters */}
-            <div className='p-4 border-b bg-white'>
+            <div className='p-4 border-b bg-white flex-shrink-0'>
               <div className='flex items-center gap-4'>
                 <span className='text-sm font-medium text-gray-700'>
                   فلترة حسب الحالة:
@@ -307,8 +309,10 @@ export default function AttendanceModal({
               </div>
             </div>
 
-            {/* Attendance List */}
-            <div className='flex-1 overflow-auto p-6'>
+            {/* Attendance List - Scrollable Content */}
+            <div
+              className='flex-1 overflow-y-auto p-6'
+              style={{ minHeight: "200px" }}>
               <div className='space-y-3'>
                 {filteredAttendances.map((attendance) => {
                   const currentStatus =
@@ -411,8 +415,8 @@ export default function AttendanceModal({
               )}
             </div>
 
-            {/* Footer */}
-            <div className='p-6 border-t bg-gray-50 flex items-center justify-between'>
+            {/* Footer - Fixed at Bottom */}
+            <div className='p-6 border-t bg-gray-50 flex items-center justify-between flex-shrink-0'>
               <div className='text-sm text-gray-600'>
                 آخر تحديث: {new Date().toLocaleString("ar-SA")}
               </div>

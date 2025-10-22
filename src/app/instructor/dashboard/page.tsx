@@ -23,6 +23,7 @@ import {
 import { useSessionStore, useTrackStore, useUIStore } from "@/stores";
 import SessionLinkModal from "@/app/components/instructor/SessionLinkModal";
 import AttendanceModal from "@/app/components/AttendanceModal";
+import SessionSchedulingModal from "@/app/components/coordinator/SessionSchedulingModal";
 import {
   BookOpen,
   Calendar,
@@ -300,7 +301,24 @@ export default function InstructorDashboard() {
 
         <QuickActionCard title='إدارة الحضور'>
           <button
-            onClick={() => openModal("attendanceModal")}
+            onClick={() => {
+              // Find the most recent active or completed session for attendance
+              const latestSession =
+                todaySessions?.find((s) => s.status === "ACTIVE") ||
+                todaySessions?.find((s) => s.status === "COMPLETED") ||
+                sessions?.find((s) => s.status === "ACTIVE") ||
+                sessions?.find((s) => s.status === "COMPLETED");
+
+              if (latestSession) {
+                setModalData({ selectedSessionId: latestSession.id });
+                openModal("attendanceModal");
+              } else {
+                addNotification({
+                  type: "warning",
+                  message: "لا توجد جلسات متاحة لتسجيل الحضور",
+                });
+              }
+            }}
             className='w-full bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg flex items-center justify-center space-x-2 space-x-reverse transition-colors'>
             <UserCheck className='w-5 h-5' />
             <span>مراجعة الحضور</span>
@@ -309,7 +327,13 @@ export default function InstructorDashboard() {
 
         <QuickActionCard title='تقارير الأداء'>
           <button
-            onClick={() => openModal("reportsModal")}
+            onClick={() => {
+              // Show all instructor's sessions with attendance statistics
+              addNotification({
+                type: "info",
+                message: "سيتم إضافة تقارير الأداء قريباً",
+              });
+            }}
             className='w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg flex items-center justify-center space-x-2 space-x-reverse transition-colors'>
             <Activity className='w-5 h-5' />
             <span>عرض التقارير</span>
@@ -409,12 +433,34 @@ export default function InstructorDashboard() {
                         انضمام
                       </button>
                       <button
+                        onClick={() => {
+                          setModalData({ selectedSessionId: session.id });
+                          openModal("attendanceModal");
+                        }}
+                        className='bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700 transition-colors flex items-center gap-1'>
+                        <UserCheck className='w-3 h-3' />
+                        الحضور
+                      </button>
+                      <button
                         onClick={() => handleCompleteSession(session.id)}
                         className='bg-purple-600 text-white px-3 py-1 rounded text-xs hover:bg-purple-700 transition-colors flex items-center gap-1'>
                         <Pause className='w-3 h-3' />
                         إنهاء
                       </button>
                     </>
+                  )}
+
+                  {/* Completed Session Controls */}
+                  {session.status === "COMPLETED" && (
+                    <button
+                      onClick={() => {
+                        setModalData({ selectedSessionId: session.id });
+                        openModal("attendanceModal");
+                      }}
+                      className='bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700 transition-colors flex items-center gap-1'>
+                      <UserCheck className='w-3 h-3' />
+                      مراجعة الحضور
+                    </button>
                   )}
 
                   {/* Edit Button */}
@@ -470,7 +516,7 @@ export default function InstructorDashboard() {
 
       {/* Upcoming Sessions */}
       {(upcomingSessions?.length || 0) > 0 && (
-        <div className='bg-white rounded-lg shadow-md p-6'>
+        <div className='bg-white rounded-lg shadow-md p-6 mb-8'>
           <h2 className='text-xl font-bold text-gray-900 mb-6 flex items-center gap-2'>
             <TrendingUp className='w-5 h-5 text-purple-600' />
             الجلسات القادمة ({upcomingSessions?.length || 0})
@@ -511,6 +557,70 @@ export default function InstructorDashboard() {
         </div>
       )}
 
+      {/* Past Sessions - Completed Sessions for Attendance Management */}
+      {sessions &&
+        sessions.filter((s) => s.status === "COMPLETED").length > 0 && (
+          <div className='bg-white rounded-lg shadow-md p-6'>
+            <h2 className='text-xl font-bold text-gray-900 mb-6 flex items-center gap-2'>
+              <UserCheck className='w-5 h-5 text-gray-600' />
+              الجلسات المكتملة (
+              {sessions.filter((s) => s.status === "COMPLETED").length})
+            </h2>
+
+            <div className='space-y-3'>
+              {sessions
+                .filter((s) => s.status === "COMPLETED")
+                .slice(0, 10)
+                .map((session) => (
+                  <div
+                    key={session.id}
+                    className='flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50'>
+                    <div>
+                      <h4 className='font-semibold text-gray-900'>
+                        {session.title}
+                      </h4>
+                      <p className='text-sm text-gray-600'>
+                        {new Date(session.date).toLocaleDateString("ar-SA")} -
+                        {new Date(session.startTime).toLocaleTimeString(
+                          "ar-SA",
+                          {
+                            hour12: true,
+                          }
+                        )}
+                      </p>
+                      <p className='text-xs text-gray-500 mt-1'>
+                        المسار: {session.track?.name || "غير محدد"}
+                      </p>
+                    </div>
+                    <div className='flex items-center gap-3'>
+                      <span className='px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800'>
+                        مكتملة
+                      </span>
+                      <button
+                        onClick={() => {
+                          setModalData({ selectedSessionId: session.id });
+                          openModal("attendanceModal");
+                        }}
+                        className='bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700 transition-colors flex items-center gap-1'>
+                        <UserCheck className='w-3 h-3' />
+                        مراجعة الحضور
+                      </button>
+                    </div>
+                  </div>
+                ))}
+            </div>
+
+            {sessions.filter((s) => s.status === "COMPLETED").length > 10 && (
+              <div className='text-center mt-4'>
+                <button className='text-blue-600 hover:text-blue-800 text-sm font-medium'>
+                  عرض جميع الجلسات المكتملة (
+                  {sessions.filter((s) => s.status === "COMPLETED").length})
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
       {/* Modals */}
       <SessionLinkModal
         isOpen={useUIStore.getState().modals.sessionLinkModal}
@@ -539,6 +649,46 @@ export default function InstructorDashboard() {
         sessionId={useUIStore.getState().modalData?.selectedSessionId || ""}
         isOpen={useUIStore.getState().modals.attendanceModal}
         onClose={() => useUIStore.getState().closeModal("attendanceModal")}
+      />
+
+      <SessionSchedulingModal
+        isOpen={useUIStore.getState().modals.sessionModal}
+        onClose={() => {
+          useUIStore.getState().closeModal("sessionModal");
+          useUIStore.getState().setModalData({ selectedSessionId: null });
+        }}
+        onSuccess={async () => {
+          // Refresh sessions after creating/editing
+          await fetchSessions({ instructorId: session?.user?.id });
+          await fetchTodaySessions();
+          await fetchUpcomingSessions();
+          addNotification({
+            type: "success",
+            message: "تم حفظ الجلسة بنجاح",
+          });
+          useUIStore.getState().closeModal("sessionModal");
+        }}
+        editSession={
+          useUIStore.getState().modalData?.selectedSessionId
+            ? (() => {
+                const sess = sessions?.find(
+                  (s) =>
+                    s.id === useUIStore.getState().modalData?.selectedSessionId
+                );
+                return sess
+                  ? {
+                      id: sess.id,
+                      title: sess.title,
+                      description: sess.description || "",
+                      date: sess.date,
+                      startTime: sess.startTime,
+                      endTime: sess.endTime,
+                      trackId: sess.track?.id || sess.trackId,
+                    }
+                  : null;
+              })()
+            : null
+        }
       />
     </DashboardLayout>
   );

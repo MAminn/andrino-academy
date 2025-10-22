@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export async function GET(
   request: NextRequest,
@@ -24,7 +22,7 @@ export async function GET(
     const student = await prisma.user.findUnique({
       where: { id },
       include: {
-        grade: {
+        assignedGrade: {
           include: {
             tracks: {
               include: {
@@ -62,9 +60,9 @@ export async function GET(
     // Flatten all sessions from all tracks
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const allSessions: any[] = [];
-    if (student.grade?.tracks) {
+    if (student.assignedGrade?.tracks) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      student.grade.tracks.forEach((track: any) => {
+      student.assignedGrade.tracks.forEach((track: any) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         track.liveSessions.forEach((session: any) => {
           allSessions.push({
