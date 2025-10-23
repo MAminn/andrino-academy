@@ -284,9 +284,7 @@ export default function AttendanceModal({
         </div>
 
         {/* Content */}
-        <div
-          className='flex-1 overflow-y-auto'
-          style={{ minHeight: "200px" }}>
+        <div className='flex-1 overflow-y-auto' style={{ minHeight: "200px" }}>
           {loading ? (
             <div className='flex items-center justify-center py-12'>
               <div className='text-center'>

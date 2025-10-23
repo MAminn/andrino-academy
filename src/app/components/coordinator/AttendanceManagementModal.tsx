@@ -158,19 +158,19 @@ export default function AttendanceManagementModal({
 
   const getStatusColor = (status: string) => {
     const colorMap: Record<string, string> = {
-      PRESENT: "bg-green-500 hover:bg-green-600",
-      ABSENT: "bg-red-500 hover:bg-red-600",
-      LATE: "bg-yellow-500 hover:bg-yellow-600",
-      EXCUSED: "bg-blue-500 hover:bg-blue-600",
+      present: "bg-green-500 hover:bg-green-600",
+      absent: "bg-red-500 hover:bg-red-600",
+      late: "bg-yellow-500 hover:bg-yellow-600",
+      excused: "bg-blue-500 hover:bg-blue-600",
     };
     return colorMap[status] || "bg-gray-500 hover:bg-gray-600";
   };
 
   const statusOptions = [
-    { value: "PRESENT", label: "حاضر", color: "green" },
-    { value: "ABSENT", label: "غائب", color: "red" },
-    { value: "LATE", label: "متأخر", color: "yellow" },
-    { value: "EXCUSED", label: "معذور", color: "blue" },
+    { value: "present", label: "حاضر", color: "green" },
+    { value: "absent", label: "غائب", color: "red" },
+    { value: "late", label: "متأخر", color: "yellow" },
+    { value: "excused", label: "معذور", color: "blue" },
   ];
 
   return (

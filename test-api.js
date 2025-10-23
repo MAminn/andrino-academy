@@ -1,44 +1,86 @@
-#!/usr/bin/env node
-/**
- * ANDRINO ACADEMY - AUTOMATED API TEST SUITE
+// Test API endpoint directly#!/usr/bin/env node
+
+const { PrismaClient } = require('./src/generated/prisma');/**
+
+const prisma = new PrismaClient(); * ANDRINO ACADEMY - AUTOMATED API TEST SUITE
+
  *
- * Quick validation of critical API endpoints and authentication flows
- * Run with: node test-api.js
- */
 
-const BASE_URL = "http://localhost:3000";
+async function testAPI() { * Quick validation of critical API endpoints and authentication flows
 
-// Test credentials from seed data
-const TEST_ACCOUNTS = {
-  ceo: { email: "ceo@andrino-academy.com", password: "Andrino2024!" },
-  manager: { email: "manager@andrino-academy.com", password: "Manager2024!" },
-  coordinator: {
-    email: "coordinator@andrino-academy.com",
-    password: "Coord2024!",
-  },
-  instructor: {
-    email: "ahmed.instructor@andrino-academy.com",
-    password: "Instructor123!",
-  },
-  student: {
-    email: "ali.student@andrino-academy.com",
-    password: "Student123!",
-  },
-};
+  // Get a session that has attendance data * Run with: node test-api.js
 
-// Color codes for terminal output
-const colors = {
-  reset: "\x1b[0m",
-  green: "\x1b[32m",
-  red: "\x1b[31m",
-  yellow: "\x1b[33m",
-  blue: "\x1b[34m",
-  magenta: "\x1b[35m",
-};
+  const session = await prisma.liveSession.findFirst({ */
 
-let totalTests = 0;
-let passedTests = 0;
+    where: {
+
+      attendances: { some: {} }const BASE_URL = "http://localhost:3000";
+
+    },
+
+    include: {// Test credentials from seed data
+
+      track: {const TEST_ACCOUNTS = {
+
+        include: {  ceo: { email: "ceo@andrino-academy.com", password: "Andrino2024!" },
+
+          grade: { select: { id: true, name: true } },  manager: { email: "manager@andrino-academy.com", password: "Manager2024!" },
+
+          instructor: { select: { id: true, name: true, email: true } },  coordinator: {
+
+        },    email: "coordinator@andrino-academy.com",
+
+      },    password: "Coord2024!",
+
+      instructor: { select: { id: true, name: true, email: true } },  },
+
+      attendances: {  instructor: {
+
+        include: {    email: "ahmed.instructor@andrino-academy.com",
+
+          student: { select: { id: true, name: true, email: true } },    password: "Instructor123!",
+
+        },  },
+
+        orderBy: { student: { name: "asc" } },  student: {
+
+      },    email: "ali.student@andrino-academy.com",
+
+      _count: { select: { attendances: true } },    password: "Student123!",
+
+    },  },
+
+  });};
+
+
+
+  console.log('\n=== Session Data (as API returns) ===\n');// Color codes for terminal output
+
+  console.log(`Session ID: ${session.id}`);const colors = {
+
+  console.log(`Session Title: ${session.title}`);  reset: "\x1b[0m",
+
+  console.log(`Has attendances property: ${!!session.attendances}`);  green: "\x1b[32m",
+
+  console.log(`Attendances count: ${session.attendances.length}`);  red: "\x1b[31m",
+
+  console.log(`_count.attendances: ${session._count.attendances}`);  yellow: "\x1b[33m",
+
+    blue: "\x1b[34m",
+
+  console.log('\nAttendances array:');  magenta: "\x1b[35m",
+
+  console.log(JSON.stringify(session.attendances, null, 2));};
+
+  
+
+  await prisma.$disconnect();let totalTests = 0;
+
+}let passedTests = 0;
+
 let failedTests = 0;
+
+testAPI().catch(console.error);
 
 function log(message, color = "reset") {
   console.log(`${colors[color]}${message}${colors.reset}`);

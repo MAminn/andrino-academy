@@ -8,14 +8,15 @@ export async function GET(
   try {
     const { id } = await params;
 
-    // Get all attendance records for the student
-    const attendanceRecords = await prisma.attendance.findMany({
+    // Get all SessionAttendance records for the student (LiveSessions)
+    const sessionAttendanceRecords = await prisma.sessionAttendance.findMany({
       where: { studentId: id },
       include: {
         session: {
           include: {
             track: {
               include: {
+                grade: true,
                 instructor: true,
               },
             },
@@ -30,16 +31,17 @@ export async function GET(
 
     // Transform the data for the frontend
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const records = attendanceRecords.map((record: any) => ({
+    const records = sessionAttendanceRecords.map((record: any) => ({
       id: record.id,
       sessionId: record.session.id,
       sessionTitle: record.session.title,
       trackName: record.session.track.name,
+      gradeName: record.session.track.grade.name,
       date: record.session.date,
       startTime: record.session.startTime,
       endTime: record.session.endTime,
       status: record.status,
-      markedAt: record.createdAt,
+      markedAt: record.markedAt,
       notes: record.notes,
       instructor: record.session.track.instructor?.name || "غير محدد",
     }));

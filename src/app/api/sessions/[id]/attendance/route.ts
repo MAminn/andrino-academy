@@ -69,11 +69,11 @@ export async function POST(
       }
     }
 
-    // Update attendance records
+    // Update attendance records using SessionAttendance model
     const updatePromises = attendance.map(
-      async (record: { studentId: string; status: string }) => {
+      async (record: { studentId: string; status: string; notes?: string }) => {
         // Find existing attendance record
-        const existingRecord = await prisma.attendance.findFirst({
+        const existingRecord = await prisma.sessionAttendance.findFirst({
           where: {
             sessionId: sessionId,
             studentId: record.studentId,
@@ -82,17 +82,25 @@ export async function POST(
 
         if (existingRecord) {
           // Update existing record
-          return prisma.attendance.update({
+          return prisma.sessionAttendance.update({
             where: { id: existingRecord.id },
-            data: { status: record.status },
+            data: {
+              status: record.status,
+              notes: record.notes,
+              markedBy: session.user.id,
+              markedAt: new Date(),
+            },
           });
         } else {
           // Create new record
-          return prisma.attendance.create({
+          return prisma.sessionAttendance.create({
             data: {
               sessionId: sessionId,
               studentId: record.studentId,
               status: record.status,
+              notes: record.notes,
+              markedBy: session.user.id,
+              markedAt: new Date(),
             },
           });
         }
@@ -102,7 +110,7 @@ export async function POST(
     await Promise.all(updatePromises);
 
     // Fetch updated attendance records
-    const updatedAttendance = await prisma.attendance.findMany({
+    const updatedAttendance = await prisma.sessionAttendance.findMany({
       where: { sessionId: sessionId },
       include: {
         student: {
@@ -113,6 +121,7 @@ export async function POST(
           },
         },
       },
+      orderBy: { student: { name: "asc" } },
     });
 
     return NextResponse.json({

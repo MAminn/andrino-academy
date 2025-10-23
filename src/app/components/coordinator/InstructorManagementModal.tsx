@@ -28,7 +28,7 @@ interface Instructor {
 }
 
 interface InstructorAnalytics {
-  instructorWorkload: {
+  workload: {
     id: string;
     name: string;
     email: string;
@@ -87,7 +87,7 @@ export default function InstructorManagementModal({
 
   const getWorkloadData = (instructorId: string) => {
     if (!analytics) return null;
-    return analytics.instructorWorkload.find((w) => w.id === instructorId);
+    return analytics.workload.find((w) => w.id === instructorId);
   };
 
   const getWorkloadColor = (score: number) => {

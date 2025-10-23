@@ -524,7 +524,7 @@ After seeding, you should have:
 **Priority**: 🔴 CRITICAL
 
 **Steps**:
-
+s
 1. Login as Manager
 2. Navigate to "إدارة المستويات" (Grade Management)
 3. Click "مستوى جديد" (New Grade)

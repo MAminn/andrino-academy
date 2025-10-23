@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
         email: true,
         role: true,
         createdAt: true,
-        instructorTracks: {
+        instructedTracks: {
           include: {
             grade: {
               select: { id: true, name: true },
@@ -72,9 +72,9 @@ export async function GET(request: NextRequest) {
       email: user.email,
       role: user.role,
       createdAt: user.createdAt,
-      tracks: user.instructorTracks || [],
+      tracks: user.instructedTracks || [],
       _count: {
-        tracks: user.instructorTracks?.length || 0,
+        tracks: user.instructedTracks?.length || 0,
       },
     }));
 

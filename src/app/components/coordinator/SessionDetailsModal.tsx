@@ -136,13 +136,13 @@ export default function SessionDetailsModal({
 
   const getAttendanceStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; className: string }> = {
-      PRESENT: { label: "حاضر", className: "bg-green-100 text-green-800" },
-      ABSENT: { label: "غائب", className: "bg-red-100 text-red-800" },
-      LATE: { label: "متأخر", className: "bg-yellow-100 text-yellow-800" },
-      EXCUSED: { label: "معذور", className: "bg-blue-100 text-blue-800" },
+      present: { label: "حاضر", className: "bg-green-100 text-green-800" },
+      absent: { label: "غائب", className: "bg-red-100 text-red-800" },
+      late: { label: "متأخر", className: "bg-yellow-100 text-yellow-800" },
+      excused: { label: "معذور", className: "bg-blue-100 text-blue-800" },
     };
 
-    const statusInfo = statusMap[status] || statusMap.ABSENT;
+    const statusInfo = statusMap[status] || statusMap.absent;
     return (
       <span
         className={`px-2 py-1 rounded-full text-xs font-medium ${statusInfo.className}`}>
@@ -152,7 +152,7 @@ export default function SessionDetailsModal({
   };
 
   const presentCount =
-    session?.attendance.filter((a) => a.status === "PRESENT").length || 0;
+    session?.attendance.filter((a) => a.status === "present").length || 0;
   const totalStudents = session?.attendance.length || 0;
 
   return (
@@ -267,7 +267,7 @@ export default function SessionDetailsModal({
                         <div className='bg-white p-3 rounded'>
                           <div className='text-2xl font-bold text-green-600'>
                             {session.attendance.filter(
-                              (a) => a.status === "PRESENT"
+                              (a) => a.status === "present"
                             ).length || 0}
                           </div>
                           <div className='text-xs text-gray-600'>حاضر</div>
@@ -275,7 +275,7 @@ export default function SessionDetailsModal({
                         <div className='bg-white p-3 rounded'>
                           <div className='text-2xl font-bold text-red-600'>
                             {session.attendance.filter(
-                              (a) => a.status === "ABSENT"
+                              (a) => a.status === "absent"
                             ).length || 0}
                           </div>
                           <div className='text-xs text-gray-600'>غائب</div>
@@ -283,7 +283,7 @@ export default function SessionDetailsModal({
                         <div className='bg-white p-3 rounded'>
                           <div className='text-2xl font-bold text-yellow-600'>
                             {session.attendance.filter(
-                              (a) => a.status === "LATE"
+                              (a) => a.status === "late"
                             ).length || 0}
                           </div>
                           <div className='text-xs text-gray-600'>متأخر</div>
@@ -291,7 +291,7 @@ export default function SessionDetailsModal({
                         <div className='bg-white p-3 rounded'>
                           <div className='text-2xl font-bold text-blue-600'>
                             {session.attendance.filter(
-                              (a) => a.status === "EXCUSED"
+                              (a) => a.status === "excused"
                             ).length || 0}
                           </div>
                           <div className='text-xs text-gray-600'>معذور</div>

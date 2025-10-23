@@ -101,6 +101,8 @@ export default function CoordinatorDashboard() {
   const [showSessionDetails, setShowSessionDetails] = useState(false);
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
   const [showTrackDetails, setShowTrackDetails] = useState(false);
+  const [showAllTracks, setShowAllTracks] = useState(false);
+  const [showAllUpcoming, setShowAllUpcoming] = useState(false);
 
   // Edit session state for SessionSchedulingModal
   const [editSession, setEditSession] = useState<{
@@ -367,7 +369,7 @@ export default function CoordinatorDashboard() {
       {/* Track Management */}
       <QuickActionCard title='إدارة المسارات'>
         <div className='space-y-4'>
-          {tracks.slice(0, 5).map((track) => (
+          {(showAllTracks ? tracks : tracks.slice(0, 5)).map((track) => (
             <div
               key={track.id}
               className='border rounded-lg p-4 hover:shadow-md transition-shadow'>
@@ -423,8 +425,12 @@ export default function CoordinatorDashboard() {
 
           {tracks.length > 5 && (
             <div className='text-center py-4'>
-              <button className='text-blue-600 hover:text-blue-800 font-medium'>
-                عرض جميع المسارات ({tracks.length})
+              <button
+                onClick={() => setShowAllTracks(!showAllTracks)}
+                className='text-blue-600 hover:text-blue-800 font-medium'>
+                {showAllTracks
+                  ? "إخفاء المسارات"
+                  : `عرض جميع المسارات (${tracks.length})`}
               </button>
             </div>
           )}
@@ -442,7 +448,10 @@ export default function CoordinatorDashboard() {
           </div>
         ) : (
           <div className='space-y-4'>
-            {upcomingSessions.slice(0, 5).map((session) => (
+            {(showAllUpcoming
+              ? upcomingSessions
+              : upcomingSessions.slice(0, 5)
+            ).map((session) => (
               <div
                 key={session.id}
                 className='border rounded-lg p-4 hover:shadow-md transition-shadow'>
@@ -493,8 +502,12 @@ export default function CoordinatorDashboard() {
 
             {upcomingSessions.length > 5 && (
               <div className='text-center py-4'>
-                <button className='text-blue-600 hover:text-blue-800 font-medium'>
-                  عرض جميع الجلسات القادمة ({upcomingSessions.length})
+                <button
+                  onClick={() => setShowAllUpcoming(!showAllUpcoming)}
+                  className='text-blue-600 hover:text-blue-800 font-medium'>
+                  {showAllUpcoming
+                    ? "إخفاء الجلسات"
+                    : `عرض جميع الجلسات القادمة (${upcomingSessions.length})`}
                 </button>
               </div>
             )}
