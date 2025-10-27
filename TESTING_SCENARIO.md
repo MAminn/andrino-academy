@@ -5,6 +5,9 @@
 ### Administrative Accounts
 
 ```
+
+adrino 
+Andrino2024!
 CEO Account:
 Email: ceo@andrino-academy.com
 Password: Andrino2024!

@@ -1,0 +1,18 @@
+0 verbose cli C:\nvm4w\nodejs\node.exe C:\ProgramData\nvm\v22.20.0\node_modules\npm\bin\npm-cli.js
+1 info using npm@10.9.3
+2 info using node@v22.20.0
+3 silly config load:file:C:\ProgramData\nvm\v22.20.0\node_modules\npm\npmrc
+4 silly config load:file:E:\Commercial\andrino-academy\.npmrc
+5 silly config load:file:E:\Commercial\andrino-academy\.temp\.npmrc
+6 silly config load:file:C:\nvm4w\nodejs\etc\npmrc
+7 verbose title npm exec next build
+8 verbose argv "exec" "--" "next" "build"
+9 verbose logfile logs-max:10 dir:E:\Commercial\andrino-academy\.temp\LocalAppData\npm-cache\_logs\2025-10-25T10_33_45_366Z-
+10 verbose logfile E:\Commercial\andrino-academy\.temp\LocalAppData\npm-cache\_logs\2025-10-25T10_33_45_366Z-debug-0.log
+11 silly logfile done cleaning log files
+12 verbose cwd E:\Commercial\andrino-academy
+13 verbose os Windows_NT 10.0.19045
+14 verbose node v22.20.0
+15 verbose npm  v10.9.3
+16 verbose exit 1
+17 verbose code 1

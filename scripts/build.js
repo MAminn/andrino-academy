@@ -15,10 +15,18 @@ process.env.INIT_CWD = projectRoot;
 // Disable unnecessary file system scanning
 process.env.NEXT_TELEMETRY_DISABLED = "1";
 process.env.WATCHPACK_POLLING = "false";
+process.env.WEBPACK_DISABLE_HOST_CHECK = "true";
+process.env.NODE_OPTIONS = "--max-old-space-size=4096";
+
+// Prevent Windows system directory scanning
+process.env.USERPROFILE = projectRoot;
+process.env.APPDATA = path.join(projectRoot, ".next");
+process.env.LOCALAPPDATA = path.join(projectRoot, ".next");
 
 console.log("🔨 Building Andrino Academy...");
 console.log("📁 Working directory:", projectRoot);
 console.log("🚫 Telemetry disabled");
+console.log("🔒 System directories restricted");
 
 try {
   // Run Next.js build with limited scope

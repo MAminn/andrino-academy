@@ -1,4 +1,4 @@
-# Enhancement: Session Track & Instructor Assignment Updates
+sudo apt install -y postgresql postgresql-contrib# Enhancement: Session Track & Instructor Assignment Updates
 
 **Date**: October 19, 2025
 **Status**: ✅ Implemented
