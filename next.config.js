@@ -10,7 +10,7 @@ const nextConfig = {
   },
   // Optimize bundle size
   experimental: {
-    optimizePackageImports: ['@heroicons/react'],
+    optimizePackageImports: ["@heroicons/react"],
   },
   // Fix Windows permissions issue by limiting file system scanning
   webpack: (config, { dev }) => {
@@ -18,13 +18,13 @@ const nextConfig = {
       // Limit webpack's file watching and scanning in production builds
       config.watchOptions = {
         ignored: [
-          '**/node_modules/**',
-          '**/.git/**',
-          '**/C:/**',
-          '**/Documents and Settings/**',
-          '**/Users/**/My Documents/**',
-          '**/Users/**/Documents/**',
-          '**/ProgramData/**',
+          "**/node_modules/**",
+          "**/.git/**",
+          "**/C:/**",
+          "**/Documents and Settings/**",
+          "**/Users/**/My Documents/**",
+          "**/Users/**/Documents/**",
+          "**/ProgramData/**",
         ],
       };
     }
