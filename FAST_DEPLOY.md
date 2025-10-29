@@ -130,7 +130,7 @@ sudo tee /etc/nginx/sites-available/andrino-academy << EOF
 server {
     listen 80;
     server_name 88.223.94.192;
-    
+
     location / {
         proxy_pass http://localhost:3000;
         proxy_set_header Host \$host;
@@ -168,6 +168,7 @@ curl -I http://88.223.94.192
 **Visit**: http://88.223.94.192
 
 **Login with**:
+
 - Email: `ceo@andrino-academy.com`
 - Password: `Andrino2024!`
 

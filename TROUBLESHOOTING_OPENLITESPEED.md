@@ -7,35 +7,63 @@ Your Node.js app is running correctly on port 3000, but OpenLiteSpeed is showing
 ## DNS Configuration
 
 ### Check Current DNS
-1. **From your VPS:**
+
+1. **Check your server's IP addresses:**
+
+   ```bash
+   # Get IPv4 address
+   curl -4 ifconfig.me
+   
+   # Get IPv6 address (your VPS has IPv6: 2a02:4780:28:15b9::1)
+   curl -6 ifconfig.me
+   ```
+
+2. **From your VPS:**
+
    ```bash
    nslookup andrinoacademy.com
    dig andrinoacademy.com +short
    ```
 
-2. **Check DNS from your local machine:**
+3. **Check DNS from your local machine:**
    - Go to https://dnschecker.org
    - Enter: andrinoacademy.com
-   - Should show IP: 88.223.94.192
+   - Should show your server's IPv4 address
 
 ### Configure DNS (If Not Set Up)
 
 If DNS isn't configured, you need to add A records in your domain registrar:
 
-**Required DNS Records:**
+**Required DNS Records (IPv4 + IPv6):**
+
 ```
+# IPv4 Records (Required)
 Type: A
 Name: @
-Value: 88.223.94.192
+Value: [YOUR_IPV4_ADDRESS]  # Get this with: curl -4 ifconfig.me
 TTL: 3600
 
 Type: A
 Name: www
-Value: 88.223.94.192
+Value: [YOUR_IPV4_ADDRESS]
+TTL: 3600
+
+# IPv6 Records (Optional but recommended)
+Type: AAAA
+Name: @
+Value: 2a02:4780:28:15b9::1
+TTL: 3600
+
+Type: AAAA
+Name: www
+Value: 2a02:4780:28:15b9::1
 TTL: 3600
 ```
 
+**Note:** If `curl -4 ifconfig.me` shows a different IP than what you expected (like 88.223.94.192), use the actual IPv4 address returned by the command.
+
 **Common Registrars:**
+
 - **Namecheap**: Advanced DNS → Add New Record
 - **GoDaddy**: DNS Management → Add Record
 - **Cloudflare**: DNS → Add Record
@@ -46,15 +74,17 @@ TTL: 3600
 ## Diagnostic Commands (Run These First)
 
 ### 1. Check Virtual Host Configuration File
+
 ```bash
 sudo cat /usr/local/lsws/conf/vhosts/andrinoacademy/vhconf.conf
 ```
 
 **Expected Output:**
+
 ```
 docRoot                   $VH_ROOT/html
 vhDomain                  andrinoacademy.com, www.andrinoacademy.com
-vhAliases                 
+vhAliases
 enableGzip                1
 
 errorlog $VH_ROOT/logs/error.log {
@@ -65,7 +95,7 @@ errorlog $VH_ROOT/logs/error.log {
 
 accesslog $VH_ROOT/logs/access.log {
   useServer               0
-  logFormat               
+  logFormat
   logHeaders              5
   rollingSize             10M
   keepDays                30
@@ -85,11 +115,13 @@ rewrite {
 ```
 
 ### 2. Check Main Server Configuration
+
 ```bash
 sudo grep -A 10 "extprocessor nodejs_backend" /usr/local/lsws/conf/httpd_config.conf
 ```
 
 **Expected Output:**
+
 ```
 extprocessor nodejs_backend {
   type                    proxy
@@ -103,12 +135,14 @@ extprocessor nodejs_backend {
 ```
 
 ### 3. Check Virtual Host Files Structure
+
 ```bash
 ls -la /usr/local/lsws/andrinoacademy/
 ls -la /usr/local/lsws/andrinoacademy/html/
 ```
 
 **Expected:**
+
 ```
 drwxr-xr-x andrino andrino andrinoacademy/
 drwxr-xr-x andrino andrino html/
@@ -118,11 +152,13 @@ lrwxrwxrwx andrino andrino public -> /home/andrino/apps/andrino-academy/public
 ```
 
 ### 4. Check OpenLiteSpeed Listeners
+
 ```bash
 sudo cat /usr/local/lsws/conf/httpd_config.conf | grep -A 30 "listener Default"
 ```
 
 ### 5. Verify PM2 Status
+
 ```bash
 sudo -u andrino pm2 list
 sudo -u andrino pm2 logs andrino-academy --lines 50
@@ -134,20 +170,24 @@ curl http://localhost:3000
 ### Step 1: Verify Virtual Host in WebAdmin
 
 1. **Login to WebAdmin:**
+
    ```
    https://88.223.94.192:7080
    Username: admin
    Password: (run command below to get it)
    ```
+
    ```bash
    sudo cat /home/andrino/.litespeed_password
    ```
 
 2. **Check Virtual Hosts:**
+
    - Go to: **Configuration → Virtual Hosts**
    - Look for: **andrinoacademy**
-   
+
    **If NOT listed:**
+
    - Click **Add** button
    - Fill in:
      - **Virtual Host Name:** `andrinoacademy`
@@ -159,14 +199,16 @@ curl http://localhost:3000
    - Click **Save**
 
 3. **Verify External App:**
+
    - Go to: **Configuration → Server → External App**
    - Look for: **nodejs_backend**
    - Should show:
      - Type: `Proxy`
      - Address: `http://127.0.0.1:3000`
      - Max Connections: `500`
-   
+
    **If NOT listed:**
+
    - Click **Add**
    - Type: `Web Server`
    - Name: `nodejs_backend`
@@ -178,17 +220,20 @@ curl http://localhost:3000
 ### Step 2: Configure Listener Mapping
 
 1. **Go to Listeners:**
+
    - **Configuration → Listeners**
 
 2. **HTTP Listener (Port 80):**
+
    - Click on **Default** (or the HTTP listener)
    - Go to **Virtual Host Mappings** tab
    - Click **Add**
-   
+
    **Fill in:**
+
    - **Virtual Host:** `andrinoacademy`
    - **Domains:** `andrinoacademy.com, www.andrinoacademy.com`
-   
+
    - Click **Save**
 
 3. **Set as Default (Optional but Recommended):**
@@ -229,6 +274,7 @@ sudo tail -f /usr/local/lsws/logs/error.log
 **Symptoms:** Can't read vhconf.conf
 
 **Fix:**
+
 ```bash
 sudo chmod 644 /usr/local/lsws/conf/vhosts/andrinoacademy/vhconf.conf
 sudo chown lsadm:lsadm /usr/local/lsws/conf/vhosts/andrinoacademy/vhconf.conf
@@ -237,6 +283,7 @@ sudo chown lsadm:lsadm /usr/local/lsws/conf/vhosts/andrinoacademy/vhconf.conf
 ### Issue 2: Virtual Host Logs Directory Missing
 
 **Fix:**
+
 ```bash
 sudo mkdir -p /usr/local/lsws/andrinoacademy/logs
 sudo chown andrino:andrino /usr/local/lsws/andrinoacademy/logs
@@ -246,6 +293,7 @@ sudo chmod 755 /usr/local/lsws/andrinoacademy/logs
 ### Issue 3: Symbolic Links Not Working
 
 **Fix:**
+
 ```bash
 # Remove old links
 rm -f /usr/local/lsws/andrinoacademy/html/_next
@@ -262,6 +310,7 @@ ls -la /usr/local/lsws/andrinoacademy/html/
 ### Issue 4: Node.js App Not Accessible
 
 **Fix:**
+
 ```bash
 # Check PM2 status
 sudo -u andrino pm2 list
@@ -278,6 +327,7 @@ curl http://localhost:3000
 ### Issue 5: OpenLiteSpeed Not Starting
 
 **Fix:**
+
 ```bash
 # Check OpenLiteSpeed status
 sudo systemctl status lsws
@@ -310,15 +360,16 @@ sudo nano /usr/local/lsws/conf/httpd_config.conf
 listener Default {
   address                 *:80
   secure                  0
-  
+
   # Add these lines
   vhostMap                andrinoacademy andrinoacademy.com, www.andrinoacademy.com
-  
+
   # Rest of config...
 }
 ```
 
 **Save and restart:**
+
 ```bash
 sudo /usr/local/lsws/bin/lswsctrl restart
 ```
@@ -326,6 +377,7 @@ sudo /usr/local/lsws/bin/lswsctrl restart
 ## Verify Everything Works
 
 ### Checklist:
+
 - [ ] PM2 shows andrino-academy as `online`
 - [ ] `curl http://localhost:3000` returns HTML (not Hello World)
 - [ ] Virtual Host `andrinoacademy` listed in WebAdmin
@@ -338,6 +390,7 @@ sudo /usr/local/lsws/bin/lswsctrl restart
 ## DNS Verification
 
 ### Test DNS Resolution
+
 ```bash
 # From VPS
 nslookup andrinoacademy.com
@@ -347,6 +400,7 @@ dig andrinoacademy.com +short
 ```
 
 ### If DNS Not Propagated Yet
+
 You can test using `/etc/hosts` file:
 
 ```bash
@@ -365,6 +419,7 @@ You can test using `/etc/hosts` file:
 ## Next Steps After Site Works
 
 1. **Install SSL Certificate:**
+
    ```bash
    sudo apt install certbot -y
    sudo systemctl stop lsws
@@ -373,6 +428,7 @@ You can test using `/etc/hosts` file:
    ```
 
 2. **Configure HTTPS Listener in WebAdmin:**
+
    - Configuration → Listeners → HTTPS (443)
    - SSL → Private Key File: `/etc/letsencrypt/live/andrinoacademy.com/privkey.pem`
    - SSL → Certificate File: `/etc/letsencrypt/live/andrinoacademy.com/fullchain.pem`

@@ -3,6 +3,7 @@
 ## 🚀 Quick Deployment with OpenLiteSpeed
 
 ### Prerequisites
+
 - Hostinger VPS with OpenLiteSpeed installed
 - Root or sudo access
 - IP: 88.223.94.192
@@ -110,12 +111,14 @@ pm2 startup systemd
 2. **Login** with your admin credentials
 3. Navigate to **Virtual Hosts** → **Add**
 4. Create new Virtual Host:
+
    - Name: `andrino-academy`
    - Virtual Host Root: `/usr/local/lsws/andrino-academy`
    - Document Root: `$VH_ROOT`
    - Domain Name: `88.223.94.192`
 
 5. Add **External App**:
+
    - Go to **Server Configuration** → **External App**
    - Type: `Web Server (Proxy)`
    - Name: `andrino-node`
@@ -123,6 +126,7 @@ pm2 startup systemd
    - Max Connections: `100`
 
 6. Configure **Context**:
+
    - Go to your Virtual Host → **Context**
    - URI: `/`
    - Type: `Proxy`
@@ -200,6 +204,7 @@ curl http://88.223.94.192
 **Visit**: http://88.223.94.192
 
 **Login**:
+
 - Email: `ceo@andrino-academy.com`
 - Password: `Andrino2024!`
 
@@ -335,6 +340,7 @@ pm2 restart andrino-academy
 ### OpenLiteSpeed Caching
 
 Enable caching in WebAdmin:
+
 - Go to **Server Configuration** → **Modules**
 - Enable **Cache Module**
 - Configure cache storage path and policies

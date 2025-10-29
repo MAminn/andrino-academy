@@ -1,4 +1,5 @@
 # OpenLiteSpeed WebAdmin Configuration Guide
+
 ## Complete Setup for Andrino Academy Production Deployment
 
 After running `deploy-ols-production.sh`, follow these exact steps in WebAdmin.
@@ -10,6 +11,7 @@ After running `deploy-ols-production.sh`, follow these exact steps in WebAdmin.
 URL: `https://88.223.94.192:7080`
 
 Get admin password:
+
 ```bash
 sudo cat /home/ubuntu/.litespeed_password
 ```
@@ -57,6 +59,7 @@ You should see `nodejs_backend` in the list. If not:
 ### 2.1 Click **Add** Button
 
 Fill in the form:
+
 ```
 Virtual Host Name: andrinoacademy
 Virtual Host Root: /usr/local/lsws/andrinoacademy
@@ -75,7 +78,7 @@ Click on **andrinoacademy** virtual host name to open it.
 
 You should see tabs: **General, Member, Log, Security, External App, Script Handler, Rewrite, Context, WebSocket Proxy, SSL**
 
-If you see a warning: *"Config file does not exist"* - this means the script didn't run correctly. Re-run the deployment script.
+If you see a warning: _"Config file does not exist"_ - this means the script didn't run correctly. Re-run the deployment script.
 
 ---
 
@@ -92,6 +95,7 @@ Look for **Default** or any listener on port 80.
 Click **Add** (or **View** if one exists, then **Edit**)
 
 **General Settings:**
+
 ```
 Listener Name: HTTP
 IP Address: ANY IPv4
@@ -107,6 +111,7 @@ Click **Save**
 While viewing the **HTTP** listener, scroll down to **Virtual Host Mappings**
 
 Click **Add**:
+
 ```
 Virtual Host: andrinoacademy
 Domains: andrinoacademy.com, www.andrinoacademy.com
@@ -125,6 +130,7 @@ Click **Save**
 Click **Add**
 
 **General Settings:**
+
 ```
 Listener Name: HTTPS
 IP Address: ANY IPv4
@@ -141,6 +147,7 @@ Click on **HTTPS** listener → **SSL** tab
 Click **Edit** button
 
 **SSL Private Key & Certificate:**
+
 ```
 Private Key File: /etc/letsencrypt/live/andrinoacademy.com/privkey.pem
 Certificate File: /etc/letsencrypt/live/andrinoacademy.com/fullchain.pem
@@ -148,6 +155,7 @@ Chained Certificate: Yes
 ```
 
 **SSL Protocol:**
+
 ```
 Protocol Version: TLSv1.2, TLSv1.3
 ```
@@ -159,6 +167,7 @@ Click **Save**
 Scroll down to **Virtual Host Mappings**
 
 Click **Add**:
+
 ```
 Virtual Host: andrinoacademy
 Domains: andrinoacademy.com, www.andrinoacademy.com
@@ -271,6 +280,7 @@ sudo -u ubuntu pm2 logs andrino-academy
 ### Issue: Still seeing "Hello World" page
 
 **Solution:**
+
 1. Check PM2 is running: `sudo -u ubuntu pm2 status`
 2. Test Node.js: `curl http://localhost:3000`
 3. Check external app name matches in vhconf.conf
@@ -281,6 +291,7 @@ sudo -u ubuntu pm2 logs andrino-academy
 ### Issue: 503 Service Unavailable
 
 **Solution:**
+
 1. Node.js app not running: `sudo -u ubuntu pm2 restart andrino-academy`
 2. Check port 3000: `sudo lsof -i :3000`
 3. Check error logs: `sudo tail -f /usr/local/lsws/logs/error.log`
@@ -288,6 +299,7 @@ sudo -u ubuntu pm2 logs andrino-academy
 ### Issue: SSL Certificate Error
 
 **Solution:**
+
 1. Verify certificate files exist:
    ```bash
    sudo ls -la /etc/letsencrypt/live/andrinoacademy.com/
@@ -301,6 +313,7 @@ sudo -u ubuntu pm2 logs andrino-academy
 ### Issue: Virtual Host Config Not Loading
 
 **Solution:**
+
 1. Check file exists:
    ```bash
    cat /usr/local/lsws/conf/vhosts/andrinoacademy/vhconf.conf
@@ -314,6 +327,7 @@ sudo -u ubuntu pm2 logs andrino-academy
 ### Issue: Static Files (CSS/JS) Not Loading
 
 **Solution:**
+
 1. Check Next.js build exists: `ls -la /home/ubuntu/apps/andrino-academy/.next/`
 2. Verify symbolic link: `ls -la /usr/local/lsws/andrinoacademy/html/_next`
 3. Check context for `/_next/static/` in WebAdmin
