@@ -77,14 +77,15 @@ echo "✓ Node.js version: $(node --version)"
 # Check if .env exists
 if [ ! -f "$APP_DIR/.env" ]; then
     echo "⚠️  .env file not found. Creating one..."
-    cat > "$APP_DIR/.env" << 'EOENV'
+    RANDOM_SECRET=$(openssl rand -base64 32 2>/dev/null || echo "change-this-to-a-random-secret")
+    cat > "$APP_DIR/.env" << EOENV
 DATABASE_URL="postgresql://andrino_admin:Andrino2024!@localhost:5432/andrino_academy_prod?schema=public"
-NEXTAUTH_URL="http://andrinoacademy.com"
-NEXTAUTH_SECRET="change-this-to-a-random-secret"
+NEXTAUTH_URL="https://andrinoacademy.com"
+NEXTAUTH_SECRET="$RANDOM_SECRET"
 NODE_ENV="production"
 NEXT_TELEMETRY_DISABLED=1
 EOENV
-    echo "✓ Created .env file (please update NEXTAUTH_SECRET)"
+    echo "✓ Created .env file with HTTPS URL"
 fi
 
 # Check if Next.js is built
