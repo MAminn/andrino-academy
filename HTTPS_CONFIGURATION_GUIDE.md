@@ -48,15 +48,18 @@ DATABASE_URL="postgresql://andrino_admin:Andrino2024!@localhost:5432/andrino_aca
 #### Step 2: Configure OpenLiteSpeed HTTPS Listener
 
 1. **Login to WebAdmin:**
+
    ```
    https://YOUR_SERVER_IP:7080
    ```
 
 2. **Configure HTTPS Listener (Port 443):**
+
    - Go to: **Configuration → Listeners**
    - Click on **HTTPS** listener (or add new if doesn't exist)
-   
+
    **General Tab:**
+
    - Listener Name: `HTTPS` or `SSL`
    - IP Address: `ANY` or `*`
    - Port: `443`
@@ -64,6 +67,7 @@ DATABASE_URL="postgresql://andrino_admin:Andrino2024!@localhost:5432/andrino_aca
    - Binding: `*:443`
 
    **SSL Tab:**
+
    - **Private Key File:** `/etc/letsencrypt/live/andrinoacademy.com/privkey.pem`
    - **Certificate File:** `/etc/letsencrypt/live/andrinoacademy.com/fullchain.pem`
    - **Chained Certificate:** `Yes`
@@ -71,6 +75,7 @@ DATABASE_URL="postgresql://andrino_admin:Andrino2024!@localhost:5432/andrino_aca
    - **CA Certificate File:** (leave empty for Let's Encrypt)
 
    **Virtual Host Mappings Tab:**
+
    - Click **Add**
    - **Virtual Host:** `andrinoacademy`
    - **Domains:** `andrinoacademy.com, www.andrinoacademy.com`
@@ -84,15 +89,18 @@ DATABASE_URL="postgresql://andrino_admin:Andrino2024!@localhost:5432/andrino_aca
 In OpenLiteSpeed WebAdmin:
 
 1. **Go to Virtual Host Configuration:**
+
    - Configuration → Virtual Hosts → andrinoacademy → Rewrite
 
 2. **Enable Rewrite:**
+
    - Enable Rewrite: `Yes`
    - Auto Load from .htaccess: `Yes`
 
 3. **Add Rewrite Rules:**
-   
+
    Click **Edit** on Rewrite Rules and add:
+
    ```
    RewriteCond %{HTTPS} !=on
    RewriteRule ^(.*)$ https://%{HTTP_HOST}$1 [R=301,L]
@@ -105,12 +113,13 @@ In OpenLiteSpeed WebAdmin:
    ```
 
    Add at the top:
+
    ```apache
    # Force HTTPS
    RewriteEngine On
    RewriteCond %{HTTPS} !=on
    RewriteRule ^(.*)$ https://%{HTTP_HOST}$1 [R=301,L]
-   
+
    # Proxy to Node.js
    RewriteCond %{REQUEST_FILENAME} !-f
    RewriteCond %{REQUEST_FILENAME} !-d
@@ -201,6 +210,7 @@ sudo crontab -e
 ### Issue 1: "Not Secure" Warning Still Appears
 
 **Causes:**
+
 - Mixed content (HTTP resources on HTTPS page)
 - Invalid SSL certificate
 - Certificate not trusted
@@ -246,36 +256,37 @@ nano /home/andrino/apps/andrino-academy/next.config.js
 ```
 
 Add:
+
 ```javascript
 module.exports = {
   // ... existing config
-  
+
   async headers() {
     return [
       {
-        source: '/(.*)',
+        source: "/(.*)",
         headers: [
           {
-            key: 'Strict-Transport-Security',
-            value: 'max-age=63072000; includeSubDomains; preload'
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains; preload",
           },
           {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff'
+            key: "X-Content-Type-Options",
+            value: "nosniff",
           },
           {
-            key: 'X-Frame-Options',
-            value: 'DENY'
+            key: "X-Frame-Options",
+            value: "DENY",
           },
           {
-            key: 'X-XSS-Protection',
-            value: '1; mode=block'
-          }
-        ]
-      }
-    ]
-  }
-}
+            key: "X-XSS-Protection",
+            value: "1; mode=block",
+          },
+        ],
+      },
+    ];
+  },
+};
 ```
 
 ### Issue 4: Redirect Loop
@@ -335,11 +346,13 @@ Permissions-Policy: geolocation=(), microphone=(), camera=()
 ### Enable HTTP/2
 
 In OpenLiteSpeed WebAdmin:
+
 - Configuration → Server → General → HTTP/2: `Enabled`
 
 ### Enable GZIP Compression
 
 In Virtual Host configuration:
+
 - Configuration → Virtual Hosts → andrinoacademy → General → Enable GZIP: `Yes`
 
 ### Cache Control

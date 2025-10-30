@@ -13,7 +13,7 @@ Your Node.js app is running correctly on port 3000, but OpenLiteSpeed is showing
    ```bash
    # Get IPv4 address
    curl -4 ifconfig.me
-   
+
    # Get IPv6 address (your VPS has IPv6: 2a02:4780:28:15b9::1)
    curl -6 ifconfig.me
    ```
