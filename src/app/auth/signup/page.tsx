@@ -117,16 +117,16 @@ export default function SignupPage() {
 
   return (
     <div
-      className='min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4'
+      className='min-h-screen bg-gradient-to-b from-[#b7b7b8] to-white py-12 px-4'
       dir='rtl'>
       <div className='max-w-2xl mx-auto'>
-        <div className='bg-white rounded-2xl shadow-xl p-8'>
+        <div className='bg-white rounded-2xl shadow-xl p-8 border border-gray-100'>
           {/* Header */}
           <div className='text-center mb-8'>
-            <div className='mx-auto w-16 h-16 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mb-4'>
+            <div className='mx-auto w-16 h-16 bg-gradient-to-r from-[#7e5b3f] to-[#c19170] rounded-full flex items-center justify-center mb-4'>
               <UserPlus className='w-8 h-8 text-white' />
             </div>
-            <h1 className='text-3xl font-bold text-gray-900 mb-2'>
+            <h1 className='text-3xl font-bold text-[#343b50] mb-2'>
               إنشاء حساب طالب
             </h1>
             <p className='text-gray-600'>
@@ -165,7 +165,7 @@ export default function SignupPage() {
           <form onSubmit={handleSubmit} className='space-y-6'>
             {/* Student Information */}
             <div className='space-y-4'>
-              <h3 className='text-lg font-semibold text-gray-900 border-b pb-2'>
+              <h3 className='text-lg font-semibold text-[#343b50] border-b-2 border-[#c19170]/30 pb-2'>
                 معلومات الطالب
               </h3>
 
@@ -180,7 +180,7 @@ export default function SignupPage() {
                     value={formData.name}
                     onChange={handleInputChange}
                     required
-                    className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                    className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7e5b3f] focus:border-transparent transition-colors'
                     placeholder='أدخل اسمك الكامل'
                   />
                 </div>
@@ -197,7 +197,7 @@ export default function SignupPage() {
                     required
                     min='6'
                     max='18'
-                    className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                    className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7e5b3f] focus:border-transparent transition-colors'
                     placeholder='6-18'
                   />
                 </div>
@@ -213,7 +213,7 @@ export default function SignupPage() {
                   value={formData.email}
                   onChange={handleInputChange}
                   required
-                  className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                  className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7e5b3f] focus:border-transparent transition-colors'
                   placeholder='student@example.com'
                 />
                 <p className='text-xs text-gray-500 mt-1'>
@@ -234,13 +234,13 @@ export default function SignupPage() {
                       onChange={handleInputChange}
                       required
                       minLength={6}
-                      className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pl-10'
+                      className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7e5b3f] focus:border-transparent transition-colors pl-10'
                       placeholder='أدخل كلمة مرور قوية'
                     />
                     <button
                       type='button'
                       onClick={() => setShowPassword(!showPassword)}
-                      className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500'>
+                      className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-[#7e5b3f] transition-colors'>
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
@@ -257,7 +257,7 @@ export default function SignupPage() {
                       value={formData.confirmPassword}
                       onChange={handleInputChange}
                       required
-                      className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pl-10'
+                      className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7e5b3f] focus:border-transparent transition-colors pl-10'
                       placeholder='أعد كتابة كلمة المرور'
                     />
                     <button
@@ -265,7 +265,7 @@ export default function SignupPage() {
                       onClick={() =>
                         setShowConfirmPassword(!showConfirmPassword)
                       }
-                      className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500'>
+                      className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-[#7e5b3f] transition-colors'>
                       {showConfirmPassword ? (
                         <EyeOff size={16} />
                       ) : (
@@ -285,7 +285,7 @@ export default function SignupPage() {
                   value={formData.priorExperience}
                   onChange={handleInputChange}
                   required
-                  className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'>
+                  className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7e5b3f] focus:border-transparent transition-colors'>
                   <option value=''>اختر مستوى خبرتك</option>
                   <option value='none'>لا يوجد خبرة سابقة</option>
                   <option value='basic'>خبرة أساسية</option>
@@ -297,7 +297,7 @@ export default function SignupPage() {
 
             {/* Parent Information */}
             <div className='space-y-4'>
-              <h3 className='text-lg font-semibold text-gray-900 border-b pb-2'>
+              <h3 className='text-lg font-semibold text-[#343b50] border-b-2 border-[#c19170]/30 pb-2'>
                 معلومات ولي الأمر
               </h3>
 
@@ -311,7 +311,7 @@ export default function SignupPage() {
                   value={formData.parentName}
                   onChange={handleInputChange}
                   required
-                  className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                  className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7e5b3f] focus:border-transparent transition-colors'
                   placeholder='اسم ولي الأمر الكامل'
                 />
               </div>
@@ -327,7 +327,7 @@ export default function SignupPage() {
                     value={formData.parentEmail}
                     onChange={handleInputChange}
                     required
-                    className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                    className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7e5b3f] focus:border-transparent transition-colors'
                     placeholder='parent@example.com'
                   />
                   <p className='text-xs text-gray-500 mt-1'>
@@ -345,7 +345,7 @@ export default function SignupPage() {
                     value={formData.parentPhone}
                     onChange={handleInputChange}
                     required
-                    className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                    className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7e5b3f] focus:border-transparent transition-colors'
                     placeholder='+966 5X XXX XXXX'
                   />
                 </div>
@@ -354,7 +354,7 @@ export default function SignupPage() {
 
             {/* Optional Information */}
             <div className='space-y-4'>
-              <h3 className='text-lg font-semibold text-gray-900 border-b pb-2'>
+              <h3 className='text-lg font-semibold text-[#343b50] border-b-2 border-[#c19170]/30 pb-2'>
                 معلومات إضافية (اختيارية)
               </h3>
 
@@ -368,7 +368,7 @@ export default function SignupPage() {
                     name='phone'
                     value={formData.phone}
                     onChange={handleInputChange}
-                    className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                    className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7e5b3f] focus:border-transparent transition-colors'
                     placeholder='+966 5X XXX XXXX'
                   />
                 </div>
@@ -382,7 +382,7 @@ export default function SignupPage() {
                     name='address'
                     value={formData.address}
                     onChange={handleInputChange}
-                    className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                    className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7e5b3f] focus:border-transparent transition-colors'
                     placeholder='المدينة، المملكة العربية السعودية'
                   />
                 </div>
@@ -394,7 +394,7 @@ export default function SignupPage() {
               <button
                 type='submit'
                 disabled={isLoading}
-                className='w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-3 px-4 rounded-lg font-medium hover:from-blue-600 hover:to-indigo-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200'>
+                className='w-full bg-gradient-to-r from-[#7e5b3f] to-[#c19170] text-white py-3 px-4 rounded-xl font-medium hover:from-[#343b50] hover:to-[#7e5b3f] focus:ring-2 focus:ring-[#7e5b3f] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'>
                 {isLoading ? "جاري إنشاء الحساب..." : "إنشاء الحساب"}
               </button>
             </div>
@@ -405,7 +405,7 @@ export default function SignupPage() {
             لديك حساب بالفعل؟{" "}
             <Link
               href='/auth/signin'
-              className='text-blue-600 hover:text-blue-700 font-medium'>
+              className='text-[#7e5b3f] hover:text-[#343b50] font-medium transition-colors'>
               تسجيل الدخول
             </Link>
           </div>

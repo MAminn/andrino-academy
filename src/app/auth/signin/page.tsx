@@ -79,16 +79,16 @@ function SigninForm() {
 
   return (
     <div
-      className='min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4'
+      className='min-h-screen bg-gradient-to-b from-white to-[#b7b7b8] flex items-center justify-center py-12 px-4'
       dir='rtl'>
       <div className='max-w-md w-full'>
-        <div className='bg-white rounded-2xl shadow-xl p-8'>
+        <div className='bg-white rounded-2xl shadow-xl p-8 border border-gray-100'>
           {/* Header */}
           <div className='text-center mb-8'>
-            <div className='mx-auto w-16 h-16 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mb-4'>
+            <div className='mx-auto w-16 h-16 bg-gradient-to-r from-[#7e5b3f] to-[#c19170] rounded-full flex items-center justify-center mb-4'>
               <LogIn className='w-8 h-8 text-white' />
             </div>
-            <h1 className='text-3xl font-bold text-gray-900 mb-2'>
+            <h1 className='text-3xl font-bold text-[#343b50] mb-2'>
               تسجيل الدخول
             </h1>
             <p className='text-gray-600'>أدخل بياناتك للوصول إلى حسابك</p>
@@ -116,7 +116,7 @@ function SigninForm() {
                 value={formData.email}
                 onChange={handleInputChange}
                 required
-                className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors'
+                className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7e5b3f] focus:border-transparent transition-colors'
                 placeholder='أدخل بريدك الإلكتروني'
               />
             </div>
@@ -132,13 +132,13 @@ function SigninForm() {
                   value={formData.password}
                   onChange={handleInputChange}
                   required
-                  className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pl-10 transition-colors'
+                  className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7e5b3f] focus:border-transparent pl-10 transition-colors'
                   placeholder='أدخل كلمة المرور'
                 />
                 <button
                   type='button'
                   onClick={() => setShowPassword(!showPassword)}
-                  className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors'>
+                  className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-[#7e5b3f] transition-colors'>
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
@@ -147,7 +147,7 @@ function SigninForm() {
             <button
               type='submit'
               disabled={isLoading}
-              className='w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-3 px-4 rounded-lg font-medium hover:from-blue-600 hover:to-indigo-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-[1.02]'>
+              className='w-full bg-gradient-to-r from-[#7e5b3f] to-[#c19170] text-white py-3 px-4 rounded-xl font-medium hover:from-[#343b50] hover:to-[#7e5b3f] focus:ring-2 focus:ring-[#7e5b3f] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'>
               {isLoading ? "جاري تسجيل الدخول..." : "تسجيل الدخول"}
             </button>
           </form>
@@ -165,7 +165,7 @@ function SigninForm() {
               لا تملك حساباً؟{" "}
               <Link
                 href='/auth/signup'
-                className='text-blue-600 hover:text-blue-700 font-medium transition-colors'>
+                className='text-[#7e5b3f] hover:text-[#343b50] font-medium transition-colors'>
                 إنشاء حساب جديد
               </Link>
             </p>
@@ -175,8 +175,8 @@ function SigninForm() {
           </div>
 
           {/* Demo Accounts */}
-          <div className='mt-6 p-4 bg-gray-50 rounded-lg'>
-            <h3 className='text-sm font-medium text-gray-700 mb-2'>
+          <div className='mt-6 p-4 bg-gradient-to-br from-[#7e5b3f]/5 to-[#c19170]/5 rounded-xl border border-[#c19170]/20'>
+            <h3 className='text-sm font-medium text-[#343b50] mb-2'>
               حسابات تجريبية:
             </h3>
             <div className='text-xs text-gray-600 space-y-1'>
