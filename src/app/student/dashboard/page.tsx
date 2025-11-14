@@ -207,7 +207,9 @@ export default function StudentDashboard() {
               <div className='animate-spin rounded-full h-20 w-20 border-4 border-[#c19170]/20 border-t-[#7e5b3f] mx-auto'></div>
               <div className='absolute inset-0 animate-ping rounded-full h-20 w-20 border-4 border-[#7e5b3f]/20'></div>
             </div>
-            <p className='mt-6 text-[#343b50] font-semibold text-lg'>جارٍ تحميل لوحة التحكم...</p>
+            <p className='mt-6 text-[#343b50] font-semibold text-lg'>
+              جارٍ تحميل لوحة التحكم...
+            </p>
             <p className='mt-2 text-gray-500 text-sm'>يرجى الانتظار</p>
           </div>
         </div>
@@ -239,7 +241,7 @@ export default function StudentDashboard() {
               <div className='absolute bottom-2 left-2 w-16 h-16 bg-white rounded-full'></div>
             </div>
           </div>
-          
+
           <div className='relative flex items-center justify-between flex-wrap gap-4'>
             <div className='flex items-center gap-4'>
               <div className='bg-white/20 backdrop-blur-sm rounded-2xl p-4 animate-bounce border border-white/30'>
@@ -277,9 +279,18 @@ export default function StudentDashboard() {
               }}
               className='bg-white text-green-700 px-8 py-4 rounded-xl font-bold text-lg hover:bg-green-50 transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:scale-105 hover:-translate-y-1 border-2 border-green-200'>
               <span className='flex items-center gap-2'>
-                انضم للجلسة الآن 
-                <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M13 7l5 5m0 0l-5 5m5-5H6' />
+                انضم للجلسة الآن
+                <svg
+                  className='w-6 h-6'
+                  fill='none'
+                  stroke='currentColor'
+                  viewBox='0 0 24 24'>
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth={2}
+                    d='M13 7l5 5m0 0l-5 5m5-5H6'
+                  />
                 </svg>
               </span>
             </button>
@@ -344,7 +355,9 @@ export default function StudentDashboard() {
                 key={track.id}
                 className='group border border-gray-200 rounded-xl p-5 hover:shadow-lg transition-all duration-300 bg-white hover:border-[#c19170]/30 hover:-translate-y-1'>
                 <div className='flex items-center justify-between mb-3'>
-                  <h3 className='font-bold text-lg text-[#343b50] group-hover:text-[#7e5b3f] transition-colors'>{track.name}</h3>
+                  <h3 className='font-bold text-lg text-[#343b50] group-hover:text-[#7e5b3f] transition-colors'>
+                    {track.name}
+                  </h3>
                   <span className='text-sm text-gray-600 bg-gradient-to-r from-gray-50 to-gray-100 px-3 py-1.5 rounded-lg font-medium border border-gray-200'>
                     {track.instructor?.name || "غير محدد"}
                   </span>
