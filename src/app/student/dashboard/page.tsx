@@ -203,8 +203,12 @@ export default function StudentDashboard() {
       <DashboardLayout title='لوحة تحكم الطالب' role='student'>
         <div className='flex items-center justify-center min-h-screen'>
           <div className='text-center'>
-            <div className='animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto'></div>
-            <p className='mt-4 text-gray-600'>جارٍ تحميل لوحة التحكم...</p>
+            <div className='relative'>
+              <div className='animate-spin rounded-full h-20 w-20 border-4 border-[#c19170]/20 border-t-[#7e5b3f] mx-auto'></div>
+              <div className='absolute inset-0 animate-ping rounded-full h-20 w-20 border-4 border-[#7e5b3f]/20'></div>
+            </div>
+            <p className='mt-6 text-[#343b50] font-semibold text-lg'>جارٍ تحميل لوحة التحكم...</p>
+            <p className='mt-2 text-gray-500 text-sm'>يرجى الانتظار</p>
           </div>
         </div>
       </DashboardLayout>
@@ -227,21 +231,31 @@ export default function StudentDashboard() {
       {/* Active Session Banner - PRIORITY DISPLAY */}
       {upcomingSessions.filter((s) => s.status === "ACTIVE" && s.externalLink)
         .length > 0 && (
-        <div className='bg-gradient-to-r from-green-500 to-emerald-600 border-4 border-green-700 rounded-xl p-6 mb-6 shadow-2xl animate-pulse'>
-          <div className='flex items-center justify-between'>
+        <div className='relative overflow-hidden bg-gradient-to-r from-green-500 via-emerald-500 to-green-600 border-2 border-green-400 rounded-2xl p-6 mb-6 shadow-2xl'>
+          {/* Animated background */}
+          <div className='absolute inset-0 opacity-20'>
+            <div className='absolute top-0 left-0 w-full h-full animate-pulse'>
+              <div className='absolute top-2 right-2 w-20 h-20 bg-white rounded-full'></div>
+              <div className='absolute bottom-2 left-2 w-16 h-16 bg-white rounded-full'></div>
+            </div>
+          </div>
+          
+          <div className='relative flex items-center justify-between flex-wrap gap-4'>
             <div className='flex items-center gap-4'>
-              <div className='bg-white rounded-full p-3 animate-bounce'>
-                <Play className='w-8 h-8 text-green-600' />
+              <div className='bg-white/20 backdrop-blur-sm rounded-2xl p-4 animate-bounce border border-white/30'>
+                <Play className='w-8 h-8 text-white' />
               </div>
               <div>
-                <h2 className='text-2xl font-bold text-white mb-1'>
-                  🔴 جلسة مباشرة الآن!
+                <h2 className='text-2xl font-bold text-white mb-1 flex items-center gap-2'>
+                  <span className='inline-block w-3 h-3 bg-red-500 rounded-full animate-ping'></span>
+                  <span className='inline-block w-3 h-3 bg-red-500 rounded-full -mr-3'></span>
+                  جلسة مباشرة الآن!
                 </h2>
-                <p className='text-green-100 text-lg'>
+                <p className='text-white/90 text-lg font-medium'>
                   {upcomingSessions.find((s) => s.status === "ACTIVE")?.title ||
                     "جلسة حية"}
                 </p>
-                <p className='text-green-50 text-sm mt-1'>
+                <p className='text-white/80 text-sm mt-1'>
                   المدرب:{" "}
                   {upcomingSessions.find((s) => s.status === "ACTIVE")?.track
                     ?.instructor?.name || "غير محدد"}
@@ -261,8 +275,13 @@ export default function StudentDashboard() {
                   );
                 }
               }}
-              className='bg-white text-green-700 px-8 py-4 rounded-lg font-bold text-lg hover:bg-green-50 transition-all shadow-lg hover:shadow-xl transform hover:scale-105'>
-              انضم للجلسة الآن →
+              className='bg-white text-green-700 px-8 py-4 rounded-xl font-bold text-lg hover:bg-green-50 transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:scale-105 hover:-translate-y-1 border-2 border-green-200'>
+              <span className='flex items-center gap-2'>
+                انضم للجلسة الآن 
+                <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M13 7l5 5m0 0l-5 5m5-5H6' />
+                </svg>
+              </span>
             </button>
           </div>
         </div>
@@ -270,14 +289,16 @@ export default function StudentDashboard() {
 
       {/* Grade Assignment Check */}
       {!studentData?.grade && (
-        <div className='bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6'>
-          <div className='flex items-center'>
-            <AlertCircle className='w-5 h-5 text-yellow-600 ml-2' />
-            <div>
-              <h3 className='text-yellow-800 font-medium'>
+        <div className='bg-gradient-to-r from-yellow-50 to-amber-50 border-l-4 border-yellow-500 rounded-xl p-6 mb-6 shadow-sm'>
+          <div className='flex items-start gap-4'>
+            <div className='bg-yellow-100 rounded-full p-3'>
+              <AlertCircle className='w-6 h-6 text-yellow-600' />
+            </div>
+            <div className='flex-1'>
+              <h3 className='text-yellow-900 font-bold text-lg mb-2'>
                 في انتظار تعيين المستوى الدراسي
               </h3>
-              <p className='text-yellow-700 text-sm mt-1'>
+              <p className='text-yellow-800 leading-relaxed'>
                 يرجى التواصل مع الإدارة لتعيينك في المستوى الدراسي المناسب
                 للوصول إلى المسارات والجلسات.
               </p>
@@ -321,10 +342,10 @@ export default function StudentDashboard() {
             {studentData.grade.tracks.map((track) => (
               <div
                 key={track.id}
-                className='border rounded-lg p-4 hover:shadow-md transition-shadow'>
-                <div className='flex items-center justify-between mb-2'>
-                  <h3 className='font-semibold text-lg'>{track.name}</h3>
-                  <span className='text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded'>
+                className='group border border-gray-200 rounded-xl p-5 hover:shadow-lg transition-all duration-300 bg-white hover:border-[#c19170]/30 hover:-translate-y-1'>
+                <div className='flex items-center justify-between mb-3'>
+                  <h3 className='font-bold text-lg text-[#343b50] group-hover:text-[#7e5b3f] transition-colors'>{track.name}</h3>
+                  <span className='text-sm text-gray-600 bg-gradient-to-r from-gray-50 to-gray-100 px-3 py-1.5 rounded-lg font-medium border border-gray-200'>
                     {track.instructor?.name || "غير محدد"}
                   </span>
                 </div>
@@ -351,7 +372,7 @@ export default function StudentDashboard() {
                       setSelectedTrackName(track.name);
                       setSessionsModalOpen(true);
                     }}
-                    className='flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors cursor-pointer'>
+                    className='flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#7e5b3f] to-[#c19170] text-white rounded-lg hover:from-[#343b50] hover:to-[#7e5b3f] transition-all duration-300 shadow-sm hover:shadow-md transform hover:-translate-y-0.5 cursor-pointer'>
                     <Eye className='w-4 h-4' />
                     عرض الجلسات
                   </button>
@@ -361,7 +382,7 @@ export default function StudentDashboard() {
                       setSelectedTrackName(track.name);
                       setProgressModalOpen(true);
                     }}
-                    className='flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors cursor-pointer'>
+                    className='flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-300 shadow-sm hover:shadow-md transform hover:-translate-y-0.5 cursor-pointer'>
                     <BarChart3 className='w-4 h-4' />
                     تقدمي
                   </button>
@@ -406,7 +427,7 @@ export default function StudentDashboard() {
             {upcomingSessions.slice(0, 5).map((session) => (
               <div
                 key={session.id}
-                className='border rounded-lg p-4 hover:shadow-md transition-shadow'>
+                className='group border border-gray-200 rounded-xl p-5 hover:shadow-lg transition-all duration-300 bg-white hover:border-[#c19170]/30 hover:-translate-y-1'>
                 <div className='flex items-center justify-between mb-2'>
                   <h3 className='font-semibold'>{session.title}</h3>
                   <span className='text-sm text-gray-500'>
@@ -567,27 +588,35 @@ export default function StudentDashboard() {
       <div className='grid grid-cols-1 md:grid-cols-4 gap-6 mt-8'>
         <button
           onClick={() => setScheduleModalOpen(true)}
-          className='flex items-center justify-center p-6 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl'>
-          <Calendar className='w-6 h-6 ml-2' />
-          جدولي الأسبوعي
+          className='group flex flex-col items-center justify-center p-6 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:-translate-y-1'>
+          <div className='bg-white/20 backdrop-blur-sm p-3 rounded-xl mb-3 group-hover:scale-110 transition-transform duration-300'>
+            <Calendar className='w-7 h-7' />
+          </div>
+          <span className='font-bold text-lg'>جدولي الأسبوعي</span>
         </button>
         <button
           onClick={() => setAchievementsModalOpen(true)}
-          className='flex items-center justify-center p-6 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-lg hover:shadow-xl'>
-          <Trophy className='w-6 h-6 ml-2' />
-          إنجازاتي
+          className='group flex flex-col items-center justify-center p-6 bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:-translate-y-1'>
+          <div className='bg-white/20 backdrop-blur-sm p-3 rounded-xl mb-3 group-hover:scale-110 transition-transform duration-300'>
+            <Trophy className='w-7 h-7' />
+          </div>
+          <span className='font-bold text-lg'>إنجازاتي</span>
         </button>
         <button
           onClick={() => setProgressModalOpen(true)}
-          className='flex items-center justify-center p-6 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-lg hover:shadow-xl'>
-          <BarChart3 className='w-6 h-6 ml-2' />
-          تقدمي
+          className='group flex flex-col items-center justify-center p-6 bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:-translate-y-1'>
+          <div className='bg-white/20 backdrop-blur-sm p-3 rounded-xl mb-3 group-hover:scale-110 transition-transform duration-300'>
+            <BarChart3 className='w-7 h-7' />
+          </div>
+          <span className='font-bold text-lg'>تقدمي</span>
         </button>
         <button
           onClick={() => setAssessmentsModalOpen(true)}
-          className='flex items-center justify-center p-6 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-lg hover:shadow-xl'>
-          <Star className='w-6 h-6 ml-2' />
-          التقييمات
+          className='group flex flex-col items-center justify-center p-6 bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-xl hover:from-indigo-600 hover:to-indigo-700 transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:-translate-y-1'>
+          <div className='bg-white/20 backdrop-blur-sm p-3 rounded-xl mb-3 group-hover:scale-110 transition-transform duration-300'>
+            <Star className='w-7 h-7' />
+          </div>
+          <span className='font-bold text-lg'>التقييمات</span>
         </button>
       </div>
 
@@ -595,9 +624,11 @@ export default function StudentDashboard() {
       <div className='grid grid-cols-1 md:grid-cols-3 gap-6 mt-6'>
         <button
           onClick={() => setAttendanceModalOpen(true)}
-          className='flex items-center justify-center p-4 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors shadow-lg hover:shadow-xl'>
-          <UserCheck className='w-5 h-5 ml-2' />
-          سجل الحضور المفصل
+          className='group flex items-center justify-center gap-3 p-5 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all duration-300 shadow-md hover:shadow-xl transform hover:-translate-y-1'>
+          <div className='bg-white/20 backdrop-blur-sm p-2 rounded-lg group-hover:scale-110 transition-transform duration-300'>
+            <UserCheck className='w-5 h-5' />
+          </div>
+          <span className='font-semibold'>سجل الحضور المفصل</span>
         </button>
         <button
           onClick={() => {
@@ -607,15 +638,19 @@ export default function StudentDashboard() {
               setSessionsModalOpen(true);
             }
           }}
-          className='flex items-center justify-center p-4 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors shadow-lg hover:shadow-xl'>
-          <Eye className='w-5 h-5 ml-2' />
-          جلسات المسار
+          className='group flex items-center justify-center gap-3 p-5 bg-gradient-to-r from-teal-500 to-teal-600 text-white rounded-xl hover:from-teal-600 hover:to-teal-700 transition-all duration-300 shadow-md hover:shadow-xl transform hover:-translate-y-1'>
+          <div className='bg-white/20 backdrop-blur-sm p-2 rounded-lg group-hover:scale-110 transition-transform duration-300'>
+            <Eye className='w-5 h-5' />
+          </div>
+          <span className='font-semibold'>جلسات المسار</span>
         </button>
         <button
           onClick={() => setProgressModalOpen(true)}
-          className='flex items-center justify-center p-4 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors shadow-lg hover:shadow-xl'>
-          <TrendingUp className='w-5 h-5 ml-2' />
-          تحليل الأداء
+          className='group flex items-center justify-center gap-3 p-5 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-xl hover:from-cyan-600 hover:to-cyan-700 transition-all duration-300 shadow-md hover:shadow-xl transform hover:-translate-y-1'>
+          <div className='bg-white/20 backdrop-blur-sm p-2 rounded-lg group-hover:scale-110 transition-transform duration-300'>
+            <TrendingUp className='w-5 h-5' />
+          </div>
+          <span className='font-semibold'>تحليل الأداء</span>
         </button>
       </div>
 

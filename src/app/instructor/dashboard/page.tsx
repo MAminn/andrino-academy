@@ -266,25 +266,25 @@ export default function InstructorDashboard() {
           title='المسارات التعليمية'
           value={totalTracks}
           icon={<BookOpen className='w-6 h-6' />}
-          color='bg-blue-500'
+          color='blue'
         />
         <StatCard
           title='إجمالي الجلسات'
           value={totalSessions}
           icon={<Calendar className='w-6 h-6' />}
-          color='bg-green-500'
+          color='green'
         />
         <StatCard
           title='جلسات اليوم'
           value={todaySessionsCount}
           icon={<Clock className='w-6 h-6' />}
-          color='bg-orange-500'
+          color='yellow'
         />
         <StatCard
           title='الجلسات القادمة'
           value={upcomingSessionsCount}
           icon={<TrendingUp className='w-6 h-6' />}
-          color='bg-purple-500'
+          color='purple'
         />
       </div>
 
