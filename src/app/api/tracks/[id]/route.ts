@@ -15,12 +15,6 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check permissions
-    const allowedRoles = ["manager", "coordinator", "instructor", "ceo"];
-    if (!allowedRoles.includes(session.user.role)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     // Await params in Next.js 15
     const { id } = await params;
 
@@ -48,7 +42,7 @@ export async function GET(
           orderBy: { date: "asc" },
         },
         _count: {
-          select: { liveSessions: true },
+          select: { liveSessions: true, modules: true },
         },
       },
     });
@@ -57,18 +51,29 @@ export async function GET(
       return NextResponse.json({ error: "Track not found" }, { status: 404 });
     }
 
-    // Additional permission check for instructors and coordinators
-    if (
-      session.user.role === "instructor" &&
-      track.instructorId !== session.user.id
-    ) {
+    // Permission checks based on role
+    const userRole = session.user.role;
+    const userId = session.user.id;
+
+    // Students can only view tracks in their assigned grade
+    if (userRole === "student") {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { gradeId: true },
+      });
+
+      if (!user?.gradeId || user.gradeId !== track.gradeId) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    }
+
+    // Instructors can only view their own tracks
+    if (userRole === "instructor" && track.instructorId !== userId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    if (
-      session.user.role === "coordinator" &&
-      track.coordinatorId !== session.user.id
-    ) {
+    // Coordinators can only view tracks they coordinate
+    if (userRole === "coordinator" && track.coordinatorId !== userId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

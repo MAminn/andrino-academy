@@ -439,6 +439,7 @@ model Track {
   instructor   User          @relation("TrackInstructor", fields: [instructorId], references: [id], onDelete: Restrict)
   coordinator  User          @relation("TrackCoordinator", fields: [coordinatorId], references: [id], onDelete: Restrict)
   liveSessions LiveSession[]
+  modules      Module[]      // Course content modules
 
   @@index([gradeId])
   @@index([instructorId])
@@ -467,6 +468,7 @@ model LiveSession {
   track          Track              @relation(fields: [trackId], references: [id], onDelete: Cascade)
   instructor     User               @relation("SessionInstructor", fields: [instructorId], references: [id], onDelete: Restrict)
   attendances    SessionAttendance[]
+  modules        Module[]           // Session-specific materials
 
   @@index([trackId])
   @@index([instructorId])
@@ -497,6 +499,59 @@ model SessionAttendance {
   @@map("SessionAttendance")
 }
 
+// Course Content Management Models
+model Module {
+  id              String         @id @default(cuid())
+  title           String
+  description     String?
+  type            ModuleType     // VIDEO, PDF, DOCUMENT, IMAGE
+  category        ModuleCategory @default(UNCATEGORIZED) // Categorize materials
+  fileUrl         String         // Path to uploaded file
+  fileName        String         // Original file name
+  fileSize        Int            // File size in bytes
+  mimeType        String         // MIME type for proper handling
+  duration        Int?           // Video duration in seconds (auto-extracted)
+  order           Int            @default(0) // Display order within track
+  isPublished     Boolean        @default(false) // Manager-controlled visibility
+  trackId         String         // Track this module belongs to
+  sessionId       String?        // Optional: Specific session this material is for
+  uploadedBy      String         // Manager who uploaded
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  // Relations
+  track           Track                @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  session         LiveSession?         @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  attachedTo      ModuleAttachment[]   @relation("ParentModule")
+  attachments     ModuleAttachment[]   @relation("AttachedModule")
+
+  @@index([trackId])
+  @@index([sessionId])
+  @@index([type])
+  @@index([category])
+  @@index([isPublished])
+  @@index([order])
+  @@map("Module")
+}
+
+// Cross-linking table: Attach materials (PDFs/docs/images) to video modules
+model ModuleAttachment {
+  id              String   @id @default(cuid())
+  parentModuleId  String   // The video module
+  attachedModuleId String  // The PDF/doc/image attached to it
+  order           Int      @default(0) // Order of attachments
+  createdAt       DateTime @default(now())
+
+  // Relations
+  parentModule    Module   @relation("ParentModule", fields: [parentModuleId], references: [id], onDelete: Cascade)
+  attachedModule  Module   @relation("AttachedModule", fields: [attachedModuleId], references: [id], onDelete: Cascade)
+
+  @@unique([parentModuleId, attachedModuleId])
+  @@index([parentModuleId])
+  @@index([attachedModuleId])
+  @@map("ModuleAttachment")
+}
+
 // Session Status Enum for External Coordination Platform
 enum SessionStatus {
   DRAFT      // Session created without external link
@@ -506,4 +561,26 @@ enum SessionStatus {
   PAUSED     // Session temporarily paused
   COMPLETED  // Session finished successfully
   CANCELLED  // Session was cancelled
+}
+
+// Module Type Enum
+enum ModuleType {
+  VIDEO
+  PDF
+  DOCUMENT
+  IMAGE
+}
+
+// Module Category Enum for organized content
+enum ModuleCategory {
+  LECTURE         // Main lecture videos
+  TUTORIAL        // Step-by-step tutorials
+  EXERCISE        // Practice exercises
+  REFERENCE       // Reference materials
+  SLIDES          // Presentation slides
+  HANDOUT         // Handouts and notes
+  ASSIGNMENT      // Assignment materials
+  SOLUTION        // Solution files
+  SUPPLEMENTARY   // Supplementary materials
+  UNCATEGORIZED   // Default category
 }

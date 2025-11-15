@@ -7,7 +7,12 @@ async function seed() {
   console.log("🌱 Creating comprehensive test data for Andrino Academy...");
 
   try {
-    // Clear existing data
+    // Clear existing data in correct order (child tables first)
+    await prisma.moduleAttachment.deleteMany();
+    await prisma.module.deleteMany();
+    await prisma.sessionAttendance.deleteMany();
+    await prisma.liveSession.deleteMany();
+    await prisma.track.deleteMany();
     await prisma.user.deleteMany();
     await prisma.grade.deleteMany();
 
@@ -324,6 +329,240 @@ async function seed() {
 
     console.log("✅ Created live sessions for today and tomorrow");
 
+    // Create sample course content modules
+    const modules = await Promise.all([
+      // Video modules for "أساسيات الحاسوب" track
+      prisma.module.create({
+        data: {
+          title: "مقدمة عن الحاسوب",
+          description: "فيديو تعريفي عن أجزاء الحاسوب الأساسية",
+          type: "VIDEO",
+          category: "LECTURE",
+          fileUrl: "/uploads/modules/intro-to-computer.mp4",
+          fileName: "intro-to-computer.mp4",
+          fileSize: 52428800, // 50MB
+          mimeType: "video/mp4",
+          duration: 900, // 15 minutes
+          order: 1,
+          isPublished: true,
+          trackId: tracks[0].id,
+          uploadedBy: "manager@andrino-academy.com",
+        },
+      }),
+      // PDF module attached to video
+      prisma.module.create({
+        data: {
+          title: "ملخص الدرس - أجزاء الحاسوب",
+          description: "ملف PDF يحتوي على ملخص الدرس",
+          type: "PDF",
+          category: "HANDOUT",
+          fileUrl: "/uploads/modules/computer-parts-summary.pdf",
+          fileName: "computer-parts-summary.pdf",
+          fileSize: 2097152, // 2MB
+          mimeType: "application/pdf",
+          order: 2,
+          isPublished: true,
+          trackId: tracks[0].id,
+          uploadedBy: "manager@andrino-academy.com",
+        },
+      }),
+      // Document module (slides)
+      prisma.module.create({
+        data: {
+          title: "شرائح العرض - أساسيات الحاسوب",
+          description: "ملف PowerPoint للدرس",
+          type: "DOCUMENT",
+          category: "SLIDES",
+          fileUrl: "/uploads/modules/computer-basics-slides.pptx",
+          fileName: "computer-basics-slides.pptx",
+          fileSize: 5242880, // 5MB
+          mimeType: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+          order: 3,
+          isPublished: true,
+          trackId: tracks[0].id,
+          uploadedBy: "manager@andrino-academy.com",
+        },
+      }),
+      // Video module for "برمجة سكراتش" track
+      prisma.module.create({
+        data: {
+          title: "أساسيات سكراتش - الدرس الأول",
+          description: "تعلم واجهة سكراتش وإنشاء أول مشروع",
+          type: "VIDEO",
+          category: "TUTORIAL",
+          fileUrl: "/uploads/modules/scratch-basics.mp4",
+          fileName: "scratch-basics.mp4",
+          fileSize: 104857600, // 100MB
+          mimeType: "video/mp4",
+          duration: 1200, // 20 minutes
+          order: 1,
+          isPublished: true,
+          trackId: tracks[2].id,
+          uploadedBy: "manager@andrino-academy.com",
+        },
+      }),
+      // Exercise PDF for Scratch
+      prisma.module.create({
+        data: {
+          title: "تمارين سكراتش - الدرس الأول",
+          description: "تمارين عملية لتطبيق ما تعلمته",
+          type: "PDF",
+          category: "EXERCISE",
+          fileUrl: "/uploads/modules/scratch-exercises.pdf",
+          fileName: "scratch-exercises.pdf",
+          fileSize: 3145728, // 3MB
+          mimeType: "application/pdf",
+          order: 2,
+          isPublished: true,
+          trackId: tracks[2].id,
+          uploadedBy: "manager@andrino-academy.com",
+        },
+      }),
+      // Video module for "تطوير المواقع" track
+      prisma.module.create({
+        data: {
+          title: "مقدمة في HTML",
+          description: "تعلم أساسيات HTML وبنية الصفحة",
+          type: "VIDEO",
+          category: "LECTURE",
+          fileUrl: "/uploads/modules/html-introduction.mp4",
+          fileName: "html-introduction.mp4",
+          fileSize: 157286400, // 150MB
+          mimeType: "video/mp4",
+          duration: 1800, // 30 minutes
+          order: 1,
+          isPublished: true,
+          trackId: tracks[4].id,
+          uploadedBy: "manager@andrino-academy.com",
+        },
+      }),
+      // Reference material for HTML
+      prisma.module.create({
+        data: {
+          title: "مرجع HTML الشامل",
+          description: "مرجع كامل لجميع عناصر HTML",
+          type: "PDF",
+          category: "REFERENCE",
+          fileUrl: "/uploads/modules/html-reference.pdf",
+          fileName: "html-reference.pdf",
+          fileSize: 10485760, // 10MB
+          mimeType: "application/pdf",
+          order: 2,
+          isPublished: true,
+          trackId: tracks[4].id,
+          uploadedBy: "manager@andrino-academy.com",
+        },
+      }),
+      // Image module (infographic)
+      prisma.module.create({
+        data: {
+          title: "مخطط بنية HTML",
+          description: "رسم توضيحي لبنية صفحة HTML",
+          type: "IMAGE",
+          category: "REFERENCE",
+          fileUrl: "/uploads/modules/html-structure-diagram.png",
+          fileName: "html-structure-diagram.png",
+          fileSize: 524288, // 512KB
+          mimeType: "image/png",
+          order: 3,
+          isPublished: true,
+          trackId: tracks[4].id,
+          uploadedBy: "manager@andrino-academy.com",
+        },
+      }),
+      // Video for Python track
+      prisma.module.create({
+        data: {
+          title: "البرمجة بـ Python - المتغيرات",
+          description: "شرح المتغيرات وأنواع البيانات في Python",
+          type: "VIDEO",
+          category: "LECTURE",
+          fileUrl: "/uploads/modules/python-variables.mp4",
+          fileName: "python-variables.mp4",
+          fileSize: 209715200, // 200MB
+          mimeType: "video/mp4",
+          duration: 2400, // 40 minutes
+          order: 1,
+          isPublished: true,
+          trackId: tracks[5].id,
+          uploadedBy: "manager@andrino-academy.com",
+        },
+      }),
+      // Code examples document
+      prisma.module.create({
+        data: {
+          title: "أمثلة كود Python",
+          description: "أمثلة عملية على المتغيرات في Python",
+          type: "DOCUMENT",
+          category: "SUPPLEMENTARY",
+          fileUrl: "/uploads/modules/python-code-examples.docx",
+          fileName: "python-code-examples.docx",
+          fileSize: 1048576, // 1MB
+          mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          order: 2,
+          isPublished: false, // Unpublished for testing
+          trackId: tracks[5].id,
+          uploadedBy: "manager@andrino-academy.com",
+        },
+      }),
+    ]);
+
+    console.log("✅ Created 10 sample course content modules");
+
+    // Create cross-linking (attach PDFs to videos)
+    await Promise.all([
+      // Attach PDF summary to "مقدمة عن الحاسوب" video
+      prisma.moduleAttachment.create({
+        data: {
+          parentModuleId: modules[0].id, // Video module
+          attachedModuleId: modules[1].id, // PDF module
+          order: 1,
+        },
+      }),
+      // Attach slides to same video
+      prisma.moduleAttachment.create({
+        data: {
+          parentModuleId: modules[0].id, // Video module
+          attachedModuleId: modules[2].id, // Slides module
+          order: 2,
+        },
+      }),
+      // Attach exercises to Scratch video
+      prisma.moduleAttachment.create({
+        data: {
+          parentModuleId: modules[3].id, // Scratch video
+          attachedModuleId: modules[4].id, // Exercises PDF
+          order: 1,
+        },
+      }),
+      // Attach HTML reference to HTML video
+      prisma.moduleAttachment.create({
+        data: {
+          parentModuleId: modules[5].id, // HTML video
+          attachedModuleId: modules[6].id, // HTML reference PDF
+          order: 1,
+        },
+      }),
+      // Attach diagram image to HTML video
+      prisma.moduleAttachment.create({
+        data: {
+          parentModuleId: modules[5].id, // HTML video
+          attachedModuleId: modules[7].id, // Diagram image
+          order: 2,
+        },
+      }),
+      // Attach code examples to Python video
+      prisma.moduleAttachment.create({
+        data: {
+          parentModuleId: modules[8].id, // Python video
+          attachedModuleId: modules[9].id, // Code examples doc
+          order: 1,
+        },
+      }),
+    ]);
+
+    console.log("✅ Created module attachments (cross-linking materials)");
+
     console.log("\n🎉 Database seeded successfully!");
     console.log("\n📋 Complete Test Credentials:");
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -354,6 +593,7 @@ async function seed() {
     console.log("\n📚 Academic Structure Created:");
     console.log(`- ${grades.length} Grades (المستويات)`);
     console.log(`- ${tracks.length} Tracks (المسارات)`);
+    console.log(`- ${modules.length} Course Content Modules (المواد التعليمية)`);
     console.log(`- Live Sessions scheduled for today and tomorrow`);
 
     console.log("\n🚀 Ready for Testing:");

@@ -400,6 +400,31 @@ export default function ManagerDashboard() {
         />
       </div>
 
+      {/* Quick Access - Content Management */}
+      <div className='mb-8'>
+        <button
+          onClick={() => router.push('/manager/content')}
+          className='w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-between group'
+        >
+          <div className='flex items-center space-x-4 space-x-reverse'>
+            <div className='bg-white/20 p-3 rounded-lg'>
+              <BookOpen className='w-8 h-8' />
+            </div>
+            <div className='text-right'>
+              <h3 className='text-xl font-bold'>إدارة المحتوى التعليمي</h3>
+              <p className='text-green-100 text-sm mt-1'>
+                رفع وإدارة الفيديوهات والمواد التعليمية للطلاب
+              </p>
+            </div>
+          </div>
+          <div className='text-white/80 group-hover:text-white group-hover:translate-x-[-4px] transition-transform'>
+            <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+              <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M15 19l-7-7 7-7' />
+            </svg>
+          </div>
+        </button>
+      </div>
+
       {/* Academic Management Grid */}
       <div className='grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8'>
         {/* Grades Management */}

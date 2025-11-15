@@ -2,6 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import DashboardLayout from "@/app/components/dashboard/DashboardLayout";
 import {
   WelcomeCard,
@@ -97,6 +98,7 @@ interface AttendanceRecord {
 
 export default function StudentDashboard() {
   const { data: session } = useSession();
+  const router = useRouter();
   const [studentData, setStudentData] = useState<Student | null>(null);
   const [upcomingSessions, setUpcomingSessions] = useState<LiveSession[]>([]);
   const [attendanceHistory, setAttendanceHistory] = useState<
@@ -388,6 +390,12 @@ export default function StudentDashboard() {
                     className='flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#7e5b3f] to-[#c19170] text-white rounded-lg hover:from-[#343b50] hover:to-[#7e5b3f] transition-all duration-300 shadow-sm hover:shadow-md transform hover:-translate-y-0.5 cursor-pointer'>
                     <Eye className='w-4 h-4' />
                     عرض الجلسات
+                  </button>
+                  <button
+                    onClick={() => router.push(`/student/tracks/${track.id}/content`)}
+                    className='flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-sm hover:shadow-md transform hover:-translate-y-0.5 cursor-pointer'>
+                    <BookOpen className='w-4 h-4' />
+                    المحتوى التعليمي
                   </button>
                   <button
                     onClick={() => {
