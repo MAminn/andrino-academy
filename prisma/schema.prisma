@@ -584,3 +584,27 @@ enum ModuleCategory {
   SUPPLEMENTARY   // Supplementary materials
   UNCATEGORIZED   // Default category
 }
+
+// Subscription Packages Model
+model Package {
+  id                String   @id @default(cuid())
+  name              String   // Package name (e.g., "مستوى احترافي")
+  price             Float    // Original price
+  discountedPrice   Float?   // Discounted price (null or 0 = no discount)
+  minAge            Int      // Minimum age criteria
+  maxAge            Int      // Maximum age criteria
+  description       String   // Rich description/curriculum details
+  perks             String   // JSON array of perk strings with checkmarks
+  durationMonths    Int      // Duration in months (e.g., 12)
+  sessionsPerLevel  Int      // Number of sessions per level (e.g., 48)
+  pricePerSession   Float    // Calculated: price / sessionsPerLevel
+  badge             String?  // Optional badge text (e.g., "Best Value", "Most Popular")
+  order             Int      @default(0) // Display order (lower = first)
+  isActive          Boolean  @default(true) // Show/hide without deleting
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([order])
+  @@map("Package")
+}
