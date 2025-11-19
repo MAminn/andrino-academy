@@ -52,7 +52,7 @@ export default function Hero() {
 
             {/* Call-to-Action Button */}
             <div className='mb-8 flex flex-col sm:flex-row gap-4  justify-center lg:justify-start'>
-              <Link
+              {/* <Link
                 href='/form'
                 className='inline-flex items-center px-8 py-4 text-lg justify-center font-semibold rounded-xl text-white bg-[#7e5b3f] hover:bg-[#343b50] transition-colors duration-300 shadow-lg hover:shadow-xl'>
                 <span>احجز حصة مجانية</span>
@@ -66,7 +66,7 @@ export default function Hero() {
                     clipRule='evenodd'
                   />
                 </svg>
-              </Link>
+              </Link> */}
 
               <Link
                 href='https://wa.me/2001066520225'

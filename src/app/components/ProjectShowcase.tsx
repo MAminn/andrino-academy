@@ -323,21 +323,6 @@ export default function ProjectShowcase() {
           </p>
           <div className='flex flex-col sm:flex-row gap-4 justify-center'>
             <Link
-              href='/form'
-              className='inline-flex items-center px-8 py-4 text-lg font-semibold rounded-xl text-[#343b50] bg-white hover:bg-[#7e5b3f] hover:text-white transition-colors duration-300 shadow-lg hover:shadow-xl'>
-              <span>احجز حصة مجانية</span>
-              <svg
-                className='mr-3 w-5 h-5'
-                fill='currentColor'
-                viewBox='0 0 20 20'>
-                <path
-                  fillRule='evenodd'
-                  d='M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z'
-                  clipRule='evenodd'
-                />
-              </svg>
-            </Link>
-            <Link
               href='https://wa.me/2001066520225'
               target='_blank'
               rel='noopener noreferrer'

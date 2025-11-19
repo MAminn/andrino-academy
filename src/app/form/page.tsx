@@ -97,9 +97,9 @@ export default function StudentForm() {
             </svg>
             العودة للصفحة الرئيسية
           </Link>
-          <h1 className='text-3xl md:text-4xl font-bold text-gray-900 mb-4'>
+          {/* <h1 className='text-3xl md:text-4xl font-bold text-gray-900 mb-4'>
             احجز حصة مجانية لطفلك
-          </h1>
+          </h1> */}
 
           <p className='text-lg text-gray-600 max-w-lg mx-auto'>
             املأ البيانات التالية وسنتواصل معك لتحديد موعد مناسب للحصة التجريبية

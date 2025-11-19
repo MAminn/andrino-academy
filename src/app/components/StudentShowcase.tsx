@@ -144,7 +144,7 @@ export default function StudentShowcase() {
             انضم لآلاف الطلاب الذين حققوا أحلامهم المهنية مع أكاديمية أندرينو
           </p>
           <div className='flex flex-col sm:flex-row gap-4 justify-center'>
-            <Link
+            {/* <Link
               href='/form'
               className='inline-flex items-center px-8 py-4 text-lg font-semibold rounded-xl text-[#343b50] bg-white hover:bg-[#7e5b3f] hover:text-white transition-colors duration-300 shadow-lg hover:shadow-xl'>
               <span>احجز حصة مجانية</span>
@@ -158,7 +158,7 @@ export default function StudentShowcase() {
                   clipRule='evenodd'
                 />
               </svg>
-            </Link>
+            </Link> */}
             <Link
               href='https://wa.me/2001066520225'
               target='_blank'
