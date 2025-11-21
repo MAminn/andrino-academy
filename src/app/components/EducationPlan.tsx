@@ -42,19 +42,10 @@ const EducationPlan: React.FC = () => {
   ];
 
   return (
-    <section dir='rtl' className='relative bg-[#f8f9fc] py-28 overflow-hidden'>
+    <section
+      dir='rtl'
+      className='relative bg-gradient-to-b from-[#b7b7b8] to-white py-28 overflow-hidden'>
       {/* Abstract Floating Shapes */}
-      <div className='absolute top-10 left-10 w-64 h-64 rounded-full bg-gradient-to-br from-yellow-300 to-yellow-400 opacity-20 blur-3xl'></div>
-      <div className='absolute top-20 right-16 w-80 h-80 opacity-15'>
-        <svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'>
-          <path
-            fill='#60a5fa'
-            d='M45.3,-78.1C58.9,-71.2,70.5,-59.4,77.8,-45.2C85.1,-31,88.1,-14.4,87.3,2.1C86.5,18.6,81.9,34.9,73.4,48.6C64.9,62.3,52.5,73.4,38.2,79.8C23.9,86.2,7.7,88,-8.3,87C-24.3,86,-40.1,82.2,-53.8,74.8C-67.5,67.4,-79.1,56.4,-85.4,42.8C-91.7,29.2,-92.7,13.1,-90.1,-2.3C-87.5,-17.7,-81.3,-32.4,-71.8,-44.8C-62.3,-57.2,-49.5,-67.3,-35.6,-73.9C-21.7,-80.5,-6.7,-83.6,7.5,-82.3C21.7,-81,31.7,-85,45.3,-78.1Z'
-            transform='translate(100 100)'
-          />
-        </svg>
-      </div>
-      <div className='absolute bottom-20 right-1/4 w-96 h-96 bg-gradient-to-br from-[#d9d7d3]/5 to-[#f2efe9]/5 rounded-full blur-3xl'></div>
 
       <div className='max-w-7xl mx-auto px-6 md:px-10 relative z-10'>
         {/* Title + Description */}

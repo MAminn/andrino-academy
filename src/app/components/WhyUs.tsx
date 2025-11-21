@@ -57,7 +57,7 @@ export default function WhyUs() {
     <section
       id='why-us'
       dir='rtl'
-      className='bg-gradient-to-b from-[#b7b7b8] to-white py-20'>
+      className='bg-gradient-to-b from-white to-[#b7b7b8] py-20'>
       <div className='max-w-7xl mx-auto px-4 md:px-8'>
         {/* Section Title */}
         <h2 className='text-4xl font-bold text-[#343b50] text-center mb-16'>

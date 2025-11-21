@@ -79,26 +79,7 @@ const TracksRoadmap: React.FC = () => {
     <section
       id='tracks'
       dir='rtl'
-      className='relative py-20 overflow-hidden bg-[linear-gradient(to_bottom,#fafbfc,#f1f3f7)]'>
-      {/* Floating SVG Shapes */}
-      <div className='absolute top-10 left-10 w-32 h-32 opacity-30'>
-        <svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'>
-          <path
-            fill='#f4d03f'
-            d='M44.7,-76.4C58.8,-69.2,71.8,-59.1,79.6,-45.8C87.4,-32.6,90,-16.3,88.5,-0.9C87,14.6,81.4,29.2,73.1,42.8C64.7,56.4,53.6,69,39.8,76.8C26,84.6,9.5,87.6,-6.1,86.2C-21.7,84.8,-36.4,79,-48.9,70.1C-61.4,61.2,-71.7,49.2,-78.3,35.4C-84.9,21.6,-87.8,6,-86.2,-9.2C-84.6,-24.4,-78.5,-39.2,-68.7,-51.4C-58.9,-63.6,-45.4,-73.2,-30.8,-79.9C-16.2,-86.6,-0.5,-90.4,13.9,-87.8C28.3,-85.2,30.6,-83.6,44.7,-76.4Z'
-            transform='translate(100 100)'
-          />
-        </svg>
-      </div>
-
-      <div className='absolute top-20 right-16 w-24 h-24 rounded-full bg-gradient-to-br from-blue-400 to-blue-500 opacity-20 blur-xl'></div>
-
-      <div className='absolute right-10 top-1/3 w-20 h-20 opacity-25'>
-        <svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'>
-          <polygon points='50,10 90,90 10,90' fill='#e67e22' />
-        </svg>
-      </div>
-
+      className='relative py-20 overflow-hidden bg-[linear-gradient(to_bottom,#b7b7b8,#ffffff)]'>
       {/* Soft Background Gradients */}
       <div className='absolute top-40 left-1/4 w-[500px] h-[500px] bg-gradient-to-br from-[#d9d7d3]/6 to-[#f2efe9]/6 rounded-full blur-3xl'></div>
       <div className='absolute top-60 right-1/4 w-[600px] h-[600px] bg-gradient-to-br from-[#f2efe9]/6 to-[#d9d7d3]/6 rounded-full blur-3xl'></div>
@@ -143,13 +124,11 @@ const TracksRoadmap: React.FC = () => {
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4, delay: index * 0.05 }}
                   viewport={{ once: true }}
-                  whileHover={{ scale: 1.02 }}
                   onClick={() => setActiveTrackId(track.id)}
                   className={
-                    "px-6 py-3 rounded-full text-base font-bold transition-all duration-300 ease-out " +
-                    (track.id === activeTrackId
-                      ? "bg-[#7e5b3f] text-white shadow-lg scale-[1.03]"
-                      : "bg-white text-[#343b50] border border-[#d9d9d9] hover:border-[#7e5b3f]/50 shadow-sm hover:shadow-md")
+                    track.id === activeTrackId
+                      ? "bg-[#7e5b3f] text-white shadow-md rounded-2xl px-5 py-2 h-11 flex items-center whitespace-nowrap font-medium scale-[1.02] transition-all duration-200"
+                      : "bg-white border border-[#e5e7eb] shadow-sm rounded-2xl px-5 py-2 h-11 flex items-center text-[#343b50] font-medium whitespace-nowrap hover:bg-neutral-50 hover:shadow-md transition-all duration-200"
                   }>
                   {track.name}
                 </motion.button>
@@ -168,10 +147,9 @@ const TracksRoadmap: React.FC = () => {
                     viewport={{ once: true }}
                     onClick={() => setActiveTrackId(track.id)}
                     className={
-                      "px-6 py-3 rounded-full text-base font-bold transition-all duration-300 ease-out whitespace-nowrap " +
-                      (track.id === activeTrackId
-                        ? "bg-[#7e5b3f] text-white shadow-lg scale-[1.03]"
-                        : "bg-white text-[#343b50] border border-[#d9d9d9] hover:border-[#7e5b3f]/50 shadow-sm hover:shadow-md")
+                      track.id === activeTrackId
+                        ? "bg-[#7e5b3f] text-white shadow-md rounded-2xl px-5 py-2 h-11 flex items-center whitespace-nowrap font-medium scale-[1.02] transition-all duration-200"
+                        : "bg-white border border-[#e5e7eb] shadow-sm rounded-2xl px-5 py-2 h-11 flex items-center text-[#343b50] font-medium whitespace-nowrap hover:bg-neutral-50 hover:shadow-md transition-all duration-200"
                     }>
                     {track.name}
                   </motion.button>

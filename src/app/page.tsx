@@ -7,6 +7,7 @@ import WhyUs from "./components/WhyUs";
 import WhoIsAndrino from "./components/WhoIsAndrino";
 import TracksRoadmap from "./components/TracksRoadmap";
 import EducationPlan from "./components/EducationPlan";
+import PricingSection from "./components/PricingSection";
 
 export default function Home() {
   return (
@@ -17,26 +18,25 @@ export default function Home() {
       <section id='WhoIsAndrino'>
         <WhoIsAndrino />
       </section>
-      {/* <section id='features'>
-        <FeatureGrid />
-      </section> */}
-      <section id='students'>
-        <StudentShowcase />
-      </section>
-      {/* 
-      <section id='projects'>
-        <ProjectShowcase />
-      </section> */}
+
       <section id='why-us'>
         <WhyUs />
       </section>
 
-      <section id="TracksRoadmap">
+      <section id='EduPlan'>
+        <EducationPlan />
+      </section>
+
+      <section id='pricing'>
+        <PricingSection />
+      </section>
+
+      <section id='TracksRoadmap'>
         <TracksRoadmap />
       </section>
 
-      <section id="EduPlan">
-        <EducationPlan />
+      <section id='students'>
+        <StudentShowcase />
       </section>
     </div>
   );
