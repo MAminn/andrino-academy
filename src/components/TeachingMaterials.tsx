@@ -25,6 +25,7 @@ interface ContentItem {
   fileUrl: string;
   fileName: string;
   order: number;
+  targetAudience?: string;
 }
 
 interface Module {
