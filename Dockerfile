@@ -35,7 +35,7 @@ ENV NODE_ENV=production
 RUN npx prisma generate
 
 # Build Next.js application
-RUN npm run build
+RUN npm run build:original
 
 # Production image, copy all the files and run next
 FROM base AS runner
