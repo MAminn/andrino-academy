@@ -288,6 +288,48 @@ export default function InstructorDashboard() {
         />
       </div>
 
+      {/* Navigation Buttons */}
+      <div className='grid grid-cols-1 md:grid-cols-3 gap-6 mb-8'>
+        <button
+          onClick={() => (window.location.href = '/instructor/availability')}
+          className='bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200'
+        >
+          <div className='flex items-center space-x-3 space-x-reverse'>
+            <Calendar className='w-8 h-8' />
+            <div className='text-right'>
+              <h3 className='text-lg font-bold'>إدارة التوفر</h3>
+              <p className='text-blue-100 text-sm mt-1'>تحديد أوقات التوفر الأسبوعية</p>
+            </div>
+          </div>
+        </button>
+
+        <button
+          onClick={() => (window.location.href = '/instructor/bookings')}
+          className='bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200'
+        >
+          <div className='flex items-center space-x-3 space-x-reverse'>
+            <BookOpen className='w-8 h-8' />
+            <div className='text-right'>
+              <h3 className='text-lg font-bold'>الحجوزات</h3>
+              <p className='text-green-100 text-sm mt-1'>عرض وإدارة حجوزات الطلاب</p>
+            </div>
+          </div>
+        </button>
+
+        <button
+          onClick={() => (window.location.href = '/instructor/materials')}
+          className='bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200'
+        >
+          <div className='flex items-center space-x-3 space-x-reverse'>
+            <BookOpen className='w-8 h-8' />
+            <div className='text-right'>
+              <h3 className='text-lg font-bold'>المواد التعليمية</h3>
+              <p className='text-purple-100 text-sm mt-1'>مواد التدريس الخاصة بك</p>
+            </div>
+          </div>
+        </button>
+      </div>
+
       {/* Quick Actions */}
       <div className='grid grid-cols-1 md:grid-cols-3 gap-6 mb-8'>
         <QuickActionCard title='جلسة جديدة'>

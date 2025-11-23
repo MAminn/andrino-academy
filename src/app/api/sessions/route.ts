@@ -207,6 +207,7 @@ export async function POST(request: NextRequest) {
       meetLink,
       materials,
       notes,
+      bookingIds,
     } = body;
 
     // Validation
@@ -377,6 +378,20 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+
+    // Link bookings to session if bookingIds provided
+    if (bookingIds && Array.isArray(bookingIds) && bookingIds.length > 0) {
+      await prisma.sessionBooking.updateMany({
+        where: {
+          id: { in: bookingIds },
+          sessionId: null, // Only update bookings not already linked
+        },
+        data: {
+          sessionId: newSession.id,
+          status: "confirmed",
+        },
+      });
+    }
 
     return NextResponse.json({ session: newSession }, { status: 201 });
   } catch (error) {

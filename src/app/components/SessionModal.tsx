@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, Calendar, Clock, User, BookOpen, AlertCircle } from "lucide-react";
+import { X, Calendar, Clock, User, BookOpen, AlertCircle, Users, CheckCircle } from "lucide-react";
 
 interface Track {
   id: string;
@@ -16,6 +16,17 @@ interface Instructor {
   email: string;
 }
 
+interface Booking {
+  id: string;
+  student: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  studentNotes: string | null;
+  createdAt: string;
+}
+
 interface SessionFormData {
   title: string;
   description: string;
@@ -24,6 +35,7 @@ interface SessionFormData {
   endTime: string;
   trackId: string;
   instructorId: string;
+  bookingIds: string[];
 }
 
 interface EditingSession {
@@ -62,9 +74,12 @@ export default function SessionModal({
     endTime: "",
     trackId: "",
     instructorId: "",
+    bookingIds: [],
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [availableBookings, setAvailableBookings] = useState<Booking[]>([]);
+  const [loadingBookings, setLoadingBookings] = useState(false);
 
   useEffect(() => {
     if (editingSession) {
@@ -78,6 +93,7 @@ export default function SessionModal({
         endTime: editingSession.endTime || "",
         trackId: editingSession.trackId || "",
         instructorId: editingSession.instructorId || "",
+        bookingIds: [],
       });
     } else {
       setFormData({
@@ -88,10 +104,79 @@ export default function SessionModal({
         endTime: "",
         trackId: "",
         instructorId: "",
+        bookingIds: [],
       });
     }
     setError(null);
+    setAvailableBookings([]);
   }, [editingSession, isOpen]);
+
+  // Fetch available bookings when date/time/instructor changes
+  useEffect(() => {
+    const fetchBookings = async () => {
+      if (!formData.date || !formData.startTime || !formData.endTime || !formData.instructorId) {
+        setAvailableBookings([]);
+        return;
+      }
+
+      setLoadingBookings(true);
+      try {
+        // Parse date and time to find matching availability slots
+        const selectedDate = new Date(formData.date);
+        const dayOfWeek = selectedDate.getDay(); // 0 = Sunday, 6 = Saturday
+        
+        // Convert time to hour (HH:mm -> HH as number)
+        const startHour = parseInt(formData.startTime.split(":")[0]);
+        const endHour = parseInt(formData.endTime.split(":")[0]);
+
+        // Fetch bookings for this instructor
+        const response = await fetch(
+          `/api/instructor/bookings?instructorId=${formData.instructorId}`
+        );
+        
+        if (!response.ok) throw new Error("Failed to fetch bookings");
+        
+        const allBookings: Booking[] = await response.json();
+        
+        // Filter bookings that match the selected time slot
+        const matchingBookings = allBookings.filter((booking: any) => {
+          const bookingDay = booking.availability.dayOfWeek;
+          const bookingStartHour = booking.availability.startHour;
+          const bookingEndHour = booking.availability.endHour;
+          const bookingWeekStart = new Date(booking.availability.weekStartDate);
+          
+          // Calculate the actual date of the booking
+          const bookingDate = new Date(bookingWeekStart);
+          bookingDate.setDate(bookingDate.getDate() + bookingDay);
+          
+          // Check if booking date matches selected date
+          const isSameDate = 
+            bookingDate.getDate() === selectedDate.getDate() &&
+            bookingDate.getMonth() === selectedDate.getMonth() &&
+            bookingDate.getFullYear() === selectedDate.getFullYear();
+          
+          // Check if time overlaps
+          const timeOverlaps = 
+            (bookingStartHour >= startHour && bookingStartHour < endHour) ||
+            (bookingEndHour > startHour && bookingEndHour <= endHour) ||
+            (bookingStartHour <= startHour && bookingEndHour >= endHour);
+          
+          // Only show bookings without sessionId (not already linked)
+          const notLinked = !booking.sessionId;
+          
+          return isSameDate && timeOverlaps && notLinked;
+        });
+        
+        setAvailableBookings(matchingBookings);
+      } catch (err) {
+        console.error("Error fetching bookings:", err);
+      } finally {
+        setLoadingBookings(false);
+      }
+    };
+
+    fetchBookings();
+  }, [formData.date, formData.startTime, formData.endTime, formData.instructorId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,6 +213,18 @@ export default function SessionModal({
   const handleChange = (field: keyof SessionFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     setError(null);
+  };
+
+  const toggleBooking = (bookingId: string) => {
+    setFormData((prev) => {
+      const isSelected = prev.bookingIds.includes(bookingId);
+      return {
+        ...prev,
+        bookingIds: isSelected
+          ? prev.bookingIds.filter((id) => id !== bookingId)
+          : [...prev.bookingIds, bookingId],
+      };
+    });
   };
 
   if (!isOpen) return null;
@@ -269,6 +366,65 @@ export default function SessionModal({
               ))}
             </select>
           </div>
+
+          {/* Available Bookings */}
+          {!editingSession && availableBookings.length > 0 && (
+            <div className='bg-blue-50 border border-blue-200 rounded-lg p-4'>
+              <div className='flex items-center gap-2 mb-3'>
+                <Users className='w-5 h-5 text-blue-600' />
+                <h3 className='font-semibold text-blue-900'>
+                  حجوزات الطلاب لهذا الوقت ({availableBookings.length})
+                </h3>
+              </div>
+              <p className='text-sm text-blue-700 mb-3'>
+                يمكنك ربط هذه الجلسة بحجوزات الطلاب التالية:
+              </p>
+              <div className='space-y-2 max-h-60 overflow-y-auto'>
+                {availableBookings.map((booking) => (
+                  <div
+                    key={booking.id}
+                    onClick={() => toggleBooking(booking.id)}
+                    className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                      formData.bookingIds.includes(booking.id)
+                        ? 'border-blue-600 bg-blue-100'
+                        : 'border-gray-300 bg-white hover:border-blue-400'
+                    }`}
+                  >
+                    <div className='flex items-center justify-between'>
+                      <div className='flex-1'>
+                        <div className='flex items-center gap-2'>
+                          <User className='w-4 h-4 text-gray-600' />
+                          <span className='font-medium text-gray-900'>
+                            {booking.student.name}
+                          </span>
+                          {formData.bookingIds.includes(booking.id) && (
+                            <CheckCircle className='w-4 h-4 text-blue-600' />
+                          )}
+                        </div>
+                        <p className='text-sm text-gray-600 mr-6'>
+                          {booking.student.email}
+                        </p>
+                        {booking.studentNotes && (
+                          <p className='text-xs text-gray-500 mr-6 mt-1 italic'>
+                            "{booking.studentNotes}"
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className='text-xs text-blue-600 mt-2'>
+                * الحجوزات المحددة سيتم ربطها تلقائياً بهذه الجلسة
+              </p>
+            </div>
+          )}
+
+          {!editingSession && loadingBookings && (
+            <div className='bg-gray-50 border border-gray-200 rounded-lg p-4 text-center'>
+              <p className='text-sm text-gray-600'>جاري البحث عن الحجوزات...</p>
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className='flex justify-end space-x-4 space-x-reverse pt-6 border-t'>

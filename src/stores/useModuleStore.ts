@@ -37,6 +37,8 @@ export interface Module {
   uploadedBy: string;
   createdAt: string;
   updatedAt: string;
+  weekNumber?: number | null;  // Week number for scheduled content
+  startDate?: string | null;   // Start date for week visibility
   track?: {
     id: string;
     name: string;
@@ -47,18 +49,6 @@ export interface Module {
     title: string;
     date: string;
   };
-  attachments?: ModuleAttachment[];
-  attachedTo?: ModuleAttachment[];
-}
-
-export interface ModuleAttachment {
-  id: string;
-  parentModuleId: string;
-  attachedModuleId: string;
-  order: number;
-  createdAt: string;
-  parentModule?: Module;
-  attachedModule?: Module;
 }
 
 interface ModuleStore {
@@ -85,19 +75,11 @@ interface ModuleStore {
     type?: ModuleType;
     category?: ModuleCategory;
     isPublished?: boolean;
+    skipDateFilter?: boolean; // For managers to see all weeks including future
   }) => Promise<void>;
   createModule: (formData: FormData) => Promise<Module | null>;
   updateModule: (id: string, updates: Partial<Module>) => Promise<Module | null>;
   deleteModule: (id: string) => Promise<boolean>;
-  attachModule: (
-    parentModuleId: string,
-    attachedModuleId: string,
-    order?: number
-  ) => Promise<ModuleAttachment | null>;
-  detachModule: (
-    parentModuleId: string,
-    attachedModuleId: string
-  ) => Promise<boolean>;
   togglePublish: (id: string) => Promise<Module | null>;
 
   // Computed selectors
@@ -151,7 +133,17 @@ const useModuleStore = create<ModuleStore>()(
           }
 
           const data = await response.json();
-          set({ modules: data.modules, loading: false });
+          
+          // Filter out future weeks (modules with startDate > now) UNLESS skipDateFilter is true (for managers)
+          let availableModules = data.modules;
+          if (!filters.skipDateFilter) {
+            const now = new Date();
+            availableModules = data.modules.filter((module: any) => 
+              !module.startDate || new Date(module.startDate) <= now
+            );
+          }
+          
+          set({ modules: availableModules, loading: false });
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : "Unknown error";
@@ -258,70 +250,6 @@ const useModuleStore = create<ModuleStore>()(
             error instanceof Error ? error.message : "Unknown error";
           set({ error: errorMessage, loading: false });
           console.error("Error deleting module:", error);
-          return false;
-        }
-      },
-
-      attachModule: async (
-        parentModuleId: string,
-        attachedModuleId: string,
-        order = 0
-      ) => {
-        set({ loading: true, error: null });
-        try {
-          const response = await fetch(`/api/modules/${parentModuleId}/attach`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ attachedModuleId, order }),
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || "Failed to attach module");
-          }
-
-          const data = await response.json();
-          const attachment = data.attachment;
-
-          // Refresh modules to get updated attachments
-          await get().fetchModules();
-
-          set({ loading: false });
-          return attachment;
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : "Unknown error";
-          set({ error: errorMessage, loading: false });
-          console.error("Error attaching module:", error);
-          return null;
-        }
-      },
-
-      detachModule: async (parentModuleId: string, attachedModuleId: string) => {
-        set({ loading: true, error: null });
-        try {
-          const response = await fetch(
-            `/api/modules/${parentModuleId}/attach?attachedModuleId=${attachedModuleId}`,
-            {
-              method: "DELETE",
-            }
-          );
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || "Failed to detach module");
-          }
-
-          // Refresh modules to get updated attachments
-          await get().fetchModules();
-
-          set({ loading: false });
-          return true;
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : "Unknown error";
-          set({ error: errorMessage, loading: false });
-          console.error("Error detaching module:", error);
           return false;
         }
       },

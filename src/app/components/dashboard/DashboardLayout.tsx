@@ -27,7 +27,16 @@ export default function DashboardLayout({
       return;
     }
 
-    if (session.user.role !== role) {
+    // Debug log
+    console.log("DashboardLayout - Checking role:", {
+      sessionRole: session.user.role,
+      expectedRole: role,
+      match: session.user.role?.toLowerCase() === role.toLowerCase()
+    });
+
+    // Case-insensitive role comparison
+    if (session.user.role?.toLowerCase() !== role.toLowerCase()) {
+      console.log("Role mismatch - redirecting to /");
       router.push("/");
       return;
     }

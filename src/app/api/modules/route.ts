@@ -97,32 +97,13 @@ export async function GET(request: NextRequest) {
             date: true,
           },
         },
-        attachedTo: {
-          include: {
-            parentModule: {
-              select: {
-                id: true,
-                title: true,
-                type: true,
-              },
-            },
-          },
+        contentItems: {
+          orderBy: { order: "asc" },
         },
-        attachments: {
-          include: {
-            attachedModule: {
-              select: {
-                id: true,
-                title: true,
-                type: true,
-                fileUrl: true,
-                fileName: true,
-                fileSize: true,
-                mimeType: true,
-                category: true,
-              },
-            },
-          },
+        tasks: {
+          orderBy: { order: "asc" },
+        },
+        assignments: {
           orderBy: { order: "asc" },
         },
       },
@@ -158,18 +139,19 @@ export async function POST(request: NextRequest) {
     // Extract form fields
     const title = formData.get("title") as string;
     const description = formData.get("description") as string | null;
-    const type = formData.get("type") as ModuleType;
     const category = formData.get("category") as ModuleCategory;
+    const targetAudience = formData.get("targetAudience") as "instructor" | "student" | null;
     const trackId = formData.get("trackId") as string;
     const sessionId = formData.get("sessionId") as string | null;
     const order = formData.get("order") as string | null;
     const isPublished = formData.get("isPublished") === "true";
-    const file = formData.get("file") as File;
+    const weekNumber = formData.get("weekNumber") as string | null;
+    const startDate = formData.get("startDate") as string | null;
 
     // Validation
-    if (!title || !type || !trackId || !file) {
+    if (!title || !trackId) {
       return NextResponse.json(
-        { error: "Title, type, trackId, and file are required" },
+        { error: "Title and trackId are required" },
         { status: 400 }
       );
     }
@@ -188,11 +170,11 @@ export async function POST(request: NextRequest) {
 
     // Verify session if provided
     if (sessionId) {
-      const session = await prisma.liveSession.findUnique({
+      const liveSession = await prisma.liveSession.findUnique({
         where: { id: sessionId },
       });
 
-      if (!session) {
+      if (!liveSession) {
         return NextResponse.json(
           { error: "Session not found" },
           { status: 404 }
@@ -200,69 +182,19 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Validate file size
-    const maxSize = FILE_SIZE_LIMITS[type];
-    if (file.size > maxSize) {
-      return NextResponse.json(
-        {
-          error: `File size exceeds limit for ${type} (${maxSize / (1024 * 1024)}MB)`,
-        },
-        { status: 400 }
-      );
-    }
-
-    // Validate MIME type
-    const allowedTypes = ALLOWED_MIME_TYPES[type];
-    if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json(
-        {
-          error: `Invalid file type for ${type}. Allowed types: ${allowedTypes.join(", ")}`,
-        },
-        { status: 400 }
-      );
-    }
-
-    // Generate unique filename
-    const timestamp = Date.now();
-    const sanitizedFilename = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-    const filename = `${timestamp}-${sanitizedFilename}`;
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "modules");
-    const filePath = path.join(uploadDir, filename);
-
-    // Ensure upload directory exists
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
-    }
-
-    // Write file to disk
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    await writeFile(filePath, buffer);
-
-    // Extract video duration if it's a video (placeholder - requires ffmpeg in production)
-    let duration: number | null = null;
-    if (type === "VIDEO") {
-      // TODO: Implement video duration extraction with ffmpeg
-      // For now, set to null and can be updated later
-      duration = null;
-    }
-
     // Create module in database
     const module = await prisma.module.create({
       data: {
         title,
         description: description || null,
-        type,
         category: category || "UNCATEGORIZED",
-        fileUrl: `/uploads/modules/${filename}`,
-        fileName: file.name,
-        fileSize: file.size,
-        mimeType: file.type,
-        duration,
+        targetAudience: targetAudience || "student",
         order: order ? parseInt(order) : 0,
         isPublished,
         trackId,
         sessionId: sessionId || null,
+        weekNumber: weekNumber ? parseInt(weekNumber) : null,
+        startDate: startDate ? new Date(startDate) : null,
         uploadedBy: session.user.email || "",
       },
       include: {
@@ -277,6 +209,15 @@ export async function POST(request: NextRequest) {
             id: true,
             title: true,
           },
+        },
+        contentItems: {
+          orderBy: { order: "asc" },
+        },
+        tasks: {
+          orderBy: { order: "asc" },
+        },
+        assignments: {
+          orderBy: { order: "asc" },
         },
       },
     });
