@@ -50,12 +50,12 @@ RUN adduser --system --uid 1001 nextjs
 
 
 # Copy all app files from builder
-# For standalone output, copy only what's needed
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/next.config.ts ./
+COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules ./node_modules
 
 # Create uploads directory with proper permissions
 RUN mkdir -p /app/public/uploads
@@ -73,4 +73,4 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 # Start the application
-CMD ["node", "server.js"]
+CMD ["npm", "run", "start"]
