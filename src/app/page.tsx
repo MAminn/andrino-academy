@@ -1,4 +1,5 @@
 ﻿import Hero from "./components/Hero";
+import HeroMobile from "./components/HeroMobile";
 import FeatureGrid from "./components/FeatureGrid";
 import StudentShowcase from "./components/StudentShowcase";
 import ProjectShowcase from "./components/ProjectShowcase";
@@ -13,6 +14,9 @@ export default function Home() {
   return (
     <div>
       <section id='hero'>
+        {/* Mobile Hero - Hidden on Desktop */}
+        <HeroMobile />
+        {/* Desktop Hero - Hidden on Mobile */}
         <Hero />
       </section>
       <section id='WhoIsAndrino'>

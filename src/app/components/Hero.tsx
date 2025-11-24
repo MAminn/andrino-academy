@@ -7,7 +7,7 @@ import HImage from "@/../assests/w f.png";
 
 export default function Hero() {
   return (
-    <section className='bg-gradient-to-b from-white to-[#b7b7b8] relative overflow-hidden text-center lg:text-right'>
+    <section className='hidden lg:block bg-gradient-to-b from-white to-[#b7b7b8] relative overflow-hidden text-center lg:text-right'>
       <div className='max-w-7xl mx-auto px-6 py-8 lg:py-24 relative z-10'>
         <div className='flex justify-between items-center gap-8 lg:flex-row flex-col'>
           {/* Text Content - Right side */}
