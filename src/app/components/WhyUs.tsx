@@ -79,7 +79,7 @@ export default function WhyUs() {
     <section
       id='why-us'
       dir='rtl'
-      className='relative bg-gradient-to-b from-white to-[#b7b7b8] py-16 md:py-24 lg:py-32'>
+      className='hidden lg:block relative bg-gradient-to-b from-white to-[#b7b7b8] py-16 md:py-24 lg:py-32'>
       <div className='max-w-7xl mx-auto px-4 md:px-8'>
         {/* Header */}
         <div className='text-center mb-20'>

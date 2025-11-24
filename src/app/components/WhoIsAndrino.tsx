@@ -61,7 +61,7 @@ export default function WhoIsAndrino() {
     <section
       id='about'
       dir='rtl'
-      className='relative overflow-hidden py-28 bg-gradient-to-b from-[#b7b7b8] to-white'>
+      className='hidden lg:block relative overflow-hidden py-28 bg-gradient-to-b from-[#b7b7b8] to-white'>
       {/* Enhanced Floating Shapes */}
       <div className='absolute top-20 right-20 w-72 h-72 bg-gradient-to-br from-[#f9d66a]/20 to-[#f6ad6f]/10 rounded-full blur-3xl'></div>
       <div className='absolute bottom-20 left-20 w-96 h-96 bg-gradient-to-tr from-[#a8cfff]/15 to-[#c8b5ff]/10 rounded-full blur-3xl'></div>

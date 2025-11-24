@@ -1,11 +1,10 @@
 ﻿import Hero from "./components/Hero";
 import HeroMobile from "./components/HeroMobile";
-import FeatureGrid from "./components/FeatureGrid";
 import StudentShowcase from "./components/StudentShowcase";
-import ProjectShowcase from "./components/ProjectShowcase";
-import Stats from "./components/Stats";
 import WhyUs from "./components/WhyUs";
+import WhyUsMobile from "./components/WhyUsMobile";
 import WhoIsAndrino from "./components/WhoIsAndrino";
+import WhoIsAndrinoMobile from "./components/WhoIsAndrinoMobile";
 import TracksRoadmap from "./components/TracksRoadmap";
 import EducationPlan from "./components/EducationPlan";
 import PricingSection from "./components/PricingSection";
@@ -20,10 +19,16 @@ export default function Home() {
         <Hero />
       </section>
       <section id='WhoIsAndrino'>
+        {/* Mobile Version - Hidden on Desktop */}
+        <WhoIsAndrinoMobile />
+        {/* Desktop Version - Hidden on Mobile */}
         <WhoIsAndrino />
       </section>
 
       <section id='why-us'>
+        {/* Mobile Version - Hidden on Desktop */}
+        <WhyUsMobile />
+        {/* Desktop Version - Hidden on Mobile */}
         <WhyUs />
       </section>
 
