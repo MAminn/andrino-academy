@@ -54,16 +54,17 @@ COPY --from=builder /app/package.json ./
 COPY --from=builder /app/next.config.ts ./
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/assests ./assests
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules ./node_modules
 
-# Create uploads directory with proper permissions
-RUN mkdir -p /app/public/uploads
-RUN chown -R nextjs:nodejs /app/public/uploads
-
-# Create directory for SQLite database with proper permissions
-RUN mkdir -p /app/prisma
-RUN chown -R nextjs:nodejs /app/prisma
+# Create necessary directories with proper permissions
+RUN mkdir -p /app/public/uploads \
+    && mkdir -p /app/.next/cache/images \
+    && mkdir -p /app/prisma \
+    && chown -R nextjs:nodejs /app/public \
+    && chown -R nextjs:nodejs /app/.next/cache \
+    && chown -R nextjs:nodejs /app/prisma
 
 USER nextjs
 
