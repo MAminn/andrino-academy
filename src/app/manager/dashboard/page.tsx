@@ -91,6 +91,17 @@ export default function ManagerDashboard() {
   const [recentTracks, setRecentTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Debug: Log session data
+  useEffect(() => {
+    if (session?.user) {
+      console.log("Manager Dashboard - Session User:", {
+        role: session.user.role,
+        email: session.user.email,
+        name: session.user.name
+      });
+    }
+  }, [session]);
+
   // Navigation functions
   const navigateToGrades = () => {
     router.push("/manager/grades");
@@ -400,52 +411,56 @@ export default function ManagerDashboard() {
         />
       </div>
 
-      {/* Quick Access - Content Management */}
-      <div className='mb-8'>
+      {/* Quick Access Navigation - Grid Layout */}
+      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8'>
         <button
           onClick={() => router.push('/manager/content')}
-          className='w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-between group'
+          className='bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200'
         >
-          <div className='flex items-center space-x-4 space-x-reverse'>
+          <div className='flex items-center space-x-3 space-x-reverse mb-3'>
             <div className='bg-white/20 p-3 rounded-lg'>
               <BookOpen className='w-8 h-8' />
             </div>
-            <div className='text-right'>
-              <h3 className='text-xl font-bold'>إدارة المحتوى التعليمي</h3>
+            <div className='text-right flex-1'>
+              <h3 className='text-lg font-bold'>إدارة المحتوى التعليمي</h3>
               <p className='text-green-100 text-sm mt-1'>
-                رفع وإدارة الفيديوهات والمواد التعليمية للطلاب
+                رفع المواد التعليمية والفيديوهات
               </p>
             </div>
           </div>
-          <div className='text-white/80 group-hover:text-white group-hover:translate-x-[-4px] transition-transform'>
-            <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-              <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M15 19l-7-7 7-7' />
-            </svg>
-          </div>
         </button>
-      </div>
 
-      {/* Quick Access - Packages Management */}
-      <div className='mb-8'>
         <button
           onClick={() => router.push('/manager/packages')}
-          className='w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-between group'
+          className='bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200'
         >
-          <div className='flex items-center space-x-4 space-x-reverse'>
+          <div className='flex items-center space-x-3 space-x-reverse mb-3'>
             <div className='bg-white/20 p-3 rounded-lg'>
               <Database className='w-8 h-8' />
             </div>
-            <div className='text-right'>
-              <h3 className='text-xl font-bold'>إدارة الباقات والاشتراكات</h3>
+            <div className='text-right flex-1'>
+              <h3 className='text-lg font-bold'>إدارة الباقات</h3>
               <p className='text-purple-100 text-sm mt-1'>
-                إضافة وتعديل باقات الطلاب والأسعار والمميزات
+                باقات الطلاب والاشتراكات
               </p>
             </div>
           </div>
-          <div className='text-white/80 group-hover:text-white group-hover:translate-x-[-4px] transition-transform'>
-            <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-              <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M15 19l-7-7 7-7' />
-            </svg>
+        </button>
+
+        <button
+          onClick={() => router.push('/manager/settings/schedule')}
+          className='bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200'
+        >
+          <div className='flex items-center space-x-3 space-x-reverse mb-3'>
+            <div className='bg-white/20 p-3 rounded-lg'>
+              <Calendar className='w-8 h-8' />
+            </div>
+            <div className='text-right flex-1'>
+              <h3 className='text-lg font-bold'>إعدادات الجدول</h3>
+              <p className='text-orange-100 text-sm mt-1'>
+                التحكم في الجدول الأسبوعي
+              </p>
+            </div>
           </div>
         </button>
       </div>

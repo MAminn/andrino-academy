@@ -8,22 +8,24 @@ async function seed() {
 
   try {
     // Clear existing data in correct order (child tables first)
-    await prisma.moduleAttachment.deleteMany();
+    await prisma.contentItem.deleteMany();
+    await prisma.task.deleteMany();
+    await prisma.assignmentSubmissionNew.deleteMany();
+    await prisma.assignmentNew.deleteMany();
+    await prisma.sessionBooking.deleteMany();
+    await prisma.instructorAvailability.deleteMany();
     await prisma.module.deleteMany();
     await prisma.sessionAttendance.deleteMany();
     await prisma.liveSession.deleteMany();
     await prisma.track.deleteMany();
     await prisma.user.deleteMany();
     await prisma.grade.deleteMany();
+    await prisma.scheduleSettings.deleteMany();
 
     console.log("🗑️  Cleared existing data");
 
-    // Hash passwords
-    const ceoPassword = await bcrypt.hash("Andrino2024!", 12);
-    const managerPassword = await bcrypt.hash("Manager2024!", 12);
-    const coordinatorPassword = await bcrypt.hash("Coord2024!", 12);
-    const instructorPassword = await bcrypt.hash("Instructor123!", 12);
-    const studentPassword = await bcrypt.hash("Student123!", 12);
+    // Hash passwords (using simple password123 for all test accounts)
+    const testPassword = await bcrypt.hash("password123", 12);
 
     // Create Grades first
     const grades = await Promise.all([
@@ -59,21 +61,21 @@ async function seed() {
 
     console.log("✅ Created 4 grades");
 
-    // Create Administrative Accounts
+    // Create Administrative Accounts (with simple test emails)
     await prisma.user.create({
       data: {
         name: "المدير التنفيذي",
         email: "ceo@andrino-academy.com",
-        password: ceoPassword,
+        password: testPassword,
         role: "ceo",
       },
     });
 
     await prisma.user.create({
       data: {
-        name: "المدير الأكاديمي",
-        email: "manager@andrino-academy.com",
-        password: managerPassword,
+        name: "Manager",
+        email: "manager@andrino.com",
+        password: testPassword,
         role: "manager",
       },
     });
@@ -82,20 +84,28 @@ async function seed() {
       data: {
         name: "منسق الأكاديمية",
         email: "coordinator@andrino-academy.com",
-        password: coordinatorPassword,
+        password: testPassword,
         role: "coordinator",
       },
     });
 
     console.log("✅ Created administrative accounts");
 
-    // Create Instructor Accounts
+    // Create Instructor Accounts (with simple test email)
     const instructors = await Promise.all([
+      prisma.user.create({
+        data: {
+          name: "Instructor",
+          email: "instructor@andrino.com",
+          password: testPassword,
+          role: "instructor",
+        },
+      }),
       prisma.user.create({
         data: {
           name: "أحمد محمد",
           email: "ahmed.instructor@andrino-academy.com",
-          password: instructorPassword,
+          password: testPassword,
           role: "instructor",
         },
       }),
@@ -103,7 +113,7 @@ async function seed() {
         data: {
           name: "سارة أحمد",
           email: "sara.instructor@andrino-academy.com",
-          password: instructorPassword,
+          password: testPassword,
           role: "instructor",
         },
       }),
@@ -111,22 +121,33 @@ async function seed() {
         data: {
           name: "عمر حسن",
           email: "omar.instructor@andrino-academy.com",
-          password: instructorPassword,
+          password: testPassword,
           role: "instructor",
         },
       }),
     ]);
 
-    console.log("✅ Created 3 instructor accounts");
+    console.log("✅ Created 4 instructor accounts");
 
-    // Create Student Accounts
-    await Promise.all([
+    // Create Student Accounts (with simple test email)
+    const studentUsers = await Promise.all([
+      // Simple test student - assigned to all grades for testing (we'll manually update after)
+      prisma.user.create({
+        data: {
+          name: "Student",
+          email: "student@andrino.com",
+          password: testPassword,
+          role: "student",
+          age: 15,
+          gradeId: grades[2].id, // المستوى الثالث - has 2 tracks
+        },
+      }),
       // Student 1 - Beginner Level (assigned to grade 1)
       prisma.user.create({
         data: {
           name: "علي محمد",
           email: "ali.student@andrino-academy.com",
-          password: studentPassword,
+          password: testPassword,
           role: "student",
           age: 8,
           gradeId: grades[0].id, // المستوى الأول
@@ -137,7 +158,7 @@ async function seed() {
         data: {
           name: "فاطمة أحمد",
           email: "fatima.student@andrino-academy.com",
-          password: studentPassword,
+          password: testPassword,
           role: "student",
           age: 11,
           gradeId: grades[1].id, // المستوى الثاني
@@ -148,7 +169,7 @@ async function seed() {
         data: {
           name: "محمد علي",
           email: "mohammed.student@andrino-academy.com",
-          password: studentPassword,
+          password: testPassword,
           role: "student",
           age: 15,
           gradeId: grades[2].id, // المستوى الثالث
@@ -159,7 +180,7 @@ async function seed() {
         data: {
           name: "عائشة حسن",
           email: "aisha.student@andrino-academy.com",
-          password: studentPassword,
+          password: testPassword,
           role: "student",
           age: 18,
           gradeId: grades[3].id, // المستوى الرابع
@@ -170,7 +191,7 @@ async function seed() {
         data: {
           name: "حسن محمود",
           email: "hassan.student@andrino-academy.com",
-          password: studentPassword,
+          password: testPassword,
           role: "student",
           age: 12,
           // No gradeId - remains unassigned
@@ -178,7 +199,7 @@ async function seed() {
       }),
     ]);
 
-    console.log("✅ Created 5 student accounts (4 assigned, 1 unassigned)");
+    console.log("✅ Created 6 student accounts (5 assigned, 1 unassigned)");
 
     // Create Tracks for each grade
     const tracks = await Promise.all([
@@ -262,6 +283,17 @@ async function seed() {
 
     console.log("✅ Created 8 tracks across all grades");
 
+    // Create ScheduleSettings (Manager control over weekly reset)
+    await prisma.scheduleSettings.create({
+      data: {
+        weekResetDay: 0, // Sunday
+        weekResetHour: 22, // 10 PM
+        availabilityOpenHours: 168, // Open for full week (7 days * 24 hours)
+      },
+    });
+
+    console.log("✅ Created schedule settings");
+
     // Create some live sessions for today and upcoming
     const today = new Date();
     const tomorrow = new Date(today);
@@ -329,266 +361,523 @@ async function seed() {
 
     console.log("✅ Created live sessions for today and tomorrow");
 
-    // Create sample course content modules
+    // Create sample course content modules with ContentItems, Tasks, and Assignments
     const modules = await Promise.all([
-      // Video modules for "أساسيات الحاسوب" track
+      // Module 1: "مقدمة عن الحاسوب" - Student-facing with video + PDF
       prisma.module.create({
         data: {
           title: "مقدمة عن الحاسوب",
-          description: "فيديو تعريفي عن أجزاء الحاسوب الأساسية",
-          type: "VIDEO",
+          description: "فيديو تعريفي عن أجزاء الحاسوب الأساسية مع ملخص PDF",
           category: "LECTURE",
-          fileUrl: "/uploads/modules/intro-to-computer.mp4",
-          fileName: "intro-to-computer.mp4",
-          fileSize: 52428800, // 50MB
-          mimeType: "video/mp4",
-          duration: 900, // 15 minutes
+          targetAudience: "student",
           order: 1,
           isPublished: true,
           trackId: tracks[0].id,
           uploadedBy: "manager@andrino-academy.com",
+          contentItems: {
+            create: [
+              {
+                type: "VIDEO",
+                fileUrl: "/uploads/modules/intro-to-computer.mp4",
+                fileName: "intro-to-computer.mp4",
+                fileSize: 52428800, // 50MB
+                mimeType: "video/mp4",
+                duration: 900, // 15 minutes
+                order: 1,
+              },
+              {
+                type: "PDF",
+                fileUrl: "/uploads/modules/computer-parts-summary.pdf",
+                fileName: "computer-parts-summary.pdf",
+                fileSize: 2097152, // 2MB
+                mimeType: "application/pdf",
+                order: 2,
+              },
+            ],
+          },
+          tasks: {
+            create: [
+              {
+                title: "اكتب ملخص عن أجزاء الحاسوب",
+                description: "اكتب فقرة صغيرة (100 كلمة) عن أهم 5 أجزاء في الحاسوب",
+                order: 1,
+              },
+            ],
+          },
         },
       }),
-      // PDF module attached to video
+
+      // Module 2: "أساسيات الحاسوب - المتقدم" - Instructor-facing with slides
       prisma.module.create({
         data: {
-          title: "ملخص الدرس - أجزاء الحاسوب",
-          description: "ملف PDF يحتوي على ملخص الدرس",
-          type: "PDF",
-          category: "HANDOUT",
-          fileUrl: "/uploads/modules/computer-parts-summary.pdf",
-          fileName: "computer-parts-summary.pdf",
-          fileSize: 2097152, // 2MB
-          mimeType: "application/pdf",
+          title: "أساسيات الحاسوب - دليل المعلم",
+          description: "شرائح العرض ومواد تدريسية للمعلم",
+          category: "SLIDES",
+          targetAudience: "instructor",
           order: 2,
           isPublished: true,
           trackId: tracks[0].id,
           uploadedBy: "manager@andrino-academy.com",
+          contentItems: {
+            create: [
+              {
+                type: "DOCUMENT",
+                fileUrl: "/uploads/modules/computer-basics-slides.pptx",
+                fileName: "computer-basics-slides.pptx",
+                fileSize: 5242880, // 5MB
+                mimeType: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                order: 1,
+              },
+              {
+                type: "PDF",
+                fileUrl: "/uploads/modules/teacher-notes.pdf",
+                fileName: "teacher-notes.pdf",
+                fileSize: 1048576, // 1MB
+                mimeType: "application/pdf",
+                order: 2,
+              },
+            ],
+          },
         },
       }),
-      // Document module (slides)
-      prisma.module.create({
-        data: {
-          title: "شرائح العرض - أساسيات الحاسوب",
-          description: "ملف PowerPoint للدرس",
-          type: "DOCUMENT",
-          category: "SLIDES",
-          fileUrl: "/uploads/modules/computer-basics-slides.pptx",
-          fileName: "computer-basics-slides.pptx",
-          fileSize: 5242880, // 5MB
-          mimeType: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-          order: 3,
-          isPublished: true,
-          trackId: tracks[0].id,
-          uploadedBy: "manager@andrino-academy.com",
-        },
-      }),
-      // Video module for "برمجة سكراتش" track
+
+      // Module 3: "أساسيات سكراتش" - Student module with video, exercise, and assignment
       prisma.module.create({
         data: {
           title: "أساسيات سكراتش - الدرس الأول",
           description: "تعلم واجهة سكراتش وإنشاء أول مشروع",
-          type: "VIDEO",
           category: "TUTORIAL",
-          fileUrl: "/uploads/modules/scratch-basics.mp4",
-          fileName: "scratch-basics.mp4",
-          fileSize: 104857600, // 100MB
-          mimeType: "video/mp4",
-          duration: 1200, // 20 minutes
+          targetAudience: "student",
           order: 1,
           isPublished: true,
           trackId: tracks[2].id,
           uploadedBy: "manager@andrino-academy.com",
+          contentItems: {
+            create: [
+              {
+                type: "VIDEO",
+                fileUrl: "/uploads/modules/scratch-basics.mp4",
+                fileName: "scratch-basics.mp4",
+                fileSize: 104857600, // 100MB
+                mimeType: "video/mp4",
+                duration: 1200, // 20 minutes
+                order: 1,
+              },
+              {
+                type: "PDF",
+                fileUrl: "/uploads/modules/scratch-exercises.pdf",
+                fileName: "scratch-exercises.pdf",
+                fileSize: 3145728, // 3MB
+                mimeType: "application/pdf",
+                order: 2,
+              },
+            ],
+          },
+          tasks: {
+            create: [
+              {
+                title: "قم بإنشاء حساب على موقع سكراتش",
+                description: "سجل في موقع scratch.mit.edu واكتب اسم المستخدم الخاص بك",
+                order: 1,
+              },
+              {
+                title: "استكشف مشاريع سكراتش",
+                description: "ابحث عن 3 مشاريع مثيرة للاهتمام واكتب أسماءها",
+                order: 2,
+              },
+            ],
+          },
+          assignments: {
+            create: [
+              {
+                title: "مشروع سكراتش الأول",
+                description: "أنشئ مشروع بسيط في سكراتش يحتوي على شخصية تتحرك وتتكلم. قم بتصدير المشروع وتحميله.",
+                dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1 week from now
+                order: 1,
+              },
+            ],
+          },
         },
       }),
-      // Exercise PDF for Scratch
-      prisma.module.create({
-        data: {
-          title: "تمارين سكراتش - الدرس الأول",
-          description: "تمارين عملية لتطبيق ما تعلمته",
-          type: "PDF",
-          category: "EXERCISE",
-          fileUrl: "/uploads/modules/scratch-exercises.pdf",
-          fileName: "scratch-exercises.pdf",
-          fileSize: 3145728, // 3MB
-          mimeType: "application/pdf",
-          order: 2,
-          isPublished: true,
-          trackId: tracks[2].id,
-          uploadedBy: "manager@andrino-academy.com",
-        },
-      }),
-      // Video module for "تطوير المواقع" track
+
+      // Module 4: "مقدمة في HTML" - Student module with multiple content types
       prisma.module.create({
         data: {
           title: "مقدمة في HTML",
           description: "تعلم أساسيات HTML وبنية الصفحة",
-          type: "VIDEO",
           category: "LECTURE",
-          fileUrl: "/uploads/modules/html-introduction.mp4",
-          fileName: "html-introduction.mp4",
-          fileSize: 157286400, // 150MB
-          mimeType: "video/mp4",
-          duration: 1800, // 30 minutes
+          targetAudience: "student",
           order: 1,
           isPublished: true,
           trackId: tracks[4].id,
           uploadedBy: "manager@andrino-academy.com",
+          contentItems: {
+            create: [
+              {
+                type: "VIDEO",
+                fileUrl: "/uploads/modules/html-introduction.mp4",
+                fileName: "html-introduction.mp4",
+                fileSize: 157286400, // 150MB
+                mimeType: "video/mp4",
+                duration: 1800, // 30 minutes
+                order: 1,
+              },
+              {
+                type: "PDF",
+                fileUrl: "/uploads/modules/html-reference.pdf",
+                fileName: "html-reference.pdf",
+                fileSize: 10485760, // 10MB
+                mimeType: "application/pdf",
+                order: 2,
+              },
+              {
+                type: "IMAGE",
+                fileUrl: "/uploads/modules/html-structure-diagram.png",
+                fileName: "html-structure-diagram.png",
+                fileSize: 524288, // 512KB
+                mimeType: "image/png",
+                order: 3,
+              },
+            ],
+          },
+          assignments: {
+            create: [
+              {
+                title: "إنشاء صفحة HTML بسيطة",
+                description: "أنشئ صفحة HTML تحتوي على عنوان، فقرة، صورة، وقائمة. احفظها كملف .html وقم بتحميلها.",
+                dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5 days from now
+                order: 1,
+              },
+            ],
+          },
         },
       }),
-      // Reference material for HTML
-      prisma.module.create({
-        data: {
-          title: "مرجع HTML الشامل",
-          description: "مرجع كامل لجميع عناصر HTML",
-          type: "PDF",
-          category: "REFERENCE",
-          fileUrl: "/uploads/modules/html-reference.pdf",
-          fileName: "html-reference.pdf",
-          fileSize: 10485760, // 10MB
-          mimeType: "application/pdf",
-          order: 2,
-          isPublished: true,
-          trackId: tracks[4].id,
-          uploadedBy: "manager@andrino-academy.com",
-        },
-      }),
-      // Image module (infographic)
-      prisma.module.create({
-        data: {
-          title: "مخطط بنية HTML",
-          description: "رسم توضيحي لبنية صفحة HTML",
-          type: "IMAGE",
-          category: "REFERENCE",
-          fileUrl: "/uploads/modules/html-structure-diagram.png",
-          fileName: "html-structure-diagram.png",
-          fileSize: 524288, // 512KB
-          mimeType: "image/png",
-          order: 3,
-          isPublished: true,
-          trackId: tracks[4].id,
-          uploadedBy: "manager@andrino-academy.com",
-        },
-      }),
-      // Video for Python track
+
+      // Module 5: "البرمجة بـ Python - المتغيرات" - Student module
       prisma.module.create({
         data: {
           title: "البرمجة بـ Python - المتغيرات",
           description: "شرح المتغيرات وأنواع البيانات في Python",
-          type: "VIDEO",
           category: "LECTURE",
-          fileUrl: "/uploads/modules/python-variables.mp4",
-          fileName: "python-variables.mp4",
-          fileSize: 209715200, // 200MB
-          mimeType: "video/mp4",
-          duration: 2400, // 40 minutes
+          targetAudience: "student",
           order: 1,
           isPublished: true,
           trackId: tracks[5].id,
           uploadedBy: "manager@andrino-academy.com",
+          contentItems: {
+            create: [
+              {
+                type: "VIDEO",
+                fileUrl: "/uploads/modules/python-variables.mp4",
+                fileName: "python-variables.mp4",
+                fileSize: 209715200, // 200MB
+                mimeType: "video/mp4",
+                duration: 2400, // 40 minutes
+                order: 1,
+              },
+            ],
+          },
+          tasks: {
+            create: [
+              {
+                title: "تثبيت Python",
+                description: "قم بتثبيت Python 3.x على جهازك وتحقق من الإصدار باستخدام python --version",
+                order: 1,
+              },
+            ],
+          },
         },
       }),
-      // Code examples document
+
+      // Module 6: "Python - أمثلة عملية" - Instructor-facing
       prisma.module.create({
         data: {
-          title: "أمثلة كود Python",
-          description: "أمثلة عملية على المتغيرات في Python",
-          type: "DOCUMENT",
+          title: "Python - أمثلة عملية للمعلم",
+          description: "أمثلة كود Python متقدمة للاستخدام في الشرح",
           category: "SUPPLEMENTARY",
-          fileUrl: "/uploads/modules/python-code-examples.docx",
-          fileName: "python-code-examples.docx",
-          fileSize: 1048576, // 1MB
-          mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          targetAudience: "instructor",
           order: 2,
           isPublished: false, // Unpublished for testing
           trackId: tracks[5].id,
           uploadedBy: "manager@andrino-academy.com",
+          contentItems: {
+            create: [
+              {
+                type: "DOCUMENT",
+                fileUrl: "/uploads/modules/python-code-examples.docx",
+                fileName: "python-code-examples.docx",
+                fileSize: 1048576, // 1MB
+                mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                order: 1,
+              },
+            ],
+          },
+        },
+      }),
+
+      // Module 7: "تطوير التطبيقات - المشروع النهائي" - Student module with assignment
+      prisma.module.create({
+        data: {
+          title: "تطوير التطبيقات - المشروع النهائي",
+          description: "تطبيق المهارات المكتسبة في مشروع شامل",
+          category: "PROJECT",
+          targetAudience: "student",
+          order: 1,
+          isPublished: true,
+          trackId: tracks[6].id,
+          uploadedBy: "manager@andrino-academy.com",
+          contentItems: {
+            create: [
+              {
+                type: "PDF",
+                fileUrl: "/uploads/modules/final-project-requirements.pdf",
+                fileName: "final-project-requirements.pdf",
+                fileSize: 4194304, // 4MB
+                mimeType: "application/pdf",
+                order: 1,
+              },
+            ],
+          },
+          assignments: {
+            create: [
+              {
+                title: "المشروع النهائي",
+                description: "قم بتطوير تطبيق ويب أو موبايل كامل يطبق المفاهيم التي تعلمتها. يجب أن يحتوي على واجهة مستخدم، وظائف أساسية، وقاعدة بيانات بسيطة.",
+                dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 2 weeks from now
+                order: 1,
+              },
+            ],
+          },
+        },
+      }),
+
+      // Module 8: "الذكاء الاصطناعي - مقدمة" - Student module
+      prisma.module.create({
+        data: {
+          title: "الذكاء الاصطناعي - مقدمة",
+          description: "ما هو الذكاء الاصطناعي وكيف يعمل؟",
+          category: "LECTURE",
+          targetAudience: "student",
+          order: 1,
+          isPublished: true,
+          trackId: tracks[7].id,
+          uploadedBy: "manager@andrino-academy.com",
+          contentItems: {
+            create: [
+              {
+                type: "VIDEO",
+                fileUrl: "/uploads/modules/ai-introduction.mp4",
+                fileName: "ai-introduction.mp4",
+                fileSize: 183500800, // 175MB
+                mimeType: "video/mp4",
+                duration: 2700, // 45 minutes
+                order: 1,
+              },
+              {
+                type: "IMAGE",
+                fileUrl: "/uploads/modules/ai-diagram.jpg",
+                fileName: "ai-diagram.jpg",
+                fileSize: 768000, // 750KB
+                mimeType: "image/jpeg",
+                order: 2,
+              },
+            ],
+          },
+          tasks: {
+            create: [
+              {
+                title: "ابحث عن تطبيقات الذكاء الاصطناعي",
+                description: "ابحث عن 5 تطبيقات حقيقية للذكاء الاصطناعي في حياتنا اليومية واكتب قائمة بها",
+                order: 1,
+              },
+            ],
+          },
         },
       }),
     ]);
 
-    console.log("✅ Created 10 sample course content modules");
+    console.log("✅ Created 8 modules with ContentItems, Tasks, and Assignments");
 
-    // Create cross-linking (attach PDFs to videos)
-    await Promise.all([
-      // Attach PDF summary to "مقدمة عن الحاسوب" video
-      prisma.moduleAttachment.create({
+    // Create Instructor Availability (for next week)
+    const nextMonday = new Date();
+    nextMonday.setDate(nextMonday.getDate() + ((1 + 7 - nextMonday.getDay()) % 7));
+    nextMonday.setHours(0, 0, 0, 0);
+
+    const availabilitySlots = await Promise.all([
+      // Ahmed - Track 1 (أساسيات الحاسوب) - Monday, Wednesday, Friday
+      prisma.instructorAvailability.create({
         data: {
-          parentModuleId: modules[0].id, // Video module
-          attachedModuleId: modules[1].id, // PDF module
-          order: 1,
+          instructorId: instructors[0].id,
+          trackId: tracks[0].id,
+          weekStartDate: nextMonday,
+          dayOfWeek: 1, // Monday
+          startHour: 14, // 2 PM
+          endHour: 16, // 4 PM
+          isBooked: false,
+          isConfirmed: true,
         },
       }),
-      // Attach slides to same video
-      prisma.moduleAttachment.create({
+      prisma.instructorAvailability.create({
         data: {
-          parentModuleId: modules[0].id, // Video module
-          attachedModuleId: modules[2].id, // Slides module
-          order: 2,
+          instructorId: instructors[0].id,
+          trackId: tracks[0].id,
+          weekStartDate: nextMonday,
+          dayOfWeek: 3, // Wednesday
+          startHour: 14,
+          endHour: 16,
+          isBooked: false,
+          isConfirmed: true,
         },
       }),
-      // Attach exercises to Scratch video
-      prisma.moduleAttachment.create({
+      prisma.instructorAvailability.create({
         data: {
-          parentModuleId: modules[3].id, // Scratch video
-          attachedModuleId: modules[4].id, // Exercises PDF
-          order: 1,
+          instructorId: instructors[0].id,
+          trackId: tracks[0].id,
+          weekStartDate: nextMonday,
+          dayOfWeek: 5, // Friday
+          startHour: 14,
+          endHour: 16,
+          isBooked: false,
+          isConfirmed: true,
         },
       }),
-      // Attach HTML reference to HTML video
-      prisma.moduleAttachment.create({
+
+      // Sara - Track 2 (البرمجة للأطفال) - Tuesday, Thursday
+      prisma.instructorAvailability.create({
         data: {
-          parentModuleId: modules[5].id, // HTML video
-          attachedModuleId: modules[6].id, // HTML reference PDF
-          order: 1,
+          instructorId: instructors[1].id,
+          trackId: tracks[1].id,
+          weekStartDate: nextMonday,
+          dayOfWeek: 2, // Tuesday
+          startHour: 15,
+          endHour: 17,
+          isBooked: false,
+          isConfirmed: true,
         },
       }),
-      // Attach diagram image to HTML video
-      prisma.moduleAttachment.create({
+      prisma.instructorAvailability.create({
         data: {
-          parentModuleId: modules[5].id, // HTML video
-          attachedModuleId: modules[7].id, // Diagram image
-          order: 2,
+          instructorId: instructors[1].id,
+          trackId: tracks[1].id,
+          weekStartDate: nextMonday,
+          dayOfWeek: 4, // Thursday
+          startHour: 15,
+          endHour: 17,
+          isBooked: false,
+          isConfirmed: true,
         },
       }),
-      // Attach code examples to Python video
-      prisma.moduleAttachment.create({
+
+      // Ahmed - Track 3 (برمجة سكراتش) - Saturday, Sunday
+      prisma.instructorAvailability.create({
         data: {
-          parentModuleId: modules[8].id, // Python video
-          attachedModuleId: modules[9].id, // Code examples doc
-          order: 1,
+          instructorId: instructors[0].id,
+          trackId: tracks[2].id,
+          weekStartDate: nextMonday,
+          dayOfWeek: 6, // Saturday
+          startHour: 10,
+          endHour: 12,
+          isBooked: false,
+          isConfirmed: true,
+        },
+      }),
+      prisma.instructorAvailability.create({
+        data: {
+          instructorId: instructors[0].id,
+          trackId: tracks[2].id,
+          weekStartDate: nextMonday,
+          dayOfWeek: 0, // Sunday
+          startHour: 10,
+          endHour: 12,
+          isBooked: false,
+          isConfirmed: true,
+        },
+      }),
+
+      // Omar - Track 6 (Python) - Monday, Wednesday, Saturday
+      prisma.instructorAvailability.create({
+        data: {
+          instructorId: instructors[2].id,
+          trackId: tracks[5].id,
+          weekStartDate: nextMonday,
+          dayOfWeek: 1,
+          startHour: 18, // 6 PM
+          endHour: 20, // 8 PM
+          isBooked: false,
+          isConfirmed: true,
+        },
+      }),
+      prisma.instructorAvailability.create({
+        data: {
+          instructorId: instructors[2].id,
+          trackId: tracks[5].id,
+          weekStartDate: nextMonday,
+          dayOfWeek: 3,
+          startHour: 18,
+          endHour: 20,
+          isBooked: false,
+          isConfirmed: true,
+        },
+      }),
+      prisma.instructorAvailability.create({
+        data: {
+          instructorId: instructors[2].id,
+          trackId: tracks[5].id,
+          weekStartDate: nextMonday,
+          dayOfWeek: 6,
+          startHour: 16,
+          endHour: 18,
+          isBooked: true, // This one is booked (example)
+          isConfirmed: true,
         },
       }),
     ]);
 
-    console.log("✅ Created module attachments (cross-linking materials)");
+    console.log("✅ Created instructor availability slots for next week");
+
+    // Get student IDs
+    const students = await prisma.user.findMany({
+      where: { role: "student" },
+      take: 4,
+    });
+
+    // Create sample session bookings
+    await prisma.sessionBooking.create({
+      data: {
+        availabilityId: availabilitySlots[9].id, // Omar's Saturday Python slot
+        studentId: students[2].id, // Mohammed (intermediate level)
+        trackId: tracks[5].id,
+        status: "booked",
+        studentNotes: "متحمس جداً لتعلم Python!",
+      },
+    });
+
+    console.log("✅ Created sample session bookings");
 
     console.log("\n🎉 Database seeded successfully!");
-    console.log("\n📋 Complete Test Credentials:");
+    console.log("\n📋 Test Credentials (all use password: password123):");
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
-    console.log("\n👑 Administrative Accounts:");
-    console.log("CEO: ceo@andrino-academy.com / Andrino2024!");
-    console.log("Manager: manager@andrino-academy.com / Manager2024!");
-    console.log("Coordinator: coordinator@andrino-academy.com / Coord2024!");
+    console.log("\n👑 Simple Test Accounts:");
+    console.log("Manager: manager@andrino.com / password123");
+    console.log("Instructor: instructor@andrino.com / password123");
+    console.log("Student: student@andrino.com / password123");
 
-    console.log("\n👨‍🏫 Instructor Accounts:");
-    console.log(
-      "Programming: ahmed.instructor@andrino-academy.com / Instructor123!"
-    );
-    console.log("Design: sara.instructor@andrino-academy.com / Instructor123!");
-    console.log(
-      "Data Science: omar.instructor@andrino-academy.com / Instructor123!"
-    );
+    console.log("\n👑 Additional Administrative Accounts:");
+    console.log("CEO: ceo@andrino-academy.com / password123");
+    console.log("Coordinator: coordinator@andrino-academy.com / password123");
 
-    console.log("\n👨‍🎓 Student Accounts:");
-    console.log("Beginner: ali.student@andrino-academy.com / Student123!");
-    console.log("Elementary: fatima.student@andrino-academy.com / Student123!");
-    console.log(
-      "Intermediate: mohammed.student@andrino-academy.com / Student123!"
-    );
-    console.log("Advanced: aisha.student@andrino-academy.com / Student123!");
-    console.log("Unassigned: hassan.student@andrino-academy.com / Student123!");
+    console.log("\n👨‍🏫 Additional Instructor Accounts:");
+    console.log("ahmed.instructor@andrino-academy.com / password123");
+    console.log("sara.instructor@andrino-academy.com / password123");
+    console.log("omar.instructor@andrino-academy.com / password123");
+
+    console.log("\n👨‍🎓 Additional Student Accounts:");
+    console.log("ali.student@andrino-academy.com / password123");
+    console.log("fatima.student@andrino-academy.com / password123");
+    console.log("mohammed.student@andrino-academy.com / password123");
+    console.log("aisha.student@andrino-academy.com / password123");
+    console.log("hassan.student@andrino-academy.com / password123");
 
     console.log("\n📚 Academic Structure Created:");
     console.log(`- ${grades.length} Grades (المستويات)`);
@@ -609,9 +898,4 @@ async function seed() {
   }
 }
 
-seed()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });
+seed();

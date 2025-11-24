@@ -38,16 +38,14 @@ export async function GET(
             date: true,
           },
         },
-        attachments: {
-          include: {
-            attachedModule: true,
-          },
+        contentItems: {
           orderBy: { order: "asc" },
         },
-        attachedTo: {
-          include: {
-            parentModule: true,
-          },
+        tasks: {
+          orderBy: { order: "asc" },
+        },
+        assignments: {
+          orderBy: { order: "asc" },
         },
       },
     });
@@ -105,130 +103,63 @@ export async function PUT(
       );
     }
 
-    // Check content type to determine if it's FormData (file upload) or JSON (metadata only)
-    const contentType = request.headers.get("content-type") || "";
-    const isFormData = contentType.includes("multipart/form-data");
+    // Handle metadata update (JSON)
+    const body = await request.json();
 
-    if (isFormData) {
-      // Handle file replacement
-      const formData = await request.formData();
-      const file = formData.get("file") as File | null;
-      const title = formData.get("title") as string;
-      const description = formData.get("description") as string;
-      const category = formData.get("category") as ModuleCategory;
-      const trackId = formData.get("trackId") as string;
-      const isPublished = formData.get("isPublished") === "true";
+    // Extract updatable fields
+    const {
+      title,
+      description,
+      category,
+      targetAudience,
+      trackId,
+      order,
+      isPublished,
+      sessionId,
+    } = body;
 
-      if (!file) {
-        return NextResponse.json(
-          { error: "File is required for file replacement" },
-          { status: 400 }
-        );
-      }
+    // Build update data
+    const updateData: any = {};
 
-      // Delete old file
-      const oldFilePath = path.join(process.cwd(), "public", existingModule.fileUrl);
-      if (fs.existsSync(oldFilePath)) {
-        fs.unlinkSync(oldFilePath);
-      }
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (category !== undefined) updateData.category = category as ModuleCategory;
+    if (targetAudience !== undefined) updateData.targetAudience = targetAudience;
+    if (trackId !== undefined) updateData.trackId = trackId;
+    if (order !== undefined) updateData.order = order;
+    if (isPublished !== undefined) updateData.isPublished = isPublished;
+    if (sessionId !== undefined) updateData.sessionId = sessionId;
 
-      // Save new file
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-
-      const uploadDir = path.join(process.cwd(), "public", "uploads", "modules");
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-
-      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-      const filename = `${uniqueSuffix}-${file.name}`;
-      const filepath = path.join(uploadDir, filename);
-
-      fs.writeFileSync(filepath, buffer);
-
-      const fileUrl = `/uploads/modules/${filename}`;
-
-      // Update module with new file
-      const module = await prisma.module.update({
-        where: { id },
-        data: {
-          title,
-          description,
-          category,
-          trackId,
-          isPublished,
-          fileUrl,
-          fileSize: file.size,
-          mimeType: file.type,
-        },
-        include: {
-          track: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-          session: {
-            select: {
-              id: true,
-              title: true,
-            },
+    // Update module
+    const module = await prisma.module.update({
+      where: { id },
+      data: updateData,
+      include: {
+        track: {
+          select: {
+            id: true,
+            name: true,
           },
         },
-      });
-
-      return NextResponse.json({ module, message: "Module and file updated successfully" });
-    } else {
-      // Handle metadata-only update (JSON)
-      const body = await request.json();
-
-      // Extract updatable fields
-      const {
-        title,
-        description,
-        category,
-        trackId,
-        order,
-        isPublished,
-        sessionId,
-        duration,
-      } = body;
-
-      // Build update data
-      const updateData: any = {};
-
-      if (title !== undefined) updateData.title = title;
-      if (description !== undefined) updateData.description = description;
-      if (category !== undefined) updateData.category = category as ModuleCategory;
-      if (trackId !== undefined) updateData.trackId = trackId;
-      if (order !== undefined) updateData.order = order;
-      if (isPublished !== undefined) updateData.isPublished = isPublished;
-      if (sessionId !== undefined) updateData.sessionId = sessionId;
-      if (duration !== undefined) updateData.duration = duration;
-
-      // Update module
-      const module = await prisma.module.update({
-        where: { id },
-        data: updateData,
-        include: {
-          track: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-          session: {
-            select: {
-              id: true,
-              title: true,
-            },
+        session: {
+          select: {
+            id: true,
+            title: true,
           },
         },
-      });
+        contentItems: {
+          orderBy: { order: "asc" },
+        },
+        tasks: {
+          orderBy: { order: "asc" },
+        },
+        assignments: {
+          orderBy: { order: "asc" },
+        },
+      },
+    });
 
-      return NextResponse.json({ module, message: "Module updated successfully" });
-    }
+    return NextResponse.json({ module, message: "Module updated successfully" });
   } catch (error) {
     console.error("Error updating module:", error);
     return NextResponse.json(
@@ -260,6 +191,9 @@ export async function DELETE(
     // Check if module exists
     const existingModule = await prisma.module.findUnique({
       where: { id },
+      include: {
+        contentItems: true,
+      },
     });
 
     if (!existingModule) {
@@ -269,20 +203,22 @@ export async function DELETE(
       );
     }
 
-    // Delete file from filesystem
-    try {
-      const filePath = path.join(
-        process.cwd(),
-        "public",
-        existingModule.fileUrl
-      );
-      await unlink(filePath);
-    } catch (fileError) {
-      console.error("Error deleting file:", fileError);
-      // Continue with database deletion even if file deletion fails
+    // Delete all content item files from filesystem
+    for (const contentItem of existingModule.contentItems) {
+      try {
+        const filePath = path.join(
+          process.cwd(),
+          "public",
+          contentItem.fileUrl
+        );
+        await unlink(filePath);
+      } catch (fileError) {
+        console.error("Error deleting file:", fileError);
+        // Continue with next file even if one fails
+      }
     }
 
-    // Delete module (attachments will cascade delete)
+    // Delete module (contentItems, tasks, assignments will cascade delete)
     await prisma.module.delete({
       where: { id },
     });

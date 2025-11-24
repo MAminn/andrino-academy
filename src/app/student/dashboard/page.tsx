@@ -348,6 +348,41 @@ export default function StudentDashboard() {
         />
       </div>
 
+      {/* Navigation Buttons */}
+      <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-8'>
+        <button
+          onClick={() => router.push('/student/sessions')}
+          className='bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200'
+        >
+          <div className='flex items-center space-x-3 space-x-reverse'>
+            <Calendar className='w-8 h-8' />
+            <div className='text-right'>
+              <h3 className='text-lg font-bold'>حجز الجلسات</h3>
+              <p className='text-blue-100 text-sm mt-1'>عرض وحجز الجلسات المتاحة</p>
+            </div>
+          </div>
+        </button>
+
+        <button
+          onClick={() => {
+            if (studentData?.grade?.tracks && studentData.grade.tracks.length > 0) {
+              router.push(`/student/tracks/${studentData.grade.tracks[0].id}/content`);
+            } else {
+              alert('لا توجد مسارات متاحة حالياً');
+            }
+          }}
+          className='bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200'
+        >
+          <div className='flex items-center space-x-3 space-x-reverse'>
+            <BookOpen className='w-8 h-8' />
+            <div className='text-right'>
+              <h3 className='text-lg font-bold'>المحتوى التعليمي</h3>
+              <p className='text-green-100 text-sm mt-1'>الوصول إلى الدروس والمهام</p>
+            </div>
+          </div>
+        </button>
+      </div>
+
       {/* Available Tracks */}
       {studentData?.grade && (
         <QuickActionCard title='المسارات المتاحة'>

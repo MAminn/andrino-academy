@@ -16,7 +16,6 @@ import {
   ArrowLeft,
   Clock,
   CheckCircle,
-  Layers,
 } from "lucide-react";
 
 export default function TrackContentPage() {
@@ -278,55 +277,7 @@ export default function TrackContentPage() {
                     </div>
                   </div>
 
-                  {/* Attached Materials */}
-                  {selectedModule.attachments && selectedModule.attachments.length > 0 && (
-                    <div className="p-6 border-t border-gray-200 bg-gray-50">
-                      <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <Layers className="w-5 h-5" />
-                        المواد المرفقة
-                      </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {selectedModule.attachments.map((attachment) => {
-                          if (!attachment.attachedModule) return null;
-                          return (
-                            <div
-                              key={attachment.id}
-                              className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-300 transition"
-                            >
-                              <div className="flex items-center gap-3">
-                                <div
-                                  className={`p-2 rounded-lg ${
-                                    attachment.attachedModule.type === "PDF"
-                                      ? "bg-red-100 text-red-600"
-                                      : attachment.attachedModule.type === "DOCUMENT"
-                                      ? "bg-blue-100 text-blue-600"
-                                      : "bg-green-100 text-green-600"
-                                  }`}
-                                >
-                                  {getModuleIcon(attachment.attachedModule.type)}
-                                </div>
-                                <div>
-                                  <p className="font-medium text-gray-900 text-sm">
-                                    {attachment.attachedModule.title}
-                                  </p>
-                                  <p className="text-xs text-gray-500">
-                                    {formatFileSize(attachment.attachedModule.fileSize)}
-                                  </p>
-                                </div>
-                              </div>
-                              <a
-                                href={attachment.attachedModule.fileUrl}
-                                download
-                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                              >
-                                <Download className="w-4 h-4" />
-                              </a>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
+
                 </div>
               ) : (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
@@ -422,15 +373,6 @@ export default function TrackContentPage() {
                                 <span className="flex items-center gap-1">
                                   <Clock className="w-3 h-3" />
                                   {formatDuration(module.duration)}
-                                </span>
-                              </>
-                            )}
-                            {module.attachments && module.attachments.length > 0 && (
-                              <>
-                                <span>•</span>
-                                <span className="flex items-center gap-1">
-                                  <Layers className="w-3 h-3" />
-                                  {module.attachments.length}
                                 </span>
                               </>
                             )}

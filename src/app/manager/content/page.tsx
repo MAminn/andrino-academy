@@ -17,12 +17,11 @@ import {
   EyeOff,
   Edit,
   Trash2,
-  Link as LinkIcon,
   Download,
-  Plus,
   Search,
   Filter,
 } from "lucide-react";
+import MultiContentUpload from "@/components/MultiContentUpload";
 
 export default function ContentManagementPage() {
   const { data: session, status } = useSession();
@@ -39,7 +38,6 @@ export default function ContentManagementPage() {
     updateModule,
     deleteModule,
     togglePublish,
-    attachModule,
     clearError,
   } = useModuleStore();
 
@@ -52,18 +50,9 @@ export default function ContentManagementPage() {
   const [filterCategory, setFilterCategory] = useState<ModuleCategory | "">("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [showAttachModal, setShowAttachModal] = useState(false);
   const [selectedModule, setSelectedModule] = useState<Module | null>(null);
   const [editingModuleId, setEditingModuleId] = useState<string | null>(null);
-  const [selectedModuleForAttachment, setSelectedModuleForAttachment] = useState<string | null>(null);
-  const [attachmentUploadForm, setAttachmentUploadForm] = useState({
-    title: "",
-    description: "",
-    type: "PDF" as ModuleType,
-    category: "REFERENCE" as ModuleCategory,
-    file: null as File | null,
-  });
-  const [showAttachmentUpload, setShowAttachmentUpload] = useState(false);
+  const [editingModuleData, setEditingModuleData] = useState<any>(null);
 
   // Upload form state
   const [uploadForm, setUploadForm] = useState({
@@ -91,26 +80,26 @@ export default function ContentManagementPage() {
 
   useEffect(() => {
     if (selectedTrack) {
-      fetchModules({ trackId: selectedTrack });
+      fetchModules({ trackId: selectedTrack, skipDateFilter: true });
     } else if (selectedGrade) {
       const gradeTrackIds = tracks
         .filter((t) => t.gradeId === selectedGrade)
         .map((t) => t.id);
       if (gradeTrackIds.length > 0) {
         // Fetch modules for all tracks in selected grade
-        fetchModules();
+        fetchModules({ skipDateFilter: true });
       }
     } else {
-      fetchModules();
+      fetchModules({ skipDateFilter: true });
     }
   }, [selectedTrack, selectedGrade]);
 
   // Helper to get current filters for consistent module fetching
   const getCurrentFilters = () => {
     if (selectedTrack) {
-      return { trackId: selectedTrack };
+      return { trackId: selectedTrack, skipDateFilter: true };
     }
-    return {};
+    return { skipDateFilter: true };
   };
 
   // Filter modules
@@ -134,94 +123,7 @@ export default function ContentManagementPage() {
     }
   };
 
-  const handleAttachmentFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setAttachmentUploadForm({ ...attachmentUploadForm, file });
-    }
-  };
 
-  const handleAttachmentUploadSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!attachmentUploadForm.file || !selectedModuleForAttachment) {
-      alert("الرجاء اختيار ملف");
-      return;
-    }
-
-    const videoModule = modules.find(m => m.id === selectedModuleForAttachment);
-    if (!videoModule?.trackId) {
-      alert("خطأ: لم يتم العثور على المسار");
-      return;
-    }
-
-    try {
-      const formData = new FormData();
-      formData.append("title", attachmentUploadForm.title);
-      formData.append("description", attachmentUploadForm.description);
-      formData.append("type", attachmentUploadForm.type);
-      formData.append("category", attachmentUploadForm.category);
-      formData.append("trackId", videoModule.trackId);
-      formData.append("isPublished", "false");
-      formData.append("file", attachmentUploadForm.file);
-
-      console.log("Creating new module...");
-      const result = await createModule(formData);
-
-      if (result) {
-        console.log("Module created:", result.id);
-        
-        // Auto-attach the newly created module
-        console.log("Attaching module to video...");
-        const attached = await attachModule(selectedModuleForAttachment, result.id);
-        
-        if (attached) {
-          console.log("Attachment successful!");
-          
-          // Reset form
-          setAttachmentUploadForm({
-            title: "",
-            description: "",
-            type: "PDF",
-            category: "REFERENCE",
-            file: null,
-          });
-          setShowAttachmentUpload(false);
-          
-          // Refresh modules to show the new attachment
-          console.log("Refreshing modules...");
-          await fetchModules(getCurrentFilters());
-          console.log("Modules refreshed!");
-          
-          alert("✅ تم رفع الملف وإرفاقه بنجاح!\n\nالملف الآن في قسم 'المواد المرفقة حالياً' أعلاه.");
-        } else {
-          console.error("Attachment failed");
-          alert("فشل إرفاق الملف");
-        }
-      } else {
-        console.error("Module creation failed");
-        alert("فشل رفع الملف");
-      }
-    } catch (error) {
-      console.error("Error in attachment upload:", error);
-      alert("حدث خطأ أثناء رفع الملف");
-    }
-  };
-
-  const handleDetachModule = async (videoId: string, attachmentId: string) => {
-    if (confirm("هل تريد إلغاء ربط هذا الملف؟")) {
-      const response = await fetch(`/api/modules/${videoId}/attach`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ attachedModuleId: attachmentId }),
-      });
-
-      if (response.ok) {
-        alert("تم إلغاء الربط بنجاح");
-        fetchModules(getCurrentFilters());
-      }
-    }
-  };
 
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -566,7 +468,49 @@ export default function ContentManagementPage() {
                 <p className="text-sm mt-2">ابدأ برفع أول محتوى تعليمي</p>
               </div>
             ) : (
-              filteredModules.map((module) => (
+              // Group modules by week number
+              (() => {
+                const weekMap = new Map<string, typeof filteredModules>();
+                filteredModules.forEach(module => {
+                  const key = module.weekNumber ? `week-${module.weekNumber}` : 'no-week';
+                  if (!weekMap.has(key)) {
+                    weekMap.set(key, []);
+                  }
+                  weekMap.get(key)!.push(module);
+                });
+                
+                // Sort weeks by number
+                const sortedWeeks = Array.from(weekMap.entries()).sort((a, b) => {
+                  if (a[0] === 'no-week') return 1;
+                  if (b[0] === 'no-week') return -1;
+                  const aNum = parseInt(a[0].split('-')[1]);
+                  const bNum = parseInt(b[0].split('-')[1]);
+                  return aNum - bNum;
+                });
+                
+                return sortedWeeks.map(([weekKey, weekModules]) => (
+                  <div key={weekKey}>
+                    {/* Week Header */}
+                    {weekKey !== 'no-week' && (
+                      <div className="bg-[#7e5b3f] text-white px-6 py-3 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="text-lg font-bold">
+                            الأسبوع {weekModules[0]?.weekNumber}
+                          </span>
+                          {weekModules[0]?.startDate && (
+                            <span className="text-sm text-[#c19170]">
+                              يبدأ: {new Date(weekModules[0].startDate).toLocaleDateString('ar-EG')}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-sm text-[#c19170]">
+                          {weekModules.length} محتوى
+                        </span>
+                      </div>
+                    )}
+                    
+                    {/* Week Modules */}
+                    {weekModules.map((module) => (
                 <div
                   key={module.id}
                   className="p-6 hover:bg-gray-50 transition"
@@ -635,12 +579,6 @@ export default function ContentManagementPage() {
                           {module.session && (
                             <span>الجلسة: {module.session.title}</span>
                           )}
-                          {module.attachments && module.attachments.length > 0 && (
-                            <span className="flex items-center gap-1">
-                              <LinkIcon className="w-4 h-4" />
-                              {module.attachments.length} مرفقات
-                            </span>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -656,34 +594,144 @@ export default function ContentManagementPage() {
                       >
                         <Download className="w-5 h-5" />
                       </a>
-                      {module.type === "VIDEO" && (
-                        <button
-                          onClick={() => {
-                            setSelectedModuleForAttachment(module.id);
-                            setShowAttachModal(true);
-                          }}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                          title="إرفاق ملفات"
-                        >
-                          <LinkIcon className="w-5 h-5" />
-                        </button>
-                      )}
                       <button
-                        onClick={() => {
-                          setUploadForm({
-                            title: module.title,
-                            description: module.description || "",
-                            type: module.type,
-                            category: module.category,
-                            trackId: module.trackId || "",
-                            isPublished: module.isPublished,
-                            file: null,
-                          });
-                          setEditingModuleId(module.id);
-                          setShowUploadModal(true);
+                        onClick={async () => {
+                          try {
+                            // Fetch ALL modules for this track (including future weeks) for editing
+                            const trackId = module.trackId;
+                            const response = await fetch(`/api/modules?trackId=${trackId}`);
+                            if (!response.ok) throw new Error("Failed to fetch modules");
+                            
+                            const data = await response.json();
+                            const allModules = data.modules || data; // Handle both {modules: []} and [] formats
+                            
+                            if (!Array.isArray(allModules)) {
+                              console.error("Invalid response format:", data);
+                              throw new Error("Invalid modules data format");
+                            }
+                            
+                            // Group modules by weekNumber
+                            const weekMap = new Map<number, any>();
+                            
+                            for (const mod of allModules) {
+                              const weekNum = mod.weekNumber || 0;
+                              
+                              if (!weekMap.has(weekNum)) {
+                                weekMap.set(weekNum, {
+                                  id: crypto.randomUUID(),
+                                  weekNumber: weekNum,
+                                  startDate: mod.startDate ? mod.startDate.split('T')[0] : new Date().toISOString().split('T')[0],
+                                  instructorTitle: mod.title || "",
+                                  instructorDescription: mod.description || "",
+                                  instructorContent: [],
+                                  studentTitle: mod.title || "",
+                                  studentDescription: mod.description || "",
+                                  studentContent: [],
+                                  tasks: [],
+                                  assignments: [],
+                                });
+                              }
+                              
+                              const week = weekMap.get(weekNum);
+                              
+                              // Fetch full module data for content items
+                              const modResponse = await fetch(`/api/modules/${mod.id}`);
+                              if (modResponse.ok) {
+                                const { module: fullModule } = await modResponse.json();
+                                
+                                console.log("Full module data:", fullModule);
+                                console.log("Content items:", fullModule.contentItems);
+                                
+                                // Log each content item's targetAudience
+                                fullModule.contentItems?.forEach((item: any, index: number) => {
+                                  console.log(`Content item ${index}:`, {
+                                    fileName: item.fileName,
+                                    targetAudience: item.targetAudience,
+                                    hasTargetAudience: 'targetAudience' in item
+                                  });
+                                });
+                                
+                                // Update titles and descriptions from the module
+                                if (!week.instructorTitle) week.instructorTitle = fullModule.title;
+                                if (!week.instructorDescription) week.instructorDescription = fullModule.description || "";
+                                if (!week.studentTitle) week.studentTitle = fullModule.title;
+                                if (!week.studentDescription) week.studentDescription = fullModule.description || "";
+                                
+                                // Process content items - check EACH item's targetAudience from the API
+                                if (fullModule.contentItems && fullModule.contentItems.length > 0) {
+                                  for (const item of fullModule.contentItems) {
+                                    const contentItem = {
+                                      id: item.id,
+                                      type: item.type,
+                                      file: null,
+                                      fileName: item.fileName,
+                                      order: item.order,
+                                      existingFileUrl: item.fileUrl,
+                                    };
+                                    
+                                    // Add to the correct tab based on the item's targetAudience
+                                    if (item.targetAudience === "instructor") {
+                                      week.instructorContent.push(contentItem);
+                                      console.log("Added to instructor:", item.fileName);
+                                    } else if (item.targetAudience === "student") {
+                                      week.studentContent.push(contentItem);
+                                      console.log("Added to student:", item.fileName);
+                                    } else {
+                                      // If no targetAudience, add to both (backward compatibility)
+                                      week.instructorContent.push({...contentItem});
+                                      week.studentContent.push({...contentItem});
+                                      console.log("Added to both (no targetAudience):", item.fileName);
+                                    }
+                                  }
+                                }
+                                
+                                console.log("Week after adding content:", week);
+                                
+                                // Add tasks (ensure they have all required fields)
+                                if (fullModule.tasks?.length > 0) {
+                                  const validTasks = fullModule.tasks.map((task: any) => ({
+                                    id: task.id,
+                                    title: task.title || "",
+                                    description: task.description || "",
+                                    order: task.order || 0,
+                                  }));
+                                  week.tasks.push(...validTasks);
+                                }
+                                
+                                // Add assignments
+                                if (fullModule.assignments?.length > 0) {
+                                  const transformedAssignments = fullModule.assignments.map((assignment: any) => ({
+                                    id: assignment.id,
+                                    title: assignment.title,
+                                    description: assignment.description || "",
+                                    dueDate: assignment.dueDate ? assignment.dueDate.split('T')[0] : "",
+                                    file: null,
+                                    fileName: assignment.fileUrl ? assignment.fileUrl.split('/').pop() : "",
+                                    order: assignment.order,
+                                    existingFileUrl: assignment.fileUrl || undefined,
+                                  }));
+                                  week.assignments.push(...transformedAssignments);
+                                }
+                              }
+                            }
+                            
+                            // Convert map to array and sort by week number
+                            const weeks = Array.from(weekMap.values()).sort((a, b) => a.weekNumber - b.weekNumber);
+                            
+                            setEditingModuleData({
+                              trackId,
+                              weeks,
+                            });
+                            
+                            setEditingModuleId(module.id);
+                            setShowUploadModal(true);
+                          } catch (error) {
+                            console.error("Error fetching modules:", error);
+                            alert("فشل تحميل بيانات المحتوى");
+                          }
                         }}
                         className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition"
-                        title="تعديل"
+                        title="تعديل جميع الأسابيع"
                       >
                         <Edit className="w-5 h-5" />
                       </button>
@@ -708,13 +756,200 @@ export default function ContentManagementPage() {
                     </div>
                   </div>
                 </div>
-              ))
+              ))}
+                  </div>
+                ));
+              })()
             )}
           </div>
         </div>
 
-        {/* Upload Modal */}
+        {/* Multi-Content Upload Modal */}
         {showUploadModal && (
+          <MultiContentUpload
+            tracks={tracks}
+            selectedTrackId={selectedTrack}
+            initialData={editingModuleData}
+            onSave={async (data) => {
+              try {
+                // Create modules for each week
+                for (const week of data.weeks) {
+                  // Validate week has content
+                  if (!week.instructorTitle || !week.instructorDescription) {
+                    alert(`الأسبوع ${week.weekNumber}: العنوان والوصف مطلوبان`);
+                    return;
+                  }
+
+                  const moduleFormData = new FormData();
+                  moduleFormData.append("title", week.instructorTitle);
+                  moduleFormData.append("description", week.instructorDescription);
+                  moduleFormData.append("trackId", data.trackId);
+                  moduleFormData.append("weekNumber", week.weekNumber.toString());
+                  moduleFormData.append("startDate", week.startDate);
+                  moduleFormData.append("category", "LECTURE");
+                  moduleFormData.append("isPublished", "true");
+
+                  const moduleResponse = await fetch("/api/modules", {
+                    method: "POST",
+                    body: moduleFormData,
+                  });
+
+                  if (!moduleResponse.ok) {
+                    const errorText = await moduleResponse.text();
+                    console.error(`Module creation failed for week ${week.weekNumber}:`, errorText);
+                    throw new Error(`فشل إنشاء الأسبوع ${week.weekNumber}`);
+                  }
+
+                  const moduleResult = await moduleResponse.json();
+                  const moduleId = moduleResult.module?.id;
+
+                  if (!moduleId) {
+                    throw new Error("Module ID not returned");
+                  }
+
+                  // Upload instructor content items
+                  for (const item of week.instructorContent) {
+                    if (!item.file) continue;
+                    
+                    const formData = new FormData();
+                    formData.append("file", item.file);
+                    formData.append("type", item.type);
+                    formData.append("order", item.order.toString());
+                    formData.append("targetAudience", "instructor");
+                    
+                    const contentResponse = await fetch(`/api/modules/${moduleId}/content`, {
+                      method: "POST",
+                      body: formData,
+                    });
+
+                    if (!contentResponse.ok) {
+                      console.error("Content upload failed:", await contentResponse.text());
+                    }
+                  }
+
+                  // Upload student content items
+                  for (const item of week.studentContent) {
+                    if (!item.file) continue;
+                    
+                    const formData = new FormData();
+                    formData.append("file", item.file);
+                    formData.append("type", item.type);
+                    formData.append("order", item.order.toString());
+                    formData.append("targetAudience", "student");
+                    
+                    const contentResponse = await fetch(`/api/modules/${moduleId}/content`, {
+                      method: "POST",
+                      body: formData,
+                    });
+
+                    if (!contentResponse.ok) {
+                      console.error("Content upload failed:", await contentResponse.text());
+                    }
+                  }
+                  
+                  // Add tasks
+                  for (const task of week.tasks) {
+                    // Skip tasks without title or description
+                    if (!task.title || !task.description) {
+                      console.warn("Skipping task without title/description");
+                      continue;
+                    }
+
+                    const taskResponse = await fetch(`/api/modules/${moduleId}/tasks`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        title: task.title,
+                        description: task.description,
+                        order: task.order,
+                      }),
+                    });
+
+                    if (!taskResponse.ok) {
+                      console.error("Task creation failed:", await taskResponse.text());
+                    }
+                  }
+                  
+                  // Add assignments
+                  console.log("Processing assignments for week", week.weekNumber, ":", week.assignments);
+                  for (const assignment of week.assignments) {
+                    console.log("Processing assignment:", assignment);
+                    
+                    // Skip assignments without required fields
+                    if (!assignment.title || !assignment.description || !assignment.dueDate) {
+                      console.warn("Skipping assignment without required fields:", {
+                        title: assignment.title,
+                        description: assignment.description,
+                        dueDate: assignment.dueDate,
+                        hasFile: !!assignment.file
+                      });
+                      continue;
+                    }
+
+                    // Validate file type if file is present
+                    if (assignment.file) {
+                      const allowedTypes = [
+                        'application/pdf',
+                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                        'application/msword',
+                        'application/zip',
+                        'application/x-zip-compressed'
+                      ];
+                      
+                      if (!allowedTypes.includes(assignment.file.type)) {
+                        alert(`الأسبوع ${week.weekNumber} - التكليف "${assignment.title}": نوع الملف غير مدعوم. الرجاء استخدام PDF أو Word أو ZIP فقط.`);
+                        continue;
+                      }
+                    }
+
+                    const assignFormData = new FormData();
+                    assignFormData.append("title", assignment.title);
+                    assignFormData.append("description", assignment.description);
+                    assignFormData.append("dueDate", assignment.dueDate);
+                    assignFormData.append("maxGrade", "100");
+                    assignFormData.append("order", assignment.order.toString());
+                    if (assignment.file) {
+                      assignFormData.append("file", assignment.file);
+                    }
+                    
+                    const assignResponse = await fetch(`/api/modules/${moduleId}/assignments`, {
+                      method: "POST",
+                      body: assignFormData,
+                    });
+
+                    if (!assignResponse.ok) {
+                      const errorText = await assignResponse.text();
+                      console.error("Assignment creation failed:", errorText);
+                      try {
+                        const errorJson = JSON.parse(errorText);
+                        alert(`فشل إنشاء التكليف "${assignment.title}": ${errorJson.error}`);
+                      } catch {
+                        alert(`فشل إنشاء التكليف "${assignment.title}": خطأ غير معروف`);
+                      }
+                    }
+                  }
+                }
+
+                setShowUploadModal(false);
+                setEditingModuleId(null);
+                setEditingModuleData(null);
+                fetchModules(getCurrentFilters());
+                alert(`تم رفع ${data.weeks.length} أسبوع بنجاح!`);
+              } catch (error) {
+                console.error("Error uploading content:", error);
+                alert(`حدث خطأ أثناء رفع المحتوى: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`);
+              }
+            }}
+            onCancel={() => {
+              setShowUploadModal(false);
+              setEditingModuleId(null);
+              setEditingModuleData(null);
+            }}
+          />
+        )}
+
+        {/* OLD SINGLE-FILE UPLOAD MODAL - KEEPING FOR REFERENCE, REMOVE AFTER TESTING */}
+        {false && showUploadModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6 border-b border-gray-200 flex justify-between items-center">
@@ -878,8 +1113,8 @@ export default function ContentManagementPage() {
                   )}
                   {uploadForm.file && (
                     <p className="text-sm text-gray-600 mt-2">
-                      الملف الجديد: {uploadForm.file.name} (
-                      {formatFileSize(uploadForm.file.size)})
+                      الملف الجديد: {uploadForm.file?.name} (
+                      {formatFileSize(uploadForm.file?.size ?? 0)})
                     </p>
                   )}
                 </div>
@@ -969,309 +1204,6 @@ export default function ContentManagementPage() {
           </div>
         )}
 
-        {/* Attachment Modal */}
-        {showAttachModal && selectedModuleForAttachment && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6 border-b border-gray-200 flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-gray-900">
-                  إرفاق ملفات للفيديو
-                </h2>
-                <button
-                  onClick={() => {
-                    setShowAttachModal(false);
-                    setSelectedModuleForAttachment(null);
-                  }}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <div className="p-6">
-                {/* Upload New Attachment Section */}
-                {!showAttachmentUpload ? (
-                  <button
-                    onClick={() => setShowAttachmentUpload(true)}
-                    className="w-full mb-6 p-4 border-2 border-dashed border-blue-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition text-blue-600 font-medium flex items-center justify-center gap-2"
-                  >
-                    <Upload className="w-5 h-5" />
-                    رفع ملف جديد وإرفاقه
-                  </button>
-                ) : (
-                  <div className="mb-6 p-4 border border-blue-200 rounded-lg bg-blue-50">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="font-bold text-gray-900">رفع ملف جديد</h3>
-                      <button
-                        onClick={() => {
-                          setShowAttachmentUpload(false);
-                          setAttachmentUploadForm({
-                            title: "",
-                            description: "",
-                            type: "PDF",
-                            category: "REFERENCE",
-                            file: null,
-                          });
-                        }}
-                        className="text-gray-400 hover:text-gray-600"
-                      >
-                        ✕
-                      </button>
-                    </div>
-
-                    <form onSubmit={handleAttachmentUploadSubmit} className="space-y-3">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          العنوان *
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={attachmentUploadForm.title}
-                          onChange={(e) =>
-                            setAttachmentUploadForm({ ...attachmentUploadForm, title: e.target.value })
-                          }
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                          placeholder="مثال: ملخص HTML"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          الوصف
-                        </label>
-                        <textarea
-                          value={attachmentUploadForm.description}
-                          onChange={(e) =>
-                            setAttachmentUploadForm({ ...attachmentUploadForm, description: e.target.value })
-                          }
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                          rows={2}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            النوع *
-                          </label>
-                          <select
-                            value={attachmentUploadForm.type}
-                            onChange={(e) =>
-                              setAttachmentUploadForm({ ...attachmentUploadForm, type: e.target.value as ModuleType })
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                          >
-                            <option value="PDF">PDF</option>
-                            <option value="DOCUMENT">مستند</option>
-                            <option value="IMAGE">صورة</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            التصنيف
-                          </label>
-                          <select
-                            value={attachmentUploadForm.category}
-                            onChange={(e) =>
-                              setAttachmentUploadForm({ ...attachmentUploadForm, category: e.target.value as ModuleCategory })
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                          >
-                            <option value="REFERENCE">مرجع</option>
-                            <option value="SLIDES">شرائح</option>
-                            <option value="HANDOUT">ملخص</option>
-                            <option value="EXERCISE">تمرين</option>
-                            <option value="SOLUTION">حل</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          الملف *
-                        </label>
-                        <input
-                          type="file"
-                          required
-                          onChange={handleAttachmentFileChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        />
-                        {attachmentUploadForm.file && (
-                          <p className="text-sm text-gray-600 mt-1">
-                            {attachmentUploadForm.file.name} ({formatFileSize(attachmentUploadForm.file.size)})
-                          </p>
-                        )}
-                      </div>
-
-                      <button
-                        type="submit"
-                        disabled={uploading}
-                        className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
-                      >
-                        {uploading ? (
-                          <>
-                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                            جاري الرفع...
-                          </>
-                        ) : (
-                          <>
-                            <Upload className="w-5 h-5" />
-                            رفع وإرفاق
-                          </>
-                        )}
-                      </button>
-                    </form>
-                  </div>
-                )}
-
-                {/* Existing Attachments Section */}
-                <div>
-                  <h3 className="font-bold text-gray-900 mb-3">
-                    المواد المرفقة حالياً
-                  </h3>
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {(() => {
-                      const videoModule = modules.find(m => m.id === selectedModuleForAttachment);
-                      const currentAttachments = videoModule?.attachments || [];
-                      
-                      if (currentAttachments.length === 0) {
-                        return (
-                          <p className="text-center text-gray-500 py-4 text-sm">
-                            لا توجد مواد مرفقة بعد
-                          </p>
-                        );
-                      }
-
-                      return currentAttachments.map((attachment) => {
-                        if (!attachment.attachedModule) return null;
-                        const module = attachment.attachedModule;
-                        
-                        return (
-                          <div
-                            key={attachment.id}
-                            className="p-3 border border-gray-200 rounded-lg flex items-center gap-3 bg-white"
-                          >
-                            <div
-                              className={`p-2 rounded-lg ${
-                                module.type === "PDF"
-                                  ? "bg-red-100 text-red-600"
-                                  : module.type === "DOCUMENT"
-                                  ? "bg-blue-100 text-blue-600"
-                                  : "bg-green-100 text-green-600"
-                              }`}
-                            >
-                              {getModuleIcon(module.type)}
-                            </div>
-                            <div className="flex-1">
-                              <h4 className="font-medium text-gray-900 text-sm">
-                                {module.title}
-                              </h4>
-                              <p className="text-xs text-gray-500">
-                                {module.type === "PDF"
-                                  ? "PDF"
-                                  : module.type === "DOCUMENT"
-                                  ? "مستند"
-                                  : "صورة"}{" "}
-                                - {formatFileSize(module.fileSize)}
-                              </p>
-                            </div>
-                            <button
-                              onClick={() => handleDetachModule(selectedModuleForAttachment!, module.id)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                              title="إلغاء الربط"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        );
-                      });
-                    })()}
-                  </div>
-                </div>
-
-                {/* Available Modules to Attach */}
-                <div className="mt-6">
-                  <h3 className="font-bold text-gray-900 mb-3">
-                    مواد متاحة للإرفاق
-                  </h3>
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {(() => {
-                      const videoModule = modules.find(m => m.id === selectedModuleForAttachment);
-                      const attachedIds = videoModule?.attachments?.map(a => a.attachedModuleId) || [];
-                      
-                      const availableModules = modules.filter(
-                        (m) =>
-                          m.id !== selectedModuleForAttachment &&
-                          m.type !== "VIDEO" &&
-                          !attachedIds.includes(m.id)
-                      );
-
-                      if (availableModules.length === 0) {
-                        return (
-                          <p className="text-center text-gray-500 py-4 text-sm">
-                            لا توجد مواد متاحة للإرفاق
-                          </p>
-                        );
-                      }
-
-                      return availableModules.map((module) => (
-                        <button
-                          key={module.id}
-                          onClick={async () => {
-                            try {
-                              const success = await attachModule(
-                                selectedModuleForAttachment!,
-                                module.id
-                              );
-                              if (success) {
-                                alert("تم إرفاق الملف بنجاح!");
-                                await fetchModules(getCurrentFilters());
-                              }
-                            } catch (error: any) {
-                              // Don't show error if already attached (user might have clicked twice)
-                              if (!error.message?.includes("already attached")) {
-                                alert("حدث خطأ: " + error.message);
-                              }
-                            }
-                          }}
-                          className="w-full p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition text-right flex items-center gap-3"
-                        >
-                          <div
-                            className={`p-2 rounded-lg ${
-                              module.type === "PDF"
-                                ? "bg-red-100 text-red-600"
-                                : module.type === "DOCUMENT"
-                                ? "bg-blue-100 text-blue-600"
-                                : "bg-green-100 text-green-600"
-                            }`}
-                          >
-                            {getModuleIcon(module.type)}
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-medium text-gray-900 text-sm">
-                              {module.title}
-                            </h4>
-                            <p className="text-xs text-gray-500">
-                              {module.type === "PDF"
-                                ? "PDF"
-                                : module.type === "DOCUMENT"
-                                ? "مستند"
-                                : "صورة"}{" "}
-                              - {formatFileSize(module.fileSize)}
-                            </p>
-                          </div>
-                          <Plus className="w-5 h-5 text-gray-400" />
-                        </button>
-                      ));
-                    })()}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </DashboardLayout>
   );
