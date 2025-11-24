@@ -130,11 +130,11 @@ export async function GET() {
     });
 
     // Calculate instructor workload
-    const instructorWorkload = instructors.map((instructor) => {
+    const instructorWorkload = instructors.map((instructor: any) => {
       const totalTracks = instructor.instructedTracks.length;
       const totalUpcomingSessions = instructor.instructedSessions.length;
       const activeSessions = instructor.instructedSessions.filter(
-        (s) => s.status === "ACTIVE"
+        (s: any) => s.status === "ACTIVE"
       ).length;
 
       return {
@@ -177,13 +177,13 @@ export async function GET() {
       .catch(() => []);
 
     const attendanceData = {
-      total: attendanceStats.reduce((sum, stat) => sum + stat._count.status, 0),
+      total: attendanceStats.reduce((sum: number, stat: any) => sum + stat._count.status, 0),
       present:
-        attendanceStats.find((s) => s.status === "present")?._count.status || 0,
+        attendanceStats.find((s: any) => s.status === "present")?._count.status || 0,
       absent:
-        attendanceStats.find((s) => s.status === "absent")?._count.status || 0,
+        attendanceStats.find((s: any) => s.status === "absent")?._count.status || 0,
       late:
-        attendanceStats.find((s) => s.status === "late")?._count.status || 0,
+        attendanceStats.find((s: any) => s.status === "late")?._count.status || 0,
     };
 
     const attendanceRate =
@@ -212,7 +212,7 @@ export async function GET() {
     });
 
     // Calculate scheduling efficiency
-    const totalScheduledHours = todaySessions.reduce((total, session) => {
+    const totalScheduledHours = todaySessions.reduce((total: number, session: any) => {
       const start = new Date(`2000-01-01T${session.startTime}`);
       const end = new Date(`2000-01-01T${session.endTime}`);
       return total + (end.getTime() - start.getTime()) / (1000 * 60 * 60);
@@ -221,15 +221,15 @@ export async function GET() {
     const analytics = {
       trackStatistics: {
         total: tracks.length,
-        active: tracks.filter((t) => t.isActive).length,
-        inactive: tracks.filter((t) => !t.isActive).length,
-        byGrade: gradeStats.map((grade) => ({
+        active: tracks.filter((t: any) => t.isActive).length,
+        inactive: tracks.filter((t: any) => !t.isActive).length,
+        byGrade: gradeStats.map((grade: any) => ({
           gradeId: grade.id,
           gradeName: grade.name,
           trackCount: grade._count.tracks,
           studentCount: grade._count.students,
           totalSessions: grade.tracks.reduce(
-            (sum, track) => sum + track._count.liveSessions,
+            (sum: number, track: any) => sum + track._count.liveSessions,
             0
           ),
         })),
@@ -237,10 +237,10 @@ export async function GET() {
       sessionStatistics: {
         today: {
           total: todaySessions.length,
-          scheduled: todaySessions.filter((s) => s.status === "SCHEDULED")
+          scheduled: todaySessions.filter((s: any) => s.status === "SCHEDULED")
             .length,
-          active: todaySessions.filter((s) => s.status === "ACTIVE").length,
-          completed: todaySessions.filter((s) => s.status === "COMPLETED")
+          active: todaySessions.filter((s: any) => s.status === "ACTIVE").length,
+          completed: todaySessions.filter((s: any) => s.status === "COMPLETED")
             .length,
           totalHours: totalScheduledHours,
         },
@@ -257,7 +257,7 @@ export async function GET() {
           instructorWorkload.length > 0
             ? Math.round(
                 instructorWorkload.reduce(
-                  (sum, i) => sum + i.workloadScore,
+                  (sum: number, i: any) => sum + i.workloadScore,
                   0
                 ) / instructorWorkload.length
               )

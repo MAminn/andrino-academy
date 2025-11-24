@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { writeFile, mkdir, unlink } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
-import { ModuleType } from "@/generated/prisma";
+import { ModuleType } from "@prisma/client";
 
 // Content type validation
 const ALLOWED_MIME_TYPES: Record<string, string[]> = {

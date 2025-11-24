@@ -58,6 +58,10 @@ COPY --from=builder /app/assests ./assests
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules ./node_modules
 
+# Explicitly copy Prisma engine binaries
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+
 # Create necessary directories with proper permissions
 RUN mkdir -p /app/public/uploads \
     && mkdir -p /app/.next/cache/images \

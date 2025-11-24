@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { unlink } from "fs/promises";
 import fs from "fs";
 import path from "path";
-import { ModuleCategory } from "@/generated/prisma";
+import { ModuleCategory } from "@prisma/client";
 
 // GET /api/modules/[id] - Get a single module by ID
 export async function GET(

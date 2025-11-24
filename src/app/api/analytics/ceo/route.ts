@@ -182,7 +182,7 @@ export async function GET() {
         totalTracks,
         activeTracks,
         inactiveTracks,
-        studentsByGrade: studentsByGrade.map((grade) => ({
+        studentsByGrade: studentsByGrade.map((grade: any) => ({
           name: grade.name,
           studentCount: grade._count.students,
           isActive: grade.isActive,
@@ -197,7 +197,7 @@ export async function GET() {
         totalAttendance,
         presentAttendance,
       },
-      trackPerformance: trackStats.map((track) => ({
+      trackPerformance: trackStats.map((track: any) => ({
         id: track.id,
         name: track.name,
         gradeName: track.grade.name,
