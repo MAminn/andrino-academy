@@ -8,7 +8,9 @@ export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className='w-full bg-gradient-to-b from-[#0d0f13] to-[#0b0d11]' dir='rtl'>
+    <footer
+      className='w-full bg-gradient-to-b from-[#0d0f13] to-[#0b0d11]'
+      dir='rtl'>
       {/* Main Footer Content */}
       <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16'>
         <div className='grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16 lg:gap-20'>
@@ -16,7 +18,7 @@ export default function Footer() {
           <div className='flex flex-col items-center md:items-end'>
             <h3
               className='text-2xl md:text-[1.5rem] font-bold text-[#e7e9ee] mb-8 text-center md:text-right'
-              style={{ letterSpacing: '-0.5px' }}>
+              style={{ letterSpacing: "-0.5px" }}>
               التدريس عبر الإنترنت
             </h3>
             <ul className='space-y-4 w-full max-w-sm'>
@@ -26,8 +28,8 @@ export default function Footer() {
                   <div
                     className='course-bullet flex-shrink-0 rounded-full border border-[#c9a265] transition-all duration-200'
                     style={{
-                      width: '18px',
-                      height: '18px',
+                      width: "18px",
+                      height: "18px",
                     }}></div>
                 </button>
               </li>
@@ -37,8 +39,8 @@ export default function Footer() {
                   <div
                     className='course-bullet flex-shrink-0 rounded-full border border-[#c9a265] transition-all duration-200'
                     style={{
-                      width: '18px',
-                      height: '18px',
+                      width: "18px",
+                      height: "18px",
                     }}></div>
                 </button>
               </li>
@@ -48,8 +50,8 @@ export default function Footer() {
                   <div
                     className='course-bullet flex-shrink-0 rounded-full border border-[#c9a265] transition-all duration-200'
                     style={{
-                      width: '18px',
-                      height: '18px',
+                      width: "18px",
+                      height: "18px",
                     }}></div>
                 </button>
               </li>
@@ -59,8 +61,8 @@ export default function Footer() {
                   <div
                     className='course-bullet flex-shrink-0 rounded-full border border-[#c9a265] transition-all duration-200'
                     style={{
-                      width: '18px',
-                      height: '18px',
+                      width: "18px",
+                      height: "18px",
                     }}></div>
                 </button>
               </li>
@@ -70,8 +72,8 @@ export default function Footer() {
                   <div
                     className='course-bullet flex-shrink-0 rounded-full border border-[#c9a265] transition-all duration-200'
                     style={{
-                      width: '18px',
-                      height: '18px',
+                      width: "18px",
+                      height: "18px",
                     }}></div>
                 </button>
               </li>
@@ -93,7 +95,7 @@ export default function Footer() {
             {/* Tagline */}
             <h2
               className='text-xl md:text-[1.5rem] font-bold text-[#e7e9ee] text-center mt-2 md:mt-4'
-              style={{ letterSpacing: '-0.5px' }}>
+              style={{ letterSpacing: "-0.5px" }}>
               صُنّاع قادة التكنولوجيا القادمين
             </h2>
 
