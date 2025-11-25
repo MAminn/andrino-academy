@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
-import { ModuleType, ModuleCategory } from "@/generated/prisma";
+import { ModuleType, ModuleCategory } from "@prisma/client";
 
 // File size limits (in bytes)
 const FILE_SIZE_LIMITS = {

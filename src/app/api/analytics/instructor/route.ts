@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Get students in instructor's tracks (via grade assignments)
-    const trackGradeIds = instructorTracks.map((track) => track.gradeId);
+    const trackGradeIds = instructorTracks.map((track: any) => track.gradeId);
     const students = await prisma.user.findMany({
       where: {
         role: "student",
@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
           where: {
             session: {
               trackId: {
-                in: instructorTracks.map((t) => t.id),
+                in: instructorTracks.map((t: any) => t.id),
               },
               date: {
                 gte: startDate,
@@ -108,36 +108,36 @@ export async function GET(request: NextRequest) {
 
     // Calculate teaching effectiveness metrics
     const totalSessions = instructorTracks.reduce(
-      (sum, track) => sum + track.liveSessions.length,
+      (sum: number, track: any) => sum + track.liveSessions.length,
       0
     );
 
     const totalScheduledSessions = instructorTracks.reduce(
-      (sum, track) => sum + track._count.liveSessions,
+      (sum: number, track: any) => sum + track._count.liveSessions,
       0
     );
 
     const completedSessions = instructorTracks.reduce(
-      (sum, track) =>
-        sum + track.liveSessions.filter((s) => s.status === "COMPLETED").length,
+      (sum: number, track: any) =>
+        sum + track.liveSessions.filter((s: any) => s.status === "COMPLETED").length,
       0
     );
 
     const totalAttendances = instructorTracks.reduce(
-      (sum, track) =>
+      (sum: number, track: any) =>
         sum +
         track.liveSessions.reduce(
-          (sessionSum, session) => sessionSum + session.attendances.length,
+          (sessionSum: number, session: any) => sessionSum + session.attendances.length,
           0
         ),
       0
     );
 
     const totalPossibleAttendances = instructorTracks.reduce(
-      (sum, track) =>
+      (sum: number, track: any) =>
         sum +
         track.liveSessions.reduce(
-          (sessionSum, session) => sessionSum + session.attendances.length,
+          (sessionSum: number, session: any) => sessionSum + session.attendances.length,
           0
         ),
       0
@@ -156,10 +156,10 @@ export async function GET(request: NextRequest) {
         : 0;
 
     // Student performance analysis
-    const studentPerformance = students.map((student) => {
+    const studentPerformance = students.map((student: any) => {
       const attendanceRecords = student.sessionAttendances;
       const presentCount = attendanceRecords.filter(
-        (a) => a.status === "present"
+        (a: any) => a.status === "present"
       ).length;
       const totalSessions = attendanceRecords.length;
       const attendancePercentage =
@@ -172,7 +172,7 @@ export async function GET(request: NextRequest) {
         totalSessions,
         presentCount,
         attendancePercentage,
-        recentAttendance: attendanceRecords.slice(-5).map((a) => ({
+        recentAttendance: attendanceRecords.slice(-5).map((a: any) => ({
           sessionId: a.session.id,
           sessionTitle: a.session.title,
           date: a.session.date,
@@ -182,20 +182,20 @@ export async function GET(request: NextRequest) {
     });
 
     // Session analytics by track
-    const trackAnalytics = instructorTracks.map((track) => {
+    const trackAnalytics = instructorTracks.map((track: any) => {
       const sessions = track.liveSessions;
       const totalTrackSessions = sessions.length;
       const completedTrackSessions = sessions.filter(
-        (s) => s.status === "COMPLETED"
+        (s: any) => s.status === "COMPLETED"
       ).length;
       const avgAttendancePerSession =
         sessions.length > 0
-          ? sessions.reduce((sum, s) => sum + s.attendances.length, 0) /
+          ? sessions.reduce((sum: number, s: any) => sum + s.attendances.length, 0) /
             sessions.length
           : 0;
 
       // Get students assigned to this track's grade
-      const trackStudents = students.filter((s) => s.gradeId === track.gradeId);
+      const trackStudents = students.filter((s: any) => s.gradeId === track.gradeId);
 
       return {
         trackId: track.id,
@@ -209,7 +209,7 @@ export async function GET(request: NextRequest) {
             : 0,
         avgAttendancePerSession: Math.round(avgAttendancePerSession),
         enrolledStudents: trackStudents.length,
-        recentSessions: sessions.slice(-3).map((s) => ({
+        recentSessions: sessions.slice(-3).map((s: any) => ({
           id: s.id,
           title: s.title,
           date: s.date,
@@ -221,8 +221,8 @@ export async function GET(request: NextRequest) {
 
     // Weekly session distribution
     const sessionsByWeek: { [key: string]: number } = {};
-    instructorTracks.forEach((track) => {
-      track.liveSessions.forEach((session) => {
+    instructorTracks.forEach((track: any) => {
+      track.liveSessions.forEach((session: any) => {
         const week = new Date(session.date).toISOString().substr(0, 10);
         if (!sessionsByWeek[week]) {
           sessionsByWeek[week] = 0;
@@ -235,15 +235,15 @@ export async function GET(request: NextRequest) {
     const attendanceTrends = Object.keys(sessionsByWeek)
       .map((date) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const sessionsOnDate = instructorTracks.reduce((acc: any[], track) => {
+        const sessionsOnDate = instructorTracks.reduce((acc: any[], track: any) => {
           const dateSessions = track.liveSessions.filter(
-            (s) => s.date.toISOString().substr(0, 10) === date
+            (s: any) => s.date.toISOString().substr(0, 10) === date
           );
           return acc.concat(dateSessions);
         }, []);
 
         const totalAttendanceOnDate = sessionsOnDate.reduce(
-          (sum, session) =>
+          (sum: number, session: any) =>
             sum +
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             session.attendances.filter((a: any) => a.status === "present")
@@ -252,7 +252,7 @@ export async function GET(request: NextRequest) {
         );
 
         const totalPossibleOnDate = sessionsOnDate.reduce(
-          (sum, session) => sum + session.attendances.length,
+          (sum: number, session: any) => sum + session.attendances.length,
           0
         );
 
@@ -266,18 +266,18 @@ export async function GET(request: NextRequest) {
               : 0,
         };
       })
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     // Top performing students
     const topStudents = studentPerformance
-      .filter((s) => s.totalSessions >= 3) // At least 3 sessions
-      .sort((a, b) => b.attendancePercentage - a.attendancePercentage)
+      .filter((s: any) => s.totalSessions >= 3) // At least 3 sessions
+      .sort((a: any, b: any) => b.attendancePercentage - a.attendancePercentage)
       .slice(0, 5);
 
     // Students needing attention (low attendance)
     const studentsNeedingAttention = studentPerformance
-      .filter((s) => s.totalSessions >= 3 && s.attendancePercentage < 70)
-      .sort((a, b) => a.attendancePercentage - b.attendancePercentage)
+      .filter((s: any) => s.totalSessions >= 3 && s.attendancePercentage < 70)
+      .sort((a: any, b: any) => a.attendancePercentage - b.attendancePercentage)
       .slice(0, 5);
 
     // Overall instructor effectiveness score
@@ -288,7 +288,7 @@ export async function GET(request: NextRequest) {
     ];
 
     const effectivenessScore =
-      effectivenessFactors.reduce((sum, factor) => sum + factor, 0) /
+      effectivenessFactors.reduce((sum: number, factor: number) => sum + factor, 0) /
       effectivenessFactors.length;
 
     const analytics = {
@@ -306,7 +306,7 @@ export async function GET(request: NextRequest) {
         totalStudents: students.length,
         averageAttendance: Math.round(
           studentPerformance.reduce(
-            (sum, s) => sum + s.attendancePercentage,
+            (sum: number, s: any) => sum + s.attendancePercentage,
             0
           ) / Math.max(students.length, 1)
         ),

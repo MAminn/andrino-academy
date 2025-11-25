@@ -6,7 +6,7 @@
  * by backing up essential data and removing unused models.
  */
 
-import { PrismaClient } from "@/generated/prisma";
+import { PrismaClient } from "@prisma/client";
 import fs from "fs";
 import path from "path";
 import { exec } from "child_process";

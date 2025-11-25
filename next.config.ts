@@ -4,9 +4,6 @@ import path from "path";
 const nextConfig: NextConfig = {
   /* config options here */
 
-  // Enable standalone output for Docker deployment
-  output: "standalone",
-
   // Temporarily skip TypeScript type checking during build
   // TypeScript errors are already fixed (18 remaining are mostly optional monitoring)
   typescript: {
