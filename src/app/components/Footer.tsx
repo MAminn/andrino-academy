@@ -8,31 +8,100 @@ export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className='bg-gradient-to-b from-[#b7b7b8] to-[#000000] text-white'>
+    <footer className='w-full bg-gradient-to-b from-[#0d0f13] to-[#0b0d11]' dir='rtl'>
       {/* Main Footer Content */}
-      <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16'>
-        <div className='flex flex-start justify-between ' dir='rtl'>
-          {/* Academy Info Section */}
-          <div className='space-y-6'>
-            <div className='flex justify-start items-center'>
-              <Image
-                src={LogoImage}
-                alt='Andrino Academy Logo'
-                width={220}
-                height={66}
-                className='brightness-0 invert'
-                priority
-              />
-            </div>
-            <h2 className='text-white text-2xl font-bold leading-tight text-right'>
+      <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16'>
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16 lg:gap-20'>
+          {/* Left Column: Course List (Right-aligned in RTL) */}
+          <div className='flex flex-col items-center md:items-end'>
+            <h3
+              className='text-2xl md:text-[1.5rem] font-bold text-[#e7e9ee] mb-8 text-center md:text-right'
+              style={{ letterSpacing: '-0.5px' }}>
+              التدريس عبر الإنترنت
+            </h3>
+            <ul className='space-y-4 w-full max-w-sm'>
+              <li>
+                <button className='course-item flex items-center justify-end gap-3 w-full text-[#e7e9ee] text-base font-medium transition-all duration-200 hover:text-white group'>
+                  <span>الذكاء الاصطناعي</span>
+                  <div
+                    className='course-bullet flex-shrink-0 rounded-full border border-[#c9a265] transition-all duration-200'
+                    style={{
+                      width: '18px',
+                      height: '18px',
+                    }}></div>
+                </button>
+              </li>
+              <li>
+                <button className='course-item flex items-center justify-end gap-3 w-full text-[#e7e9ee] text-base font-medium transition-all duration-200 hover:text-white group'>
+                  <span>الواقع الافتراضي</span>
+                  <div
+                    className='course-bullet flex-shrink-0 rounded-full border border-[#c9a265] transition-all duration-200'
+                    style={{
+                      width: '18px',
+                      height: '18px',
+                    }}></div>
+                </button>
+              </li>
+              <li>
+                <button className='course-item flex items-center justify-end gap-3 w-full text-[#e7e9ee] text-base font-medium transition-all duration-200 hover:text-white group'>
+                  <span>تطوير الشبكة</span>
+                  <div
+                    className='course-bullet flex-shrink-0 rounded-full border border-[#c9a265] transition-all duration-200'
+                    style={{
+                      width: '18px',
+                      height: '18px',
+                    }}></div>
+                </button>
+              </li>
+              <li>
+                <button className='course-item flex items-center justify-end gap-3 w-full text-[#e7e9ee] text-base font-medium transition-all duration-200 hover:text-white group'>
+                  <span>تطوير تطبيقات أندرويد</span>
+                  <div
+                    className='course-bullet flex-shrink-0 rounded-full border border-[#c9a265] transition-all duration-200'
+                    style={{
+                      width: '18px',
+                      height: '18px',
+                    }}></div>
+                </button>
+              </li>
+              <li>
+                <button className='course-item flex items-center justify-end gap-3 w-full text-[#e7e9ee] text-base font-medium transition-all duration-200 hover:text-white group'>
+                  <span>البرمجة للأطفال</span>
+                  <div
+                    className='course-bullet flex-shrink-0 rounded-full border border-[#c9a265] transition-all duration-200'
+                    style={{
+                      width: '18px',
+                      height: '18px',
+                    }}></div>
+                </button>
+              </li>
+            </ul>
+          </div>
+
+          {/* Right Column: Logo + Tagline + Social Icons (Center-aligned) */}
+          <div className='flex flex-col items-center gap-6 md:gap-8'>
+            {/* Logo */}
+            <Image
+              src={LogoImage}
+              alt='Andrino Academy Logo'
+              width={180}
+              height={54}
+              className='w-[180px] h-auto'
+              priority
+            />
+
+            {/* Tagline */}
+            <h2
+              className='text-xl md:text-[1.5rem] font-bold text-[#e7e9ee] text-center mt-2 md:mt-4'
+              style={{ letterSpacing: '-0.5px' }}>
               صُنّاع قادة التكنولوجيا القادمين
             </h2>
 
-            {/* Social Media Icons */}
-            <div className='flex items-center space-x-4 space-x-reverse justify-start'>
+            {/* Social Icons Row */}
+            <div className='flex items-center gap-3 mt-2 md:mt-4'>
               <Link
                 href='#'
-                className='w-10 h-10 bg-white/10 hover:bg-[#c19170] rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110'>
+                className='social-icon inline-flex items-center justify-center w-11 h-11 rounded-full bg-[#13161b] text-white transition-all duration-200 hover:scale-110'>
                 <svg
                   className='w-5 h-5'
                   fill='currentColor'
@@ -42,7 +111,7 @@ export default function Footer() {
               </Link>
               <Link
                 href='#'
-                className='w-10 h-10 bg-white/10 hover:bg-[#c19170] rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110'>
+                className='social-icon inline-flex items-center justify-center w-11 h-11 rounded-full bg-[#13161b] text-white transition-all duration-200 hover:scale-110'>
                 <svg
                   className='w-5 h-5'
                   fill='currentColor'
@@ -52,7 +121,7 @@ export default function Footer() {
               </Link>
               <Link
                 href='#'
-                className='w-10 h-10 bg-white/10 hover:bg-[#c19170] rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110'>
+                className='social-icon inline-flex items-center justify-center w-11 h-11 rounded-full bg-[#13161b] text-white transition-all duration-200 hover:scale-110'>
                 <svg
                   className='w-5 h-5'
                   fill='currentColor'
@@ -62,7 +131,9 @@ export default function Footer() {
               </Link>
               <Link
                 href='https://wa.me/2001066520225'
-                className='w-10 h-10 bg-white/10 hover:bg-[#25D366] rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110'>
+                target='_blank'
+                rel='noopener noreferrer'
+                className='social-icon inline-flex items-center justify-center w-11 h-11 rounded-full bg-[#13161b] text-white transition-all duration-200 hover:scale-110'>
                 <svg
                   className='w-5 h-5'
                   fill='currentColor'
@@ -72,121 +143,42 @@ export default function Footer() {
               </Link>
             </div>
           </div>
-
-          {/* Online Teaching Section */}
-          <div className='space-y-6'>
-            <h3 className='text-xl font-bold text-white border-b border-[#c19170]/30 pb-3 text-right'>
-              التدريس عبر الإنترنت
-            </h3>
-            <ul className='space-y-3 text-right'>
-              <li className='flex items-center justify-start group cursor-pointer'>
-                <div className='w-1 h-4 bg-[#c19170] rounded-full ml-3 group-hover:h-6 transition-all duration-200'></div>
-                <span className='text-gray-200 group-hover:text-[#c19170] group-hover:font-medium transition-all duration-200'>
-                  الذكاء الاصطناعي
-                </span>
-              </li>
-              <li className='flex items-center justify-start group cursor-pointer'>
-                <div className='w-1 h-4 bg-[#c19170] rounded-full ml-3 group-hover:h-6 transition-all duration-200'></div>
-                <span className='text-gray-200 group-hover:text-[#c19170] group-hover:font-medium transition-all duration-200'>
-                  الواقع الافتراضي
-                </span>
-              </li>
-              <li className='flex items-center justify-start group cursor-pointer'>
-                <div className='w-1 h-4 bg-[#c19170] rounded-full ml-3 group-hover:h-6 transition-all duration-200'></div>
-                <span className='text-gray-200 group-hover:text-[#c19170] group-hover:font-medium transition-all duration-200'>
-                  تطوير الشبكة
-                </span>
-              </li>
-              <li className='flex items-center justify-start group cursor-pointer'>
-                <div className='w-1 h-4 bg-[#c19170] rounded-full ml-3 group-hover:h-6 transition-all duration-200'></div>
-                <span className='text-gray-200 group-hover:text-[#c19170] group-hover:font-medium transition-all duration-200'>
-                  تطوير تطبيقات أندرويد
-                </span>
-              </li>
-              <li className='flex items-center justify-start group cursor-pointer'>
-                <div className='w-1 h-4 bg-[#c19170] rounded-full ml-3 group-hover:h-6 transition-all duration-200'></div>
-                <span className='text-gray-200 group-hover:text-[#c19170] group-hover:font-medium transition-all duration-200'>
-                  البرمجة للأطفال
-                </span>
-              </li>
-            </ul>
-          </div>
-
-          {/* Quick Links Section */}
-          {/* <div className='space-y-6'>
-            <h3 className='text-xl font-bold text-white border-b border-[#c19170]/30 pb-3 text-right'>
-              روابط سريعة
-            </h3>
-            <ul className='space-y-3 text-right'>
-              <li>
-                <Link
-                  href='#hero'
-                  className='text-gray-200 hover:text-[#c19170] transition-colors duration-200 flex items-center justify-end group'>
-                  <span>الرئيسية</span>
-                  <div className='w-1 h-4 bg-[#c19170] rounded-full mr-3 group-hover:h-6 transition-all duration-200'></div>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href='#features'
-                  className='text-gray-200 hover:text-[#c19170] transition-colors duration-200 flex items-center justify-end group'>
-                  <span>مميزاتنا</span>
-                  <div className='w-1 h-4 bg-[#c19170] rounded-full mr-3 group-hover:h-6 transition-all duration-200'></div>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href='#students'
-                  className='text-gray-200 hover:text-[#c19170] transition-colors duration-200 flex items-center justify-end group'>
-                  <span>طلابنا</span>
-                  <div className='w-1 h-4 bg-[#c19170] rounded-full mr-3 group-hover:h-6 transition-all duration-200'></div>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href='#projects'
-                  className='text-gray-200 hover:text-[#c19170] transition-colors duration-200 flex items-center justify-end group'>
-                  <span>مشاريعنا</span>
-                  <div className='w-1 h-4 bg-[#c19170] rounded-full mr-3 group-hover:h-6 transition-all duration-200'></div>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href='/form'
-                  className='text-gray-200 hover:text-[#c19170] transition-colors duration-200 flex items-center justify-end group'>
-                  <span>احجز حصة</span>
-                  <div className='w-1 h-4 bg-[#c19170] rounded-full mr-3 group-hover:h-6 transition-all duration-200'></div>
-                </Link>
-              </li>
-            </ul>
-          </div> */}
         </div>
       </div>
 
-      {/* Bottom Footer */}
-      <div className='border-t border-white/10 bg-[#343b50]/50 max-w-7xl mx-auto'>
-        <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6'>
-          <div
-            className='flex flex-col md:flex-row justify-between items-center text-center md:text-right'
-            dir='rtl'>
-            <div className='text-gray-300 mb-4 md:mb-0'>
-              © {currentYear} أكاديمية أندرينو. جميع الحقوق محفوظة.
-            </div>
-            <div className='flex items-center space-x-6 space-x-reverse text-sm'>
+      {/* Bottom Legal Bar */}
+      <div className='w-full bg-[#0a0c0f] py-4'>
+        <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
+          <div className='flex flex-col md:flex-row items-center justify-between gap-3 text-sm text-[#e7e9ee]/70'>
+            <p className='text-center md:text-right'>
+              © {currentYear} أكاديمية أندرينو، جميع الحقوق محفوظة.
+            </p>
+            <div className='flex items-center gap-4 text-center md:text-left'>
               <Link
                 href='#'
-                className='text-gray-300 hover:text-[#c19170] transition-colors duration-200'>
+                className='hover:text-[#c9a265] transition-colors duration-200'>
                 سياسة الخصوصية
               </Link>
               <Link
                 href='#'
-                className='text-gray-300 hover:text-[#c19170] transition-colors duration-200'>
+                className='hover:text-[#c9a265] transition-colors duration-200'>
                 البنود والشروط
               </Link>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Styles */}
+      <style jsx>{`
+        .social-icon:hover {
+          box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+        }
+        .course-item:hover .course-bullet {
+          transform: scale(1.15);
+          border-color: #e5c688;
+        }
+      `}</style>
     </footer>
   );
 }

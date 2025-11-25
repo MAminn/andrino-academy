@@ -68,16 +68,15 @@ export default function PricingSection() {
   ];
 
   return (
-    <section
-      dir='rtl'
-      className='w-full py-20 md:py-28 px-5 bg-[#F9F9F9]'>
+    <section dir='rtl' className='w-full py-20 md:py-28 px-5 bg-[#F9F9F9]'>
       {/* Section Header */}
       <div className='max-w-[1300px] mx-auto text-center mb-12 md:mb-16'>
         <h2 className='text-3xl md:text-4xl lg:text-5xl font-bold text-[#1A1A1A] mb-4'>
           خطط الأسعار
         </h2>
         <p className='text-base md:text-lg text-[#6D6D6D] max-w-2xl mx-auto leading-relaxed'>
-          اختر الخطة المناسبة لطفلك وابدأ رحلته التعليمية مع أفضل المدربين المتخصصين
+          اختر الخطة المناسبة لطفلك وابدأ رحلته التعليمية مع أفضل المدربين
+          المتخصصين
         </p>
       </div>
 
@@ -88,12 +87,12 @@ export default function PricingSection() {
             <div
               key={index}
               className={`relative bg-white rounded-[18px] p-6 md:p-7 flex flex-col
-                ${plan.highlight 
-                  ? "shadow-[0_4px_24px_rgba(107,78,61,0.12)] lg:scale-[1.03] border-2 border-[#6B4E3D]" 
-                  : "shadow-[0_4px_20px_rgba(0,0,0,0.05)] border border-gray-100"
+                ${
+                  plan.highlight
+                    ? "shadow-[0_4px_24px_rgba(107,78,61,0.12)] lg:scale-[1.03] border-2 border-[#6B4E3D]"
+                    : "shadow-[0_4px_20px_rgba(0,0,0,0.05)] border border-gray-100"
                 }
                 transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)]`}>
-              
               {/* Best Value Badge */}
               {plan.highlight && (
                 <div className='absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-[#6B4E3D] to-[#8B6E5D] text-white px-4 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 shadow-md'>
@@ -134,10 +133,10 @@ export default function PricingSection() {
               <div className='flex-1 space-y-3.5 mb-6'>
                 {plan.features.map((feature, i) => (
                   <div key={i} className='flex items-start gap-3'>
-                    <Check 
-                      size={18} 
+                    <Check
+                      size={18}
                       strokeWidth={2.5}
-                      className='text-[#6B4E3D] flex-shrink-0 mt-0.5' 
+                      className='text-[#6B4E3D] flex-shrink-0 mt-0.5'
                     />
                     <span className='text-sm text-[#1A1A1A] leading-relaxed'>
                       {feature}
@@ -151,7 +150,11 @@ export default function PricingSection() {
 
               {/* Session Price */}
               <p className='text-center text-sm text-[#6D6D6D] mb-5'>
-                سعر الحصة: <span className='font-semibold text-[#1A1A1A]'>{plan.sessionPrice}</span> جنيه
+                سعر الحصة:{" "}
+                <span className='font-semibold text-[#1A1A1A]'>
+                  {plan.sessionPrice}
+                </span>{" "}
+                جنيه
               </p>
 
               {/* CTA Button */}
