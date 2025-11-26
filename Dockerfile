@@ -68,7 +68,9 @@ COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 RUN ls -la /app/prisma/seed*.ts || echo "Seed files not found"
 
 # Create necessary directories with proper permissions
-RUN mkdir -p /app/public/uploads \
+RUN mkdir -p /app/public/uploads/assignments \
+    && mkdir -p /app/public/uploads/courses \
+    && mkdir -p /app/public/uploads/modules \
     && mkdir -p /app/assests \
     && mkdir -p /app/.next/cache/images \
     && mkdir -p /app/prisma \
