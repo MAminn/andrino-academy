@@ -3,6 +3,12 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
+import { initializeTestAccounts } from "./init-test-accounts";
+
+// Initialize test accounts on first load
+initializeTestAccounts().catch((error) => {
+  console.error("Failed to initialize test accounts:", error);
+});
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
