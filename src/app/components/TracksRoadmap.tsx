@@ -401,7 +401,6 @@ const TracksRoadmap: React.FC = () => {
               animate={{ y: [0, -6, 0] }}
               transition={{
                 y: { duration: 2.5, repeat: Infinity, ease: "easeInOut" },
-                hover: { duration: 0.3 },
               }}>
               <div className='w-11 h-11 md:w-12 md:h-12 bg-gradient-to-br from-[#d2803d] to-[#e69b5a] rounded-full flex items-center justify-center shadow-[0_8px_24px_rgba(210,128,61,0.3)]'>
                 <Flag

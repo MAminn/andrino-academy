@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "db:seed": "tsx prisma/seed.ts",
+    "db:seed-production": "tsx prisma/seed-production.ts",
     "db:seed-optimized": "tsx prisma/seed-optimized.ts",
     "db:migrate-optimized": "tsx scripts/migrate-schema.ts",
     "db:reset": "npx prisma db push --force-reset && npm run db:seed",
@@ -56,6 +57,6 @@
     "typescript": "^5"
   },
   "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "seed": "tsx prisma/seed-production.ts"
   }
 }

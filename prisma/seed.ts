@@ -1,6 +1,17 @@
 import { PrismaClient } from "../src/generated/prisma";
 import bcrypt from "bcryptjs";
 
+// Declare process for Node.js environment
+declare const process: {
+  env: {
+    TEST_CEO_PASSWORD?: string;
+    TEST_MANAGER_PASSWORD?: string;
+    TEST_COORDINATOR_PASSWORD?: string;
+    TEST_INSTRUCTOR_PASSWORD?: string;
+    TEST_STUDENT_PASSWORD?: string;
+  };
+};
+
 const prisma = new PrismaClient();
 
 async function seed() {
@@ -24,8 +35,28 @@ async function seed() {
 
     console.log("🗑️  Cleared existing data");
 
-    // Hash passwords (using simple password123 for all test accounts)
-    const testPassword = await bcrypt.hash("password123", 12);
+    // Hash secure passwords for test accounts
+    // These should be set via environment variables in production
+    const testingManagerPassword = await bcrypt.hash(
+      process.env.TEST_MANAGER_PASSWORD || "Manager#2024!Secure",
+      12
+    );
+    const instructorPassword = await bcrypt.hash(
+      process.env.TEST_INSTRUCTOR_PASSWORD || "Instructor#2024!Secure",
+      12
+    );
+    const coordinatorPassword = await bcrypt.hash(
+      process.env.TEST_COORDINATOR_PASSWORD || "Coordinator#2024!Secure",
+      12
+    );
+    const studentPassword = await bcrypt.hash(
+      process.env.TEST_STUDENT_PASSWORD || "Student#2024!Secure",
+      12
+    );
+    const ceoPassword = await bcrypt.hash(
+      process.env.TEST_CEO_PASSWORD || "CEO#2024!Secure",
+      12
+    );
 
     // Create Grades first
     const grades = await Promise.all([
@@ -61,21 +92,21 @@ async function seed() {
 
     console.log("✅ Created 4 grades");
 
-    // Create Administrative Accounts (with simple test emails)
+    // Create Administrative Accounts with secure passwords
     await prisma.user.create({
       data: {
         name: "المدير التنفيذي",
         email: "ceo@andrino-academy.com",
-        password: testPassword,
+        password: ceoPassword,
         role: "ceo",
       },
     });
 
     await prisma.user.create({
       data: {
-        name: "Manager",
-        email: "manager@andrino.com",
-        password: testPassword,
+        name: "Testing Manager",
+        email: "manager@andrino-academy.com",
+        password: testingManagerPassword,
         role: "manager",
       },
     });
@@ -84,20 +115,20 @@ async function seed() {
       data: {
         name: "منسق الأكاديمية",
         email: "coordinator@andrino-academy.com",
-        password: testPassword,
+        password: coordinatorPassword,
         role: "coordinator",
       },
     });
 
     console.log("✅ Created administrative accounts");
 
-    // Create Instructor Accounts (with simple test email)
+    // Create Instructor Accounts with secure password
     const instructors = await Promise.all([
       prisma.user.create({
         data: {
-          name: "Instructor",
-          email: "instructor@andrino.com",
-          password: testPassword,
+          name: "Test Instructor",
+          email: "instructor@andrino-academy.com",
+          password: instructorPassword,
           role: "instructor",
         },
       }),
@@ -105,7 +136,7 @@ async function seed() {
         data: {
           name: "أحمد محمد",
           email: "ahmed.instructor@andrino-academy.com",
-          password: testPassword,
+          password: instructorPassword,
           role: "instructor",
         },
       }),
@@ -113,7 +144,7 @@ async function seed() {
         data: {
           name: "سارة أحمد",
           email: "sara.instructor@andrino-academy.com",
-          password: testPassword,
+          password: instructorPassword,
           role: "instructor",
         },
       }),
@@ -121,7 +152,7 @@ async function seed() {
         data: {
           name: "عمر حسن",
           email: "omar.instructor@andrino-academy.com",
-          password: testPassword,
+          password: instructorPassword,
           role: "instructor",
         },
       }),
@@ -129,14 +160,14 @@ async function seed() {
 
     console.log("✅ Created 4 instructor accounts");
 
-    // Create Student Accounts (with simple test email)
+    // Create Student Accounts with secure password
     const studentUsers = await Promise.all([
-      // Simple test student - assigned to all grades for testing (we'll manually update after)
+      // Test student account
       prisma.user.create({
         data: {
-          name: "Student",
-          email: "student@andrino.com",
-          password: testPassword,
+          name: "Test Student",
+          email: "student@andrino-academy.com",
+          password: studentPassword,
           role: "student",
           age: 15,
           gradeId: grades[2].id, // المستوى الثالث - has 2 tracks
@@ -147,7 +178,7 @@ async function seed() {
         data: {
           name: "علي محمد",
           email: "ali.student@andrino-academy.com",
-          password: testPassword,
+          password: studentPassword,
           role: "student",
           age: 8,
           gradeId: grades[0].id, // المستوى الأول
@@ -158,7 +189,7 @@ async function seed() {
         data: {
           name: "فاطمة أحمد",
           email: "fatima.student@andrino-academy.com",
-          password: testPassword,
+          password: studentPassword,
           role: "student",
           age: 11,
           gradeId: grades[1].id, // المستوى الثاني
@@ -169,7 +200,7 @@ async function seed() {
         data: {
           name: "محمد علي",
           email: "mohammed.student@andrino-academy.com",
-          password: testPassword,
+          password: studentPassword,
           role: "student",
           age: 15,
           gradeId: grades[2].id, // المستوى الثالث
@@ -180,7 +211,7 @@ async function seed() {
         data: {
           name: "عائشة حسن",
           email: "aisha.student@andrino-academy.com",
-          password: testPassword,
+          password: studentPassword,
           role: "student",
           age: 18,
           gradeId: grades[3].id, // المستوى الرابع
@@ -191,7 +222,7 @@ async function seed() {
         data: {
           name: "حسن محمود",
           email: "hassan.student@andrino-academy.com",
-          password: testPassword,
+          password: studentPassword,
           role: "student",
           age: 12,
           // No gradeId - remains unassigned
@@ -855,29 +886,61 @@ async function seed() {
     console.log("✅ Created sample session bookings");
 
     console.log("\n🎉 Database seeded successfully!");
-    console.log("\n📋 Test Credentials (all use password: password123):");
+    console.log("\n📋 Test Account Credentials:");
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.log("\n⚠️  NOTE: Passwords are set via environment variables");
+    console.log("Set TEST_*_PASSWORD variables in .env file for custom passwords");
+    console.log("Default secure passwords are used if not set");
 
-    console.log("\n👑 Simple Test Accounts:");
-    console.log("Manager: manager@andrino.com / password123");
-    console.log("Instructor: instructor@andrino.com / password123");
-    console.log("Student: student@andrino.com / password123");
-
-    console.log("\n👑 Additional Administrative Accounts:");
-    console.log("CEO: ceo@andrino-academy.com / password123");
-    console.log("Coordinator: coordinator@andrino-academy.com / password123");
+    console.log("\n👑 Primary Test Accounts:");
+    console.log("CEO: ceo@andrino-academy.com");
+    console.log(
+      `Password: ${process.env.TEST_CEO_PASSWORD || "CEO#2024!Secure"}`
+    );
+    console.log("\nManager: manager@andrino-academy.com");
+    console.log(
+      `Password: ${process.env.TEST_MANAGER_PASSWORD || "Manager#2024!Secure"}`
+    );
+    console.log("\nCoordinator: coordinator@andrino-academy.com");
+    console.log(
+      `Password: ${process.env.TEST_COORDINATOR_PASSWORD || "Coordinator#2024!Secure"}`
+    );
+    console.log("\nInstructor: instructor@andrino-academy.com");
+    console.log(
+      `Password: ${process.env.TEST_INSTRUCTOR_PASSWORD || "Instructor#2024!Secure"}`
+    );
+    console.log("\nStudent: student@andrino-academy.com");
+    console.log(
+      `Password: ${process.env.TEST_STUDENT_PASSWORD || "Student#2024!Secure"}`
+    );
 
     console.log("\n👨‍🏫 Additional Instructor Accounts:");
-    console.log("ahmed.instructor@andrino-academy.com / password123");
-    console.log("sara.instructor@andrino-academy.com / password123");
-    console.log("omar.instructor@andrino-academy.com / password123");
+    console.log(
+      "ahmed.instructor@andrino-academy.com / (same as instructor password)"
+    );
+    console.log(
+      "sara.instructor@andrino-academy.com / (same as instructor password)"
+    );
+    console.log(
+      "omar.instructor@andrino-academy.com / (same as instructor password)"
+    );
 
     console.log("\n👨‍🎓 Additional Student Accounts:");
-    console.log("ali.student@andrino-academy.com / password123");
-    console.log("fatima.student@andrino-academy.com / password123");
-    console.log("mohammed.student@andrino-academy.com / password123");
-    console.log("aisha.student@andrino-academy.com / password123");
-    console.log("hassan.student@andrino-academy.com / password123");
+    console.log(
+      "ali.student@andrino-academy.com / (same as student password)"
+    );
+    console.log(
+      "fatima.student@andrino-academy.com / (same as student password)"
+    );
+    console.log(
+      "mohammed.student@andrino-academy.com / (same as student password)"
+    );
+    console.log(
+      "aisha.student@andrino-academy.com / (same as student password)"
+    );
+    console.log(
+      "hassan.student@andrino-academy.com / (same as student password)"
+    );
 
     console.log("\n📚 Academic Structure Created:");
     console.log(`- ${grades.length} Grades (المستويات)`);
