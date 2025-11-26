@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
 import { User, LogOut } from "lucide-react";
-import LogoImage from "@/../assests/A.A All Logo's Colors-03.png";
+import LogoImage from "@/../assests/andrino-logo-03.png";
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);

@@ -8,7 +8,7 @@ import {
   AcademicCapIcon,
   RocketLaunchIcon,
 } from "@heroicons/react/24/outline";
-import HImage from "@/../assests/w f.png";
+import HImage from "@/../assests/w-f.png";
 
 export default function HeroMobile() {
   const stats = [

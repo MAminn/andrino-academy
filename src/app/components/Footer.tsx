@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import LogoImage from "@/../assests/copyAll Logo's Colors-03.png";
+import LogoImage from "@/../assests/andrino-logo-copy-03.png";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
