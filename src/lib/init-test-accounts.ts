@@ -96,7 +96,12 @@ export async function initializeTestAccounts() {
     console.log("Coordinator: coordinator@andrino-academy.com");
     console.log("Instructor: instructor@andrino-academy.com");
     console.log("Student: student@andrino-academy.com");
-  } catch (error) {
+  } catch (error: any) {
+    // If database doesn't exist yet, just log and continue
+    if (error?.code === "P2021") {
+      console.log("⚠️  Database not initialized yet. Run: npx prisma db push");
+      return;
+    }
     console.error("❌ Error creating test accounts:", error);
   } finally {
     await prisma.$disconnect();

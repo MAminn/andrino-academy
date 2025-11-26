@@ -58,6 +58,7 @@ COPY --from=builder /app/assests ./assests
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/src ./src
+COPY --from=builder /app/start.sh ./start.sh
 
 # Explicitly copy Prisma engine binaries
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
@@ -71,6 +72,7 @@ RUN mkdir -p /app/public/uploads \
     && mkdir -p /app/assests \
     && mkdir -p /app/.next/cache/images \
     && mkdir -p /app/prisma \
+    && chmod +x /app/start.sh \
     && chown -R nextjs:nodejs /app/public \
     && chown -R nextjs:nodejs /app/assests \
     && chown -R nextjs:nodejs /app/.next/cache \
@@ -83,5 +85,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Start the application
-CMD ["npm", "run", "start"]
+# Start the application with database initialization
+CMD ["sh", "/app/start.sh"]
