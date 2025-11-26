@@ -17,6 +17,7 @@ import {
   Video, FileText, File as FileIcon, Image as ImageIcon, 
   Download, Eye, BookOpen, FileUp, Calendar, CheckCircle 
 } from "lucide-react";
+import { normalizeFileUrl } from "@/lib/fileUtils";
 
 // Types
 interface ContentItem {
@@ -173,7 +174,7 @@ export default function ContentViewer({
                     <div className="mt-3 flex gap-2">
                       {item.type === "VIDEO" || item.type === "PDF" || item.type === "IMAGE" ? (
                         <a
-                          href={item.fileUrl}
+                          href={normalizeFileUrl(item.fileUrl)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors flex items-center justify-center gap-2"
@@ -183,7 +184,7 @@ export default function ContentViewer({
                         </a>
                       ) : null}
                       <a
-                        href={item.fileUrl}
+                        href={normalizeFileUrl(item.fileUrl)}
                         download
                         className="flex-1 px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded-lg transition-colors flex items-center justify-center gap-2"
                       >
@@ -248,7 +249,7 @@ export default function ContentViewer({
                   )}
                   {assignment.fileUrl && assignment.fileName && (
                     <a
-                      href={assignment.fileUrl}
+                      href={normalizeFileUrl(assignment.fileUrl)}
                       download
                       className="inline-flex items-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors"
                     >

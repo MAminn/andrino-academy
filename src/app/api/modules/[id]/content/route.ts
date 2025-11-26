@@ -171,7 +171,7 @@ export async function POST(
       data: {
         moduleId,
         type: type as ModuleType,
-        fileUrl: `/uploads/modules/${filename}`,
+        fileUrl: `/api/uploads/modules/${filename}`,
         fileName: file.name,
         fileSize: file.size,
         mimeType: file.type,

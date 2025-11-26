@@ -18,6 +18,7 @@ import {
   FileUp, Upload, Download, CheckCircle, Clock, 
   AlertCircle, Calendar, Loader2, Star 
 } from "lucide-react";
+import { normalizeFileUrl } from "@/lib/fileUtils";
 
 // Types
 interface Assignment {
@@ -241,7 +242,7 @@ export default function AssignmentSubmission({
           <div className="flex items-center gap-2">
             <Download className="h-5 w-5 text-gray-600" />
             <a
-              href={assignment.fileUrl}
+              href={normalizeFileUrl(assignment.fileUrl)}
               download
               className="text-sm text-blue-600 hover:text-blue-700 underline"
             >
@@ -318,7 +319,7 @@ export default function AssignmentSubmission({
                 <strong>تاريخ التسليم:</strong> {formatDate(submission.submittedAt)}
               </p>
               <a
-                href={submission.fileUrl}
+                href={normalizeFileUrl(submission.fileUrl)}
                 download
                 className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors mt-2"
               >

@@ -141,7 +141,7 @@ export async function POST(
       const buffer = Buffer.from(bytes);
       await writeFile(filePath, buffer);
 
-      fileUrl = `/uploads/assignments/${filename}`;
+      fileUrl = `/api/uploads/assignments/${filename}`;
       fileName = file.name;
       fileSize = file.size;
       mimeType = file.type;

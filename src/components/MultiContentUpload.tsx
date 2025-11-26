@@ -18,6 +18,7 @@ import {
   Plus, X, GripVertical, BookOpen, FileUp, Loader2, AlertCircle,
   ChevronDown, ChevronUp, Calendar, Trash2
 } from "lucide-react";
+import { normalizeFileUrl } from "@/lib/fileUtils";
 
 // Types
 type ContentType = "VIDEO" | "PDF" | "DOCUMENT" | "IMAGE";
@@ -733,7 +734,7 @@ function InstructorTab({
                       </label>
                       {item.existingFileUrl && !item.file && (
                         <a
-                          href={item.existingFileUrl}
+                          href={normalizeFileUrl(item.existingFileUrl)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center gap-2 text-xs text-blue-600 hover:text-blue-800 px-2 py-1 hover:bg-blue-50 rounded transition-colors"
@@ -880,7 +881,7 @@ function StudentTab({
                       </label>
                       {item.existingFileUrl && !item.file && (
                         <a
-                          href={item.existingFileUrl}
+                          href={normalizeFileUrl(item.existingFileUrl)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center gap-2 text-xs text-blue-600 hover:text-blue-800 px-2 py-1 hover:bg-blue-50 rounded transition-colors"
@@ -1009,7 +1010,7 @@ function StudentTab({
                   </label>
                   {assignment.existingFileUrl && !assignment.file && (
                     <a
-                      href={assignment.existingFileUrl}
+                      href={normalizeFileUrl(assignment.existingFileUrl)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-2 text-xs text-blue-600 hover:text-blue-800 px-2 py-1 hover:bg-blue-50 rounded transition-colors"

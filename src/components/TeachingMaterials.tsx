@@ -17,6 +17,7 @@ import {
   BookOpen, Video, FileText, File as FileIcon, Image as ImageIcon,
   Download, Eye, Filter, Loader2, AlertCircle 
 } from "lucide-react";
+import { normalizeFileUrl } from "@/lib/fileUtils";
 
 // Types
 interface ContentItem {
@@ -293,7 +294,7 @@ export default function TeachingMaterials({ instructorId }: TeachingMaterialsPro
                                     item.type === "PDF" ||
                                     item.type === "IMAGE") && (
                                     <a
-                                      href={item.fileUrl}
+                                      href={normalizeFileUrl(item.fileUrl)}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors flex items-center justify-center gap-1"
@@ -303,7 +304,7 @@ export default function TeachingMaterials({ instructorId }: TeachingMaterialsPro
                                     </a>
                                   )}
                                   <a
-                                    href={item.fileUrl}
+                                    href={normalizeFileUrl(item.fileUrl)}
                                     download
                                     className="flex-1 px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white text-xs rounded-lg transition-colors flex items-center justify-center gap-1"
                                   >
