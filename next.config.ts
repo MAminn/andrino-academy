@@ -4,6 +4,11 @@ import path from "path";
 const nextConfig: NextConfig = {
   /* config options here */
 
+  // Enable instrumentation for server startup initialization
+  experimental: {
+    instrumentationHook: true,
+  },
+
   // Temporarily skip TypeScript type checking during build
   // TypeScript errors are already fixed (18 remaining are mostly optional monitoring)
   typescript: {

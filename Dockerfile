@@ -63,6 +63,9 @@ COPY --from=builder /app/src ./src
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
+# Verify seed file exists (for debugging)
+RUN ls -la /app/prisma/seed*.ts || echo "Seed files not found"
+
 # Create necessary directories with proper permissions
 RUN mkdir -p /app/public/uploads \
     && mkdir -p /app/assests \
