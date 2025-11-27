@@ -4,12 +4,10 @@
 
 echo "🚀 Starting Andrino Academy..."
 
-# Check if database exists, if not create it
-if [ ! -f "prisma/dev.db" ]; then
-  echo "📦 Initializing database..."
-  npx prisma db push --accept-data-loss
-  echo "✅ Database initialized"
-fi
+# Always apply schema changes to ensure database is up to date
+echo "📦 Syncing database schema..."
+npx prisma db push --accept-data-loss
+echo "✅ Database schema synchronized"
 
 # Always generate Prisma client to ensure it's up to date
 echo "🔧 Generating Prisma Client..."
