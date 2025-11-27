@@ -54,17 +54,24 @@ COPY --from=builder /app/package.json ./
 COPY --from=builder /app/next.config.ts ./
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/src ./src
 COPY --from=builder /app/start.sh ./start.sh
+
+# Copy Prisma files including seed scripts
+COPY --from=builder /app/prisma/schema.prisma ./prisma/
+COPY --from=builder /app/prisma/seed*.ts ./prisma/ 2>/dev/null || true
+
+# Copy reset scripts
+COPY --from=builder /app/reset-production-db.sh ./reset-production-db.sh 2>/dev/null || true
+COPY --from=builder /app/quick-fix-db.sh ./quick-fix-db.sh 2>/dev/null || true
 
 # Explicitly copy Prisma engine binaries
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
 # Verify seed file exists (for debugging)
-RUN ls -la /app/prisma/seed*.ts || echo "Seed files not found"
+RUN ls -la /app/prisma/ || echo "Prisma folder check"
 
 # Create necessary directories with proper permissions
 RUN mkdir -p /app/public/uploads/assignments \
