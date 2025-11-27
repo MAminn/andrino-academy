@@ -618,7 +618,7 @@ export default function ContentManagementPage() {
                               
                               if (!weekMap.has(weekNum)) {
                                 weekMap.set(weekNum, {
-                                  id: crypto.randomUUID(),
+                                  id: mod.id, // Use the actual module ID
                                   weekNumber: weekNum,
                                   startDate: mod.startDate ? mod.startDate.split('T')[0] : new Date().toISOString().split('T')[0],
                                   instructorTitle: mod.title || "",
@@ -772,7 +772,7 @@ export default function ContentManagementPage() {
             initialData={editingModuleData}
             onSave={async (data) => {
               try {
-                // Create modules for each week
+                // Create/Update modules for each week
                 for (const week of data.weeks) {
                   // Validate week has content
                   if (!week.instructorTitle || !week.instructorDescription) {
@@ -789,19 +789,42 @@ export default function ContentManagementPage() {
                   moduleFormData.append("category", "LECTURE");
                   moduleFormData.append("isPublished", "true");
 
-                  const moduleResponse = await fetch("/api/modules", {
-                    method: "POST",
-                    body: moduleFormData,
-                  });
+                  let moduleId: string;
+                  
+                  // Check if we're editing an existing module
+                  if (editingModuleId && week.id) {
+                    // Update existing module
+                    const moduleResponse = await fetch(`/api/modules/${week.id}`, {
+                      method: "PUT",
+                      body: moduleFormData,
+                      signal: AbortSignal.timeout(300000), // 5 minute timeout
+                    });
 
-                  if (!moduleResponse.ok) {
-                    const errorText = await moduleResponse.text();
-                    console.error(`Module creation failed for week ${week.weekNumber}:`, errorText);
-                    throw new Error(`فشل إنشاء الأسبوع ${week.weekNumber}`);
+                    if (!moduleResponse.ok) {
+                      const errorText = await moduleResponse.text();
+                      console.error(`Module update failed for week ${week.weekNumber}:`, errorText);
+                      throw new Error(`فشل تحديث الأسبوع ${week.weekNumber}`);
+                    }
+
+                    const moduleResult = await moduleResponse.json();
+                    moduleId = moduleResult.module?.id || week.id;
+                  } else {
+                    // Create new module
+                    const moduleResponse = await fetch("/api/modules", {
+                      method: "POST",
+                      body: moduleFormData,
+                      signal: AbortSignal.timeout(300000), // 5 minute timeout
+                    });
+
+                    if (!moduleResponse.ok) {
+                      const errorText = await moduleResponse.text();
+                      console.error(`Module creation failed for week ${week.weekNumber}:`, errorText);
+                      throw new Error(`فشل إنشاء الأسبوع ${week.weekNumber}`);
+                    }
+
+                    const moduleResult = await moduleResponse.json();
+                    moduleId = moduleResult.module?.id;
                   }
-
-                  const moduleResult = await moduleResponse.json();
-                  const moduleId = moduleResult.module?.id;
 
                   if (!moduleId) {
                     throw new Error("Module ID not returned");
@@ -820,6 +843,7 @@ export default function ContentManagementPage() {
                     const contentResponse = await fetch(`/api/modules/${moduleId}/content`, {
                       method: "POST",
                       body: formData,
+                      signal: AbortSignal.timeout(300000), // 5 minute timeout
                     });
 
                     if (!contentResponse.ok) {
@@ -840,6 +864,7 @@ export default function ContentManagementPage() {
                     const contentResponse = await fetch(`/api/modules/${moduleId}/content`, {
                       method: "POST",
                       body: formData,
+                      signal: AbortSignal.timeout(300000), // 5 minute timeout
                     });
 
                     if (!contentResponse.ok) {
@@ -912,19 +937,37 @@ export default function ContentManagementPage() {
                       assignFormData.append("file", assignment.file);
                     }
                     
-                    const assignResponse = await fetch(`/api/modules/${moduleId}/assignments`, {
-                      method: "POST",
-                      body: assignFormData,
-                    });
+                    try {
+                      const assignResponse = await fetch(`/api/modules/${moduleId}/assignments`, {
+                        method: "POST",
+                        body: assignFormData,
+                        signal: AbortSignal.timeout(60000), // 60 second timeout
+                      });
 
-                    if (!assignResponse.ok) {
-                      const errorText = await assignResponse.text();
-                      console.error("Assignment creation failed:", errorText);
-                      try {
-                        const errorJson = JSON.parse(errorText);
-                        alert(`فشل إنشاء التكليف "${assignment.title}": ${errorJson.error}`);
-                      } catch {
-                        alert(`فشل إنشاء التكليف "${assignment.title}": خطأ غير معروف`);
+                      if (!assignResponse.ok) {
+                        const errorText = await assignResponse.text();
+                        console.error("Assignment creation failed:", errorText);
+                        try {
+                          if (errorText) {
+                            const errorJson = JSON.parse(errorText);
+                            alert(`فشل إنشاء التكليف "${assignment.title}": ${errorJson.error}`);
+                          } else {
+                            alert(`فشل إنشاء التكليف "${assignment.title}": استجابة فارغة من الخادم`);
+                          }
+                        } catch {
+                          alert(`فشل إنشاء التكليف "${assignment.title}": ${errorText || 'خطأ غير معروف'}`);
+                        }
+                      }
+                    } catch (error: any) {
+                      if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+                        console.error(`Assignment upload timeout for "${assignment.title}"`);
+                        alert(`انتهت مهلة رفع التكليف "${assignment.title}". حاول مرة أخرى أو استخدم ملف أصغر.`);
+                      } else if (error.code === 'ECONNRESET') {
+                        console.error(`Connection reset while uploading "${assignment.title}"`);
+                        alert(`انقطع الاتصال أثناء رفع التكليف "${assignment.title}". حاول مرة أخرى.`);
+                      } else {
+                        console.error(`Error creating assignment "${assignment.title}":`, error);
+                        alert(`خطأ غير متوقع: ${error.message || 'فشل رفع التكليف'}`);
                       }
                     }
                   }

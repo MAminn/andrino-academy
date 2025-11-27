@@ -7,6 +7,11 @@ import { existsSync } from "fs";
 import path from "path";
 import { ModuleType } from "@prisma/client";
 
+// Route segment config for large file uploads
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const maxDuration = 300; // 5 minutes
+
 // Content type validation
 const ALLOWED_MIME_TYPES: Record<string, string[]> = {
   VIDEO: ["video/mp4", "video/webm", "video/ogg"],
@@ -21,10 +26,10 @@ const ALLOWED_MIME_TYPES: Record<string, string[]> = {
 };
 
 const FILE_SIZE_LIMITS: Record<string, number> = {
-  VIDEO: 500 * 1024 * 1024, // 500MB
-  PDF: 50 * 1024 * 1024, // 50MB
-  DOCUMENT: 50 * 1024 * 1024, // 50MB
-  IMAGE: 10 * 1024 * 1024, // 10MB
+  VIDEO: 5 * 1024 * 1024 * 1024, // 5GB
+  PDF: 5 * 1024 * 1024 * 1024, // 5GB
+  DOCUMENT: 5 * 1024 * 1024 * 1024, // 5GB
+  IMAGE: 5 * 1024 * 1024 * 1024, // 5GB
 };
 
 // GET /api/modules/[id]/content - List all content items for a module

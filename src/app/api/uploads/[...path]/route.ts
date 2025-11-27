@@ -4,10 +4,11 @@ import { join } from "path";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
   try {
-    const filePath = params.path.join("/");
+    const { path } = await params;
+    const filePath = path.join("/");
     const fullPath = join(process.cwd(), "public", "uploads", filePath);
 
     const fileBuffer = await readFile(fullPath);

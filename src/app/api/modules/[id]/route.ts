@@ -7,6 +7,11 @@ import fs from "fs";
 import path from "path";
 import { ModuleCategory } from "@prisma/client";
 
+// Route segment config for large file uploads
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const maxDuration = 300; // 5 minutes
+
 // GET /api/modules/[id] - Get a single module by ID
 export async function GET(
   request: NextRequest,
@@ -103,32 +108,51 @@ export async function PUT(
       );
     }
 
-    // Handle metadata update (JSON)
-    const body = await request.json();
+    // Check content type to handle both JSON and FormData
+    const contentType = request.headers.get("content-type") || "";
+    let title, description, category, targetAudience, trackId, order, isPublished, sessionId, weekNumber, startDate;
 
-    // Extract updatable fields
-    const {
-      title,
-      description,
-      category,
-      targetAudience,
-      trackId,
-      order,
-      isPublished,
-      sessionId,
-    } = body;
+    if (contentType.includes("multipart/form-data")) {
+      // Handle FormData (from multi-week upload)
+      const formData = await request.formData();
+      title = formData.get("title") as string | null;
+      description = formData.get("description") as string | null;
+      category = formData.get("category") as string | null;
+      targetAudience = formData.get("targetAudience") as string | null;
+      trackId = formData.get("trackId") as string | null;
+      order = formData.get("order") as string | null;
+      isPublished = formData.get("isPublished") as string | null;
+      sessionId = formData.get("sessionId") as string | null;
+      weekNumber = formData.get("weekNumber") as string | null;
+      startDate = formData.get("startDate") as string | null;
+    } else {
+      // Handle JSON (from simple update)
+      const body = await request.json();
+      title = body.title;
+      description = body.description;
+      category = body.category;
+      targetAudience = body.targetAudience;
+      trackId = body.trackId;
+      order = body.order;
+      isPublished = body.isPublished;
+      sessionId = body.sessionId;
+      weekNumber = body.weekNumber;
+      startDate = body.startDate;
+    }
 
     // Build update data
     const updateData: any = {};
 
-    if (title !== undefined) updateData.title = title;
-    if (description !== undefined) updateData.description = description;
-    if (category !== undefined) updateData.category = category as ModuleCategory;
-    if (targetAudience !== undefined) updateData.targetAudience = targetAudience;
-    if (trackId !== undefined) updateData.trackId = trackId;
-    if (order !== undefined) updateData.order = order;
-    if (isPublished !== undefined) updateData.isPublished = isPublished;
-    if (sessionId !== undefined) updateData.sessionId = sessionId;
+    if (title !== undefined && title !== null) updateData.title = title;
+    if (description !== undefined && description !== null) updateData.description = description;
+    if (category !== undefined && category !== null) updateData.category = category as ModuleCategory;
+    if (targetAudience !== undefined && targetAudience !== null) updateData.targetAudience = targetAudience;
+    if (trackId !== undefined && trackId !== null) updateData.trackId = trackId;
+    if (order !== undefined && order !== null) updateData.order = parseInt(order as string);
+    if (isPublished !== undefined && isPublished !== null) updateData.isPublished = isPublished === "true" || isPublished === true;
+    if (sessionId !== undefined && sessionId !== null) updateData.sessionId = sessionId;
+    if (weekNumber !== undefined && weekNumber !== null) updateData.weekNumber = parseInt(weekNumber as string);
+    if (startDate !== undefined && startDate !== null) updateData.startDate = new Date(startDate as string);
 
     // Update module
     const module = await prisma.module.update({

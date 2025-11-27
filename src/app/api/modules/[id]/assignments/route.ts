@@ -6,6 +6,11 @@ import { writeFile, mkdir, unlink } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
 
+// Route segment config for large file uploads
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const maxDuration = 300; // 5 minutes
+
 const ALLOWED_MIME_TYPES = [
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -14,7 +19,7 @@ const ALLOWED_MIME_TYPES = [
   "application/x-zip-compressed",
 ];
 
-const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024 * 1024; // 5GB
 
 // GET /api/modules/[id]/assignments - List all assignments for a module
 export async function GET(

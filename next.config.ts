@@ -56,6 +56,18 @@ const nextConfig: NextConfig = {
 
     return config;
   },
+
+  // API route configuration for file uploads
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '5gb',
+    },
+  },
+
+  // Increase timeouts for file uploads
+  serverRuntimeConfig: {
+    apiTimeout: 60000, // 60 seconds
+  },
 };
 
 export default nextConfig;
