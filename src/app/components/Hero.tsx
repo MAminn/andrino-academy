@@ -3,7 +3,7 @@
 import Link from "next/link";
 
 import Image from "next/image";
-import HImage from "@/../assests/w-f.png";
+import HImage from "@/../assets/w-f.png";
 
 export default function Hero() {
   return (
