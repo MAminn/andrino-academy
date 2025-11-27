@@ -4,10 +4,22 @@
 
 echo "🚀 Starting Andrino Academy..."
 
-# Always apply schema changes to ensure database is up to date
-echo "📦 Syncing database schema..."
-npx prisma db push --accept-data-loss
-echo "✅ Database schema synchronized"
+# Ensure src/generated directory exists with proper permissions
+echo "📁 Creating necessary directories..."
+mkdir -p /app/src/generated
+mkdir -p /app/prisma
+
+# Only sync database schema if database doesn't exist
+if [ ! -f "/app/prisma/dev.db" ]; then
+  echo "📦 Database not found. Creating new database..."
+  npx prisma db push --accept-data-loss
+  echo "✅ Database created"
+  
+  echo "🌱 Seeding production data..."
+  npm run db:seed-production || echo "⚠️  Seeding skipped or failed"
+else
+  echo "✅ Database exists. Skipping schema sync."
+fi
 
 # Always generate Prisma client to ensure it's up to date
 echo "🔧 Generating Prisma Client..."

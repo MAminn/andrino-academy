@@ -73,11 +73,13 @@ RUN mkdir -p /app/public/uploads/assignments \
     && mkdir -p /app/assets \
     && mkdir -p /app/.next/cache/images \
     && mkdir -p /app/prisma \
+    && mkdir -p /app/src/generated \
     && chmod +x /app/start.sh \
     && chown -R nextjs:nodejs /app/public \
     && chown -R nextjs:nodejs /app/assets \
     && chown -R nextjs:nodejs /app/.next/cache \
-    && chown -R nextjs:nodejs /app/prisma
+    && chown -R nextjs:nodejs /app/prisma \
+    && chown -R nextjs:nodejs /app/src
 
 USER nextjs
 
