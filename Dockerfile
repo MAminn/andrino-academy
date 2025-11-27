@@ -54,7 +54,6 @@ COPY --from=builder /app/package.json ./
 COPY --from=builder /app/next.config.ts ./
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/assests ./assests
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/src ./src
@@ -71,12 +70,12 @@ RUN ls -la /app/prisma/seed*.ts || echo "Seed files not found"
 RUN mkdir -p /app/public/uploads/assignments \
     && mkdir -p /app/public/uploads/courses \
     && mkdir -p /app/public/uploads/modules \
-    && mkdir -p /app/assests \
+    && mkdir -p /app/assets \
     && mkdir -p /app/.next/cache/images \
     && mkdir -p /app/prisma \
     && chmod +x /app/start.sh \
     && chown -R nextjs:nodejs /app/public \
-    && chown -R nextjs:nodejs /app/assests \
+    && chown -R nextjs:nodejs /app/assets \
     && chown -R nextjs:nodejs /app/.next/cache \
     && chown -R nextjs:nodejs /app/prisma
 
