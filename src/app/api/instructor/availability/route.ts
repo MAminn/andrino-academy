@@ -27,7 +27,9 @@ export async function GET(request: NextRequest) {
     };
 
     if (weekStartDate) {
-      where.weekStartDate = new Date(weekStartDate);
+      // Parse date in local time to avoid timezone shift issues
+      const [year, month, day] = weekStartDate.split('-').map(Number);
+      where.weekStartDate = new Date(year, month - 1, day);
     }
 
     if (trackId) {
@@ -118,7 +120,18 @@ export async function POST(request: NextRequest) {
     const weekStartDay = scheduleSettings?.weekResetDay ?? 0; // Default to Sunday
 
     // Validate weekStartDate matches the configured week start day
-    const weekStart = new Date(weekStartDate);
+    // Parse date in local time to avoid timezone shift issues
+    const [year, month, day] = weekStartDate.split('-').map(Number);
+    const weekStart = new Date(year, month - 1, day);
+    
+    console.log("API weekStartDate validation:", {
+      receivedWeekStartDate: weekStartDate,
+      parsedDate: weekStart.toISOString(),
+      parsedDayOfWeek: weekStart.getDay(),
+      expectedWeekStartDay: weekStartDay,
+      matches: weekStart.getDay() === weekStartDay
+    });
+    
     if (weekStart.getDay() !== weekStartDay) {
       const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
       return NextResponse.json(
@@ -179,10 +192,10 @@ export async function POST(request: NextRequest) {
         if (
           typeof endHour !== "number" ||
           endHour < 13 ||
-          endHour > 22 ||
+          endHour > 23 || // Allow 23 for the last slot (22:00-23:00)
           endHour <= startHour
         ) {
-          throw new Error("endHour must be between 13 and 22, and greater than startHour");
+          throw new Error("endHour must be between 13 and 23, and greater than startHour");
         }
 
         return prisma.instructorAvailability.create({

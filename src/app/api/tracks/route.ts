@@ -17,8 +17,9 @@ export async function GET(request: NextRequest) {
       return ErrorResponses.unauthorized();
     }
 
-    // Only manager, coordinator, instructor, and CEO can view tracks
-    const allowedRoles = ["manager", "coordinator", "instructor", "ceo"];
+    // Allow manager, coordinator, instructor, CEO, and students to view tracks
+    // Students need this to see available tracks for booking sessions
+    const allowedRoles = ["manager", "coordinator", "instructor", "ceo", "student"];
     if (!allowedRoles.includes(session.user.role)) {
       return ErrorResponses.forbidden();
     }
@@ -44,6 +45,17 @@ export async function GET(request: NextRequest) {
     // For coordinators, only show tracks they coordinate
     if (session.user.role === "coordinator") {
       whereClause.coordinatorId = session.user.id;
+    }
+
+    // For students, only show tracks from their assigned grade
+    if (session.user.role === "student") {
+      const student = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { gradeId: true },
+      });
+      if (student?.gradeId) {
+        whereClause.gradeId = student.gradeId;
+      }
     }
 
     const tracks = await prisma.track.findMany({

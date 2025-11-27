@@ -110,31 +110,13 @@ export default function MyBookings({
       setError(null);
 
       try {
-        // Get student's track first
-        const studentResponse = await fetch(`/api/users/${studentId}`);
-        if (!studentResponse.ok) throw new Error("Failed to fetch student data");
-        
-        const studentData = await studentResponse.json();
-        
-        if (!studentData.trackId) {
-          setBookings([]);
-          setLoading(false);
-          return;
-        }
-
-        // Fetch bookings via student/book-session endpoint (it handles fetching)
-        // Since there's no dedicated GET endpoint for student bookings in the API,
-        // we'll use the instructor bookings endpoint with proper filtering
-        const response = await fetch(`/api/instructor/bookings?trackId=${studentData.trackId}`);
+        // Use the correct student bookings endpoint
+        const response = await fetch(`/api/student/bookings`);
         
         if (!response.ok) throw new Error("Failed to fetch bookings");
 
-        const allBookings: SessionBooking[] = await response.json();
-        
-        // Filter to only this student's bookings
-        const studentBookings = allBookings.filter(b => b.studentId === studentId);
-        
-        setBookings(studentBookings);
+        const data = await response.json();
+        setBookings(data.bookings || []);
       } catch (err) {
         console.error("Error fetching bookings:", err);
         setError("فشل تحميل الحجوزات");

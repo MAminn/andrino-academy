@@ -64,6 +64,13 @@ export async function GET(request: NextRequest) {
             dayOfWeek: true,
             startHour: true,
             endHour: true,
+            track: {
+              select: {
+                id: true,
+                name: true,
+                gradeId: true,
+              },
+            },
           },
         },
         session: {

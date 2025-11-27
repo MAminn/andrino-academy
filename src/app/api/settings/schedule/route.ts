@@ -56,7 +56,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { weekResetDay, weekResetHour, availabilityOpenHours } = body;
+    const { weekResetDay, weekResetHour, availabilityOpenHours, nextOpenDate } = body;
 
     // Build update data
     const updateData: any = {};
@@ -103,6 +103,22 @@ export async function PUT(request: NextRequest) {
         );
       }
       updateData.availabilityOpenHours = availabilityOpenHours;
+    }
+
+    if (nextOpenDate !== undefined) {
+      // Validation - accept null to clear or valid date string
+      if (nextOpenDate !== null) {
+        const date = new Date(nextOpenDate);
+        if (isNaN(date.getTime())) {
+          return NextResponse.json(
+            { error: "nextOpenDate must be a valid date" },
+            { status: 400 }
+          );
+        }
+        updateData.nextOpenDate = date;
+      } else {
+        updateData.nextOpenDate = null;
+      }
     }
 
     // Fetch existing settings

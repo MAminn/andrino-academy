@@ -15,7 +15,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Calendar, Clock, User, BookOpen, MessageSquare, Loader2, AlertCircle, ExternalLink, Save, Edit2, X } from "lucide-react";
+import { Calendar, Clock, User, BookOpen, MessageSquare, Loader2, AlertCircle, ExternalLink, Save, Edit2, X, Video, Link as LinkIcon } from "lucide-react";
+import MeetingLinkModal from "./MeetingLinkModal";
 
 // Types
 interface SessionBooking {
@@ -43,6 +44,9 @@ interface SessionBooking {
       name: string;
       gradeName?: string;
     };
+  };
+  track: {
+    name: string;
   };
   session?: {
     id: string;
@@ -72,6 +76,11 @@ export default function InstructorBookingsList({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [selectedWeek, setSelectedWeek] = useState<string>("");
   const [weeks, setWeeks] = useState<string[]>([]);
+  
+  // Meeting Link Modal State
+  const [meetingLinkModalOpen, setMeetingLinkModalOpen] = useState(false);
+  const [selectedBookingForLink, setSelectedBookingForLink] = useState<SessionBooking | null>(null);
+  const [linkMode, setLinkMode] = useState<"single" | "bulk">("single");
 
   // Helper: Format date display
   const formatDate = (dateStr: string, dayOfWeek: number): string => {
@@ -103,38 +112,58 @@ export default function InstructorBookingsList({
     return { text: "محجوز", color: "bg-yellow-100 text-yellow-800 border-yellow-300" };
   };
 
-  // Fetch bookings
-  useEffect(() => {
-    const fetchBookings = async () => {
-      setLoading(true);
-      setError(null);
+  // Open meeting link modal for single booking
+  const handleAddMeetingLink = (booking: SessionBooking) => {
+    setSelectedBookingForLink(booking);
+    setLinkMode("single");
+    setMeetingLinkModalOpen(true);
+  };
 
-      try {
-        // Fetch all bookings for this instructor
-        const response = await fetch(`/api/instructor/bookings?instructorId=${instructorId}`);
-        if (!response.ok) throw new Error("Failed to fetch bookings");
+  // Open meeting link modal for all bookings in time slot
+  const handleBulkAddMeetingLink = (booking: SessionBooking) => {
+    setSelectedBookingForLink(booking);
+    setLinkMode("bulk");
+    setMeetingLinkModalOpen(true);
+  };
 
-        const { bookings: data } = await response.json();
-        setBookings(data as SessionBooking[]);
+  // Fetch bookings function
+  const fetchBookings = async () => {
+    setLoading(true);
+    setError(null);
 
-        // Extract unique weeks
-        const uniqueWeeks = Array.from(
-          new Set((data as SessionBooking[]).map((b: SessionBooking) => b.availability.weekStartDate))
-        ).sort() as string[];
-        setWeeks(uniqueWeeks);
-        
-        // Set most recent week as default
-        if (uniqueWeeks.length > 0 && !selectedWeek) {
-          setSelectedWeek(uniqueWeeks[uniqueWeeks.length - 1]);
-        }
-      } catch (err) {
-        console.error("Error fetching bookings:", err);
-        setError("فشل تحميل الحجوزات");
-      } finally {
-        setLoading(false);
+    try {
+      // Fetch all bookings for this instructor
+      const response = await fetch(`/api/instructor/bookings?instructorId=${instructorId}`);
+      if (!response.ok) throw new Error("Failed to fetch bookings");
+
+      const { bookings: data } = await response.json();
+      setBookings(data as SessionBooking[]);
+
+      // Extract unique weeks
+      const uniqueWeeks = Array.from(
+        new Set((data as SessionBooking[]).map((b: SessionBooking) => b.availability.weekStartDate))
+      ).sort() as string[];
+      setWeeks(uniqueWeeks);
+      
+      // Set most recent week as default
+      if (uniqueWeeks.length > 0 && !selectedWeek) {
+        setSelectedWeek(uniqueWeeks[uniqueWeeks.length - 1]);
       }
-    };
+    } catch (err) {
+      console.error("Error fetching bookings:", err);
+      setError("فشل تحميل الحجوزات");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  // Refresh bookings after meeting link added
+  const handleMeetingLinkSuccess = () => {
+    fetchBookings();
+  };
+
+  // Fetch bookings on mount
+  useEffect(() => {
     fetchBookings();
   }, [instructorId]);
 
@@ -378,6 +407,26 @@ export default function InstructorBookingsList({
                           </div>
                         )}
 
+                        {/* Meeting Link Actions */}
+                        {!booking.session?.externalLink && (
+                          <div className="mb-4 flex gap-2">
+                            <button
+                              onClick={() => handleAddMeetingLink(booking)}
+                              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
+                            >
+                              <Video className="h-4 w-4" />
+                              إضافة رابط اجتماع
+                            </button>
+                            <button
+                              onClick={() => handleBulkAddMeetingLink(booking)}
+                              className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm"
+                            >
+                              <LinkIcon className="h-4 w-4" />
+                              إضافة للكل في هذا الوقت
+                            </button>
+                          </div>
+                        )}
+
                         {/* Student Notes (Read-Only) */}
                         {booking.studentNotes && (
                           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
@@ -476,6 +525,15 @@ export default function InstructorBookingsList({
           </p>
         </div>
       )}
+
+      {/* Meeting Link Modal */}
+      <MeetingLinkModal
+        isOpen={meetingLinkModalOpen}
+        onClose={() => setMeetingLinkModalOpen(false)}
+        sessionData={selectedBookingForLink}
+        mode={linkMode}
+        onSuccess={handleMeetingLinkSuccess}
+      />
     </div>
   );
 }

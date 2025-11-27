@@ -59,14 +59,37 @@ export default function AvailableSessions({
   const [booking, setBooking] = useState<string | null>(null); // availabilityId being booked
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [weekStartDay, setWeekStartDay] = useState<number | null>(null); // From schedule settings
 
-  // Helper: Get week start date (Sunday)
+  // Fetch schedule settings
+  useEffect(() => {
+    const fetchScheduleSettings = async () => {
+      try {
+        const response = await fetch("/api/settings/schedule");
+        if (response.ok) {
+          const data = await response.json();
+          setWeekStartDay(data.settings?.weekResetDay ?? 0);
+        }
+      } catch (err) {
+        console.error("Error fetching schedule settings:", err);
+      }
+    };
+    fetchScheduleSettings();
+  }, []);
+
+  // Helper: Get week start date (based on schedule settings)
   const getWeekStartDate = (date: Date): string => {
     const d = new Date(date);
-    const day = d.getDay();
-    d.setDate(d.getDate() - day); // Go to Sunday
+    const currentDay = d.getDay();
+    const daysToSubtract = (currentDay - (weekStartDay ?? 0) + 7) % 7;
+    d.setDate(d.getDate() - daysToSubtract);
     d.setHours(0, 0, 0, 0);
-    return d.toISOString().split("T")[0];
+    
+    // Format as YYYY-MM-DD in local time (not UTC) to avoid timezone issues
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   // Helper: Format date display
@@ -76,10 +99,12 @@ export default function AvailableSessions({
     return date.toLocaleDateString("ar-EG", { month: "short", day: "numeric" });
   };
 
-  // Initialize week start date
+  // Initialize week start date after schedule settings are loaded
   useEffect(() => {
-    setWeekStartDate(getWeekStartDate(new Date()));
-  }, []);
+    if (weekStartDay !== null && !weekStartDate) {
+      setWeekStartDate(getWeekStartDate(new Date()));
+    }
+  }, [weekStartDay]);
 
   // Fetch all tracks
   useEffect(() => {
@@ -88,12 +113,13 @@ export default function AvailableSessions({
         const response = await fetch("/api/tracks");
         if (!response.ok) throw new Error("Failed to fetch tracks");
         
-        const data = await response.json();
-        setTracks(data);
+        const responseData = await response.json();
+        const tracksData = responseData.data || responseData;
+        setTracks(tracksData);
         
         // Auto-select first track
-        if (data.length > 0 && !selectedTrackId) {
-          setSelectedTrackId(data[0].id);
+        if (tracksData.length > 0 && !selectedTrackId) {
+          setSelectedTrackId(tracksData[0].id);
         }
       } catch (err) {
         console.error("Error fetching tracks:", err);
@@ -121,8 +147,8 @@ export default function AvailableSessions({
         const response = await fetch(`/api/student/available-slots?${params}`);
         if (!response.ok) throw new Error("Failed to fetch available slots");
 
-        const data: InstructorAvailability[] = await response.json();
-        setAvailableSlots(data);
+        const data = await response.json();
+        setAvailableSlots(data.availableSlots || []);
       } catch (err) {
         console.error("Error fetching available slots:", err);
         setError("فشل تحميل الجلسات المتاحة");
@@ -174,7 +200,9 @@ export default function AvailableSessions({
 
   // Handle week navigation
   const navigateWeek = (direction: "prev" | "next") => {
-    const currentDate = new Date(weekStartDate);
+    // Parse the current week start date in local time to avoid timezone issues
+    const [year, month, day] = weekStartDate.split('-').map(Number);
+    const currentDate = new Date(year, month - 1, day);
     const daysToAdd = direction === "next" ? 7 : -7;
     currentDate.setDate(currentDate.getDate() + daysToAdd);
     setWeekStartDate(getWeekStartDate(currentDate));

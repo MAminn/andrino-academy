@@ -468,9 +468,11 @@ model LiveSession {
   startTime    String   // Format: "HH:mm" (e.g., "14:30")
   endTime      String   // Format: "HH:mm" (e.g., "16:00")
   externalLink String?  // External meeting URL (Zoom, Google Meet, Teams, etc.)
+  linkAddedAt  DateTime? // When the meeting link was added
   status       SessionStatus @default(DRAFT) // DRAFT, SCHEDULED, READY, ACTIVE, COMPLETED, CANCELLED
   materials    String?  // JSON string for session materials/links
   notes        String?  // Instructor notes
+  feedbackCollected Boolean @default(false) // Whether post-session feedback has been collected
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -678,6 +680,7 @@ model SessionBooking {
   status          String   @default("booked") // booked, confirmed, completed, cancelled
   studentNotes    String?  // Student notes about instructor
   instructorNotes String?  // Instructor notes about student
+  feedbackGivenAt DateTime? // When student gave feedback
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -696,12 +699,13 @@ model SessionBooking {
 
 // Schedule Settings - Manager controls when availability resets
 model ScheduleSettings {
-  id                    String   @id @default(cuid())
-  weekResetDay          Int      @default(6) // 6=Saturday, 0=Sunday, etc.
-  weekResetHour         Int      @default(0) // 0=midnight (24h format)
-  availabilityOpenHours Int      @default(24) // How long instructors have to set availability
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                    String    @id @default(cuid())
+  weekResetDay          Int       @default(6) // 6=Saturday, 0=Sunday, etc.
+  weekResetHour         Int       @default(0) // 0=midnight (24h format)
+  availabilityOpenHours Int       @default(24) // How long instructors have to set availability
+  nextOpenDate          DateTime? // Specific date when availability calendar opens for instructors
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   @@map("ScheduleSettings")
 }

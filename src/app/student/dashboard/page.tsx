@@ -15,6 +15,7 @@ import WeeklyScheduleModal from "@/app/components/student/WeeklyScheduleModal";
 import AchievementsModal from "@/app/components/student/AchievementsModal";
 import AttendanceModal from "@/app/components/student/AttendanceModal";
 import AssessmentsModal from "@/app/components/student/AssessmentsModal";
+import ActiveSessionAlert from "@/components/ActiveSessionAlert";
 import {
   BookOpen,
   Users,
@@ -104,6 +105,17 @@ export default function StudentDashboard() {
   const [attendanceHistory, setAttendanceHistory] = useState<
     AttendanceRecord[]
   >([]);
+  const [bookingsData, setBookingsData] = useState<{
+    bookings: any[];
+    totalBookings: number;
+    confirmedBookings: number;
+    nextBooking: any | null;
+  }>({
+    bookings: [],
+    totalBookings: 0,
+    confirmedBookings: 0,
+    nextBooking: null,
+  });
   const [loading, setLoading] = useState(true);
 
   // Modal states
@@ -166,6 +178,15 @@ export default function StudentDashboard() {
           );
           setAttendanceHistory([]);
         }
+
+        // Fetch bookings
+        const bookingsResponse = await fetch(`/api/student/bookings?upcoming=true`);
+        if (bookingsResponse.ok) {
+          const bookingsResponseData = await bookingsResponse.json();
+          setBookingsData(bookingsResponseData);
+        } else {
+          console.error("Failed to fetch bookings:", bookingsResponse.status);
+        }
       } catch (error) {
         console.error("Error fetching student data:", error);
       } finally {
@@ -221,6 +242,9 @@ export default function StudentDashboard() {
 
   return (
     <DashboardLayout title='لوحة تحكم الطالب' role='student'>
+      {/* Active Session Alert */}
+      <ActiveSessionAlert role="student" />
+
       {/* Welcome Card */}
       <WelcomeCard
         name={session?.user?.name || undefined}
@@ -335,9 +359,9 @@ export default function StudentDashboard() {
           color='green'
         />
         <StatCard
-          title='الجلسات القادمة'
-          value={upcomingSessions.length}
-          icon={<Calendar className='w-8 h-8' />}
+          title='الحجوزات المؤكدة'
+          value={bookingsData.confirmedBookings}
+          icon={<CheckCircle className='w-8 h-8' />}
           color='purple'
         />
         <StatCard
@@ -347,6 +371,43 @@ export default function StudentDashboard() {
           color='indigo'
         />
       </div>
+
+      {/* Next Session Info */}
+      {bookingsData.nextBooking && (
+        <div className='bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 mb-6'>
+          <div className='flex items-start gap-4'>
+            <div className='p-3 bg-blue-500 rounded-lg'>
+              <Clock className='w-6 h-6 text-white' />
+            </div>
+            <div className='flex-1'>
+              <h3 className='text-lg font-bold text-gray-900 mb-2'>
+                الجلسة القادمة
+              </h3>
+              <div className='grid grid-cols-1 md:grid-cols-3 gap-4 text-sm'>
+                <div>
+                  <span className='text-gray-600'>المسار:</span>
+                  <span className='font-semibold text-gray-900 mr-2'>
+                    {bookingsData.nextBooking.track?.name}
+                  </span>
+                </div>
+                <div>
+                  <span className='text-gray-600'>المدرس:</span>
+                  <span className='font-semibold text-gray-900 mr-2'>
+                    {bookingsData.nextBooking.availability?.instructor?.name}
+                  </span>
+                </div>
+                <div>
+                  <span className='text-gray-600'>الوقت:</span>
+                  <span className='font-semibold text-gray-900 mr-2'>
+                    {new Date(bookingsData.nextBooking.availability.weekStartDate).toLocaleDateString('ar-EG')} - 
+                    {' '}{bookingsData.nextBooking.availability.startHour}:00
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Navigation Buttons */}
       <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-8'>

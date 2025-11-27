@@ -72,7 +72,9 @@ export default function AvailabilityCalendar({
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [weekStartDay, setWeekStartDay] = useState<number>(0); // Default Sunday
+  const [weekStartDay, setWeekStartDay] = useState<number | null>(null); // Null until loaded from API
+  const [nextOpenDate, setNextOpenDate] = useState<string | null>(null); // When calendar becomes available
+  const [isCalendarLocked, setIsCalendarLocked] = useState(false); // Whether calendar is currently locked
 
   // Fetch schedule settings
   useEffect(() => {
@@ -81,7 +83,19 @@ export default function AvailabilityCalendar({
         const response = await fetch("/api/settings/schedule");
         if (response.ok) {
           const data = await response.json();
+          console.log("Schedule settings API response:", data);
+          console.log("Setting weekStartDay to:", data.settings?.weekResetDay ?? 0);
           setWeekStartDay(data.settings?.weekResetDay ?? 0);
+          
+          // Check if nextOpenDate is set and if we're before it
+          if (data.settings?.nextOpenDate) {
+            const openDate = new Date(data.settings.nextOpenDate);
+            const now = new Date();
+            setNextOpenDate(openDate.toISOString().split('T')[0]);
+            setIsCalendarLocked(now < openDate);
+          } else {
+            setIsCalendarLocked(false);
+          }
         }
       } catch (err) {
         console.error("Error fetching schedule settings:", err);
@@ -94,10 +108,25 @@ export default function AvailabilityCalendar({
   const getWeekStartDate = (date: Date): string => {
     const d = new Date(date);
     const currentDay = d.getDay();
-    const daysToSubtract = (currentDay - weekStartDay + 7) % 7;
+    const daysToSubtract = (currentDay - (weekStartDay ?? 0) + 7) % 7;
     d.setDate(d.getDate() - daysToSubtract);
     d.setHours(0, 0, 0, 0);
-    return d.toISOString().split("T")[0];
+    
+    // Format as YYYY-MM-DD in local time (not UTC) to avoid timezone issues
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const result = `${year}-${month}-${day}`;
+    
+    console.log("getWeekStartDate:", { 
+      inputDate: date.toISOString(), 
+      currentDay, 
+      weekStartDay, 
+      daysToSubtract, 
+      result,
+      resultDayOfWeek: new Date(year, d.getMonth(), d.getDate()).getDay()
+    });
+    return result;
   };
 
   // Helper: Get slot key
@@ -113,9 +142,11 @@ export default function AvailabilityCalendar({
   // Initialize week start date after schedule settings are loaded
   useEffect(() => {
     if (weekStartDay !== null && !weekStartDate) {
-      setWeekStartDate(getWeekStartDate(new Date()));
+      const calculatedDate = getWeekStartDate(new Date());
+      console.log("Initializing weekStartDate with weekStartDay:", weekStartDay, "result:", calculatedDate);
+      setWeekStartDate(calculatedDate);
     }
-  }, [weekStartDay, weekStartDate]);
+  }, [weekStartDay]);
 
   // Fetch instructor's tracks
   useEffect(() => {
@@ -213,6 +244,8 @@ export default function AvailabilityCalendar({
 
   // Handle slot click
   const handleSlotClick = (day: number, hour: number) => {
+    if (isCalendarLocked) return; // Don't allow interaction when locked
+    
     const slot = findSlot(day, hour);
     if (!slot || slot.isConfirmed) return; // Cannot edit confirmed slots
 
@@ -229,6 +262,8 @@ export default function AvailabilityCalendar({
 
   // Handle drag start
   const handleDragStart = (day: number, hour: number) => {
+    if (isCalendarLocked) return; // Don't allow interaction when locked
+    
     const slot = findSlot(day, hour);
     if (!slot || slot.isConfirmed) return;
 
@@ -239,7 +274,7 @@ export default function AvailabilityCalendar({
 
   // Handle drag over
   const handleDragOver = (day: number, hour: number) => {
-    if (!isDragging) return;
+    if (!isDragging || isCalendarLocked) return; // Don't allow interaction when locked
 
     const slot = findSlot(day, hour);
     if (!slot || slot.isConfirmed) return;
@@ -288,6 +323,14 @@ export default function AvailabilityCalendar({
         startHour: slot.hour,
         endHour: slot.hour + 1, // Each slot is 1 hour
       }));
+
+      console.log("Saving availability with:", {
+        trackId: selectedTrackId,
+        weekStartDate,
+        weekStartDateDayOfWeek: new Date(weekStartDate).getDay(),
+        expectedWeekStartDay: weekStartDay,
+        slots: slotsData
+      });
 
       const response = await fetch("/api/instructor/availability", {
         method: "POST",
@@ -427,10 +470,16 @@ export default function AvailabilityCalendar({
 
   // Handle week navigation
   const navigateWeek = (direction: "prev" | "next") => {
-    const currentDate = new Date(weekStartDate);
+    // Parse the current week start date in local time to avoid timezone issues
+    const [year, month, day] = weekStartDate.split('-').map(Number);
+    const currentDate = new Date(year, month - 1, day);
     const daysToAdd = direction === "next" ? 7 : -7;
     currentDate.setDate(currentDate.getDate() + daysToAdd);
-    setWeekStartDate(getWeekStartDate(currentDate));
+    
+    // Recalculate to ensure we land on the correct week start day
+    const newWeekStart = getWeekStartDate(currentDate);
+    console.log("navigateWeek:", { direction, currentDate: currentDate.toISOString(), newWeekStart });
+    setWeekStartDate(newWeekStart);
   };
 
   // Get slot CSS classes
@@ -531,6 +580,34 @@ export default function AvailabilityCalendar({
         </div>
       </div>
 
+      {/* Locked Calendar Warning */}
+      {isCalendarLocked && nextOpenDate && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+          <div className="flex items-start gap-3">
+            <Lock className="h-6 w-6 text-yellow-600 flex-shrink-0 mt-1" />
+            <div>
+              <h3 className="font-semibold text-yellow-900 text-lg mb-2">
+                جدول التوافر مغلق حالياً
+              </h3>
+              <p className="text-yellow-800">
+                سيتم فتح جدول التوافر للتعديل يوم:{" "}
+                <strong>
+                  {new Date(nextOpenDate).toLocaleDateString("en-GB", { 
+                    weekday: "long", 
+                    year: "numeric", 
+                    month: "long", 
+                    day: "numeric"
+                  })}
+                </strong>
+              </p>
+              <p className="text-yellow-700 text-sm mt-2">
+                يرجى الانتظار حتى التاريخ المحدد لتتمكن من تحديد أوقات التوافر الخاصة بك.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Error/Success Messages */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
@@ -611,27 +688,10 @@ export default function AvailabilityCalendar({
 
       {/* Action Buttons */}
       <div className="flex gap-4 justify-end">
-        <button
-          onClick={handleSave}
-          disabled={!hasSelectedSlots || saving || loading}
-          className="px-6 py-3 bg-[#7e5b3f] hover:bg-[#6a4d35] text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-        >
-          {saving ? (
-            <>
-              <Loader2 className="h-5 w-5 animate-spin" />
-              جاري الحفظ...
-            </>
-          ) : (
-            <>
-              <Check className="h-5 w-5" />
-              حفظ التوافر
-            </>
-          )}
-        </button>
 
         <button
           onClick={handleConfirm}
-          disabled={hasConfirmedSlots || !hasSelectedSlots || confirming || loading}
+          disabled={hasConfirmedSlots || !hasSelectedSlots || confirming || loading || isCalendarLocked}
           className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
           {confirming ? (

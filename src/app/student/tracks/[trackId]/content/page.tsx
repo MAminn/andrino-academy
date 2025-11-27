@@ -4,19 +4,35 @@ import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import DashboardLayout from "@/app/components/dashboard/DashboardLayout";
-import useModuleStore, { Module, ModuleType, ModuleCategory } from "@/stores/useModuleStore";
+import ContentViewer from "@/components/ContentViewer";
 import {
-  Video,
-  FileText,
-  File,
-  Image,
-  Download,
-  Play,
   BookOpen,
   ArrowLeft,
-  Clock,
-  CheckCircle,
+  Calendar,
+  Loader2,
 } from "lucide-react";
+
+interface Module {
+  id: string;
+  title: string;
+  description: string | null;
+  weekNumber: number | null;
+  startDate: string | null;
+  category: string;
+  isPublished: boolean;
+  contentItems: any[];
+  tasks: any[];
+  assignments: any[];
+}
+
+interface Track {
+  id: string;
+  name: string;
+  description?: string;
+  instructor?: {
+    name: string;
+  };
+}
 
 export default function TrackContentPage() {
   const { data: session, status } = useSession();
@@ -24,11 +40,11 @@ export default function TrackContentPage() {
   const params = useParams();
   const trackId = params?.trackId as string;
 
-  const { modules, loading, fetchModules } = useModuleStore();
-
-  const [selectedModule, setSelectedModule] = useState<Module | null>(null);
-  const [trackInfo, setTrackInfo] = useState<any>(null);
-  const [selectedCategory, setSelectedCategory] = useState<ModuleCategory | "ALL">("ALL");
+  const [modules, setModules] = useState<Module[]>([]);
+  const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
+  const [trackInfo, setTrackInfo] = useState<Track | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -43,100 +59,73 @@ export default function TrackContentPage() {
   }, [status, session, trackId]);
 
   const loadTrackContent = async () => {
-    // Fetch track info
+    setLoading(true);
+    setError(null);
+    
     try {
+      // Fetch track info
       const trackResponse = await fetch(`/api/tracks/${trackId}`);
       if (trackResponse.ok) {
         const trackData = await trackResponse.json();
         setTrackInfo(trackData.track);
       }
-    } catch (error) {
-      console.error("Error fetching track info:", error);
-    }
 
-    // Fetch modules for this track (published only for students)
-    await fetchModules({ trackId, isPublished: true });
-  };
-
-  useEffect(() => {
-    if (modules.length > 0 && !selectedModule) {
-      // Auto-select first video module
-      const firstVideo = modules.find((m) => m.type === "VIDEO");
-      if (firstVideo) {
-        setSelectedModule(firstVideo);
+      // Fetch published modules for this track
+      const modulesResponse = await fetch(`/api/modules?trackId=${trackId}&isPublished=true`);
+      if (!modulesResponse.ok) {
+        throw new Error("Failed to fetch modules");
       }
-    }
-  }, [modules]);
 
-  const filteredModules =
-    selectedCategory === "ALL"
-      ? modules
-      : modules.filter((m) => m.category === selectedCategory);
+      const modulesData = await modulesResponse.json();
+      const modulesArray = modulesData.modules || modulesData.data || [];
+      
+      // Fetch full details for each module (with content items, tasks, assignments)
+      const detailedModules = await Promise.all(
+        modulesArray.map(async (mod: any) => {
+          try {
+            const detailResponse = await fetch(`/api/modules/${mod.id}`);
+            if (detailResponse.ok) {
+              const detailData = await detailResponse.json();
+              return detailData.module;
+            }
+            return mod;
+          } catch (err) {
+            console.error(`Error fetching module ${mod.id}:`, err);
+            return mod;
+          }
+        })
+      );
 
-  // Group modules by category
-  const modulesByCategory = modules.reduce((acc, module) => {
-    const category = module.category || "UNCATEGORIZED";
-    if (!acc[category]) {
-      acc[category] = [];
-    }
-    acc[category].push(module);
-    return acc;
-  }, {} as Record<string, Module[]>);
-
-  const categories = Object.keys(modulesByCategory);
-
-  const getCategoryLabel = (category: ModuleCategory) => {
-    const labels: Record<ModuleCategory, string> = {
-      LECTURE: "محاضرات",
-      TUTORIAL: "دروس تعليمية",
-      EXERCISE: "تمارين",
-      REFERENCE: "مراجع",
-      SLIDES: "شرائح",
-      HANDOUT: "ملخصات",
-      ASSIGNMENT: "واجبات",
-      SOLUTION: "حلول",
-      SUPPLEMENTARY: "مواد إضافية",
-      UNCATEGORIZED: "غير مصنف",
-    };
-    return labels[category] || category;
-  };
-
-  const getModuleIcon = (type: ModuleType) => {
-    switch (type) {
-      case "VIDEO":
-        return <Video className="w-5 h-5" />;
-      case "PDF":
-        return <FileText className="w-5 h-5" />;
-      case "DOCUMENT":
-        return <File className="w-5 h-5" />;
-      case "IMAGE":
-        return <Image className="w-5 h-5" />;
-      default:
-        return <File className="w-5 h-5" />;
+      setModules(detailedModules);
+      
+      // Auto-select first module
+      if (detailedModules.length > 0) {
+        setSelectedModuleId(detailedModules[0].id);
+      }
+    } catch (err) {
+      console.error("Error loading track content:", err);
+      setError("فشل تحميل محتوى المسار");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return bytes + " B";
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + " KB";
-    if (bytes < 1024 * 1024 * 1024)
-      return (bytes / (1024 * 1024)).toFixed(2) + " MB";
-    return (bytes / (1024 * 1024 * 1024)).toFixed(2) + " GB";
-  };
+  const selectedModule = modules.find((m) => m.id === selectedModuleId);
 
-  const formatDuration = (seconds: number | null) => {
-    if (!seconds) return null;
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
+  // Group content by instructor/student audience
+  const instructorContent = selectedModule?.contentItems?.filter(
+    (item: any) => item.targetAudience === "instructor"
+  ) || [];
+  const studentContent = selectedModule?.contentItems?.filter(
+    (item: any) => item.targetAudience === "student"  || !item.targetAudience // Include items without targetAudience for backward compatibility
+  ) || [];
 
   if (status === "loading" || loading) {
     return (
       <DashboardLayout role="student" title="محتوى المسار">
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto" />
             <p className="mt-4 text-gray-600">جاري التحميل...</p>
           </div>
         </div>
@@ -172,6 +161,12 @@ export default function TrackContentPage() {
           </div>
         </div>
 
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            {error}
+          </div>
+        )}
+
         {modules.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
             <div className="text-center text-gray-500">
@@ -183,199 +178,55 @@ export default function TrackContentPage() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Video Player Section */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Main Content Player */}
-              {selectedModule ? (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                  {/* Video/Content Display */}
-                  {selectedModule.type === "VIDEO" ? (
-                    <div className="aspect-video bg-black">
-                      <video
-                        controls
-                        className="w-full h-full"
-                        poster={selectedModule.fileUrl.replace(
-                          /\.(mp4|webm|ogg)$/,
-                          "-thumbnail.jpg"
-                        )}
-                      >
-                        <source src={selectedModule.fileUrl} type={selectedModule.mimeType} />
-                        متصفحك لا يدعم تشغيل الفيديو
-                      </video>
-                    </div>
-                  ) : selectedModule.type === "PDF" ? (
-                    <div className="h-[600px]">
-                      <iframe
-                        src={selectedModule.fileUrl}
-                        className="w-full h-full"
-                        title={selectedModule.title}
-                      />
-                    </div>
-                  ) : selectedModule.type === "IMAGE" ? (
-                    <div className="p-6 bg-gray-50">
-                      <img
-                        src={selectedModule.fileUrl}
-                        alt={selectedModule.title}
-                        className="max-w-full mx-auto rounded-lg"
-                      />
-                    </div>
-                  ) : (
-                    <div className="p-12 text-center">
-                      <File className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                      <p className="text-gray-600">
-                        اضغط على زر التحميل لعرض المستند
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Content Info */}
-                  <div className="p-6 border-t border-gray-200">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                          {selectedModule.title}
-                        </h2>
-                        {selectedModule.description && (
-                          <p className="text-gray-600">{selectedModule.description}</p>
-                        )}
-                      </div>
-                      <a
-                        href={selectedModule.fileUrl}
-                        download
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                      >
-                        <Download className="w-4 h-4" />
-                        تحميل
-                      </a>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
-                      <span className="flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-full">
-                        {getModuleIcon(selectedModule.type)}
-                        {selectedModule.type === "VIDEO"
-                          ? "فيديو"
-                          : selectedModule.type === "PDF"
-                          ? "PDF"
-                          : selectedModule.type === "DOCUMENT"
-                          ? "مستند"
-                          : "صورة"}
-                      </span>
-                      <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full">
-                        {getCategoryLabel(selectedModule.category)}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <File className="w-4 h-4" />
-                        {formatFileSize(selectedModule.fileSize)}
-                      </span>
-                      {selectedModule.duration && (
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" />
-                          {formatDuration(selectedModule.duration)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-
-                </div>
-              ) : (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-                  <Play className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                  <p className="text-gray-600">اختر محتوى من القائمة للبدء</p>
-                </div>
-              )}
-            </div>
-
-            {/* Sidebar - Content List */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Sidebar - Modules List */}
             <div className="lg:col-span-1">
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 sticky top-6">
                 <div className="p-4 border-b border-gray-200">
                   <h3 className="text-lg font-bold text-gray-900">
-                    المحتوى ({modules.length})
+                    الأسابيع ({modules.length})
                   </h3>
                 </div>
 
-                {/* Category Filter */}
-                <div className="p-4 border-b border-gray-200">
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) =>
-                      setSelectedCategory(e.target.value as ModuleCategory | "ALL")
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="ALL">جميع التصنيفات</option>
-                    {categories.map((category) => (
-                      <option key={category} value={category}>
-                        {getCategoryLabel(category as ModuleCategory)} (
-                        {modulesByCategory[category].length})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Modules List */}
                 <div className="max-h-[600px] overflow-y-auto divide-y divide-gray-200">
-                  {filteredModules.map((module, index) => (
+                  {modules.map((module) => (
                     <button
                       key={module.id}
-                      onClick={() => setSelectedModule(module)}
+                      onClick={() => setSelectedModuleId(module.id)}
                       className={`w-full p-4 text-right hover:bg-gray-50 transition ${
-                        selectedModule?.id === module.id ? "bg-blue-50" : ""
+                        selectedModuleId === module.id ? "bg-blue-50 border-r-4 border-blue-600" : ""
                       }`}
                     >
                       <div className="flex items-start gap-3">
-                        {/* Icon */}
                         <div
                           className={`p-2 rounded-lg flex-shrink-0 ${
-                            module.type === "VIDEO"
-                              ? "bg-purple-100 text-purple-600"
-                              : module.type === "PDF"
-                              ? "bg-red-100 text-red-600"
-                              : module.type === "DOCUMENT"
+                            selectedModuleId === module.id
                               ? "bg-blue-100 text-blue-600"
-                              : "bg-green-100 text-green-600"
+                              : "bg-gray-100 text-gray-600"
                           }`}
                         >
-                          {getModuleIcon(module.type)}
+                          <Calendar className="w-5 h-5" />
                         </div>
 
-                        {/* Content */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-medium text-gray-500">
-                              {index + 1}.
-                            </span>
-                            <h4
-                              className={`font-medium text-sm line-clamp-2 ${
-                                selectedModule?.id === module.id
-                                  ? "text-blue-600"
-                                  : "text-gray-900"
-                              }`}
-                            >
-                              {module.title}
-                            </h4>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-gray-500">
-                            <span>
-                              {module.type === "VIDEO"
-                                ? "فيديو"
-                                : module.type === "PDF"
-                                ? "PDF"
-                                : module.type === "DOCUMENT"
-                                ? "مستند"
-                                : "صورة"}
-                            </span>
-                            {module.duration && (
-                              <>
-                                <span>•</span>
-                                <span className="flex items-center gap-1">
-                                  <Clock className="w-3 h-3" />
-                                  {formatDuration(module.duration)}
-                                </span>
-                              </>
-                            )}
+                        <div className="flex-1 min-w-0 text-right">
+                          {module.weekNumber && (
+                            <div className="text-xs text-gray-500 mb-1">
+                              الأسبوع {module.weekNumber}
+                            </div>
+                          )}
+                          <h4
+                            className={`font-medium text-sm ${
+                              selectedModuleId === module.id
+                                ? "text-blue-600"
+                                : "text-gray-900"
+                            }`}
+                          >
+                            {module.title}
+                          </h4>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {module.contentItems?.length || 0} عنصر محتوى •{" "}
+                            {module.tasks?.length || 0} مهمة •{" "}
+                            {module.assignments?.length || 0} تكليف
                           </div>
                         </div>
                       </div>
@@ -383,6 +234,26 @@ export default function TrackContentPage() {
                   ))}
                 </div>
               </div>
+            </div>
+
+            {/* Main Content - ContentViewer */}
+            <div className="lg:col-span-3">
+              {selectedModule ? (
+                <ContentViewer
+                  moduleId={selectedModule.id}
+                  moduleName={selectedModule.title}
+                  instructorContent={instructorContent}
+                  studentContent={studentContent}
+                  tasks={selectedModule.tasks || []}
+                  assignments={selectedModule.assignments || []}
+                  userRole="STUDENT"
+                />
+              ) : (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+                  <BookOpen className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                  <p className="text-gray-600">اختر أسبوعاً من القائمة للبدء</p>
+                </div>
+              )}
             </div>
           </div>
         )}

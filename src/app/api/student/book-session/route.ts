@@ -52,15 +52,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if slot is already booked
-    if (availability.isBooked) {
-      return NextResponse.json(
-        { error: "This slot is already booked" },
-        { status: 400 }
-      );
-    }
-
-    // Check if student already has a booking for this slot
+    // Check if student already has a booking for this slot (prevent duplicate bookings by same student)
     const existingBooking = availability.bookings.find(
       (b) => b.studentId === session.user.id
     );
@@ -72,43 +64,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create the booking and mark slot as booked in a transaction
-    const result = await prisma.$transaction([
-      prisma.sessionBooking.create({
-        data: {
-          availabilityId,
-          studentId: session.user.id,
-          trackId: availability.trackId,
-          status: "booked",
-          studentNotes: studentNotes || null,
-        },
-        include: {
-          availability: {
-            include: {
-              instructor: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                },
+    // Create the booking (multiple students can book the same slot)
+    const booking = await prisma.sessionBooking.create({
+      data: {
+        availabilityId,
+        studentId: session.user.id,
+        trackId: availability.trackId,
+        status: "confirmed", // Changed from "booked" to "confirmed"
+        studentNotes: studentNotes || null,
+      },
+      include: {
+        availability: {
+          include: {
+            instructor: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
               },
             },
           },
-          track: {
-            select: {
-              id: true,
-              name: true,
-            },
+        },
+        track: {
+          select: {
+            id: true,
+            name: true,
           },
         },
-      }),
-      prisma.instructorAvailability.update({
-        where: { id: availabilityId },
-        data: { isBooked: true },
-      }),
-    ]);
-
-    const booking = result[0];
+      },
+    });
 
     return NextResponse.json(
       {

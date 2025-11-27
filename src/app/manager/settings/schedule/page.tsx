@@ -25,6 +25,7 @@ interface ScheduleSettings {
   weekResetDay: number; // 0-6 (Sunday-Saturday)
   weekResetHour: number; // 0-23
   availabilityOpenHours: number; // Hours before reset when availability opens
+  nextOpenDate?: Date | null; // Specific date when calendar opens
   createdAt: Date;
   updatedAt: Date;
 }
@@ -90,9 +91,14 @@ export default function ScheduleSettingsPage() {
           setWeekResetHour(settingsData.weekResetHour);
           setAvailabilityOpenHours(settingsData.availabilityOpenHours);
           
-          // Calculate next open date based on current settings
-          const nextDate = calculateNextOpenDate(settingsData.weekResetDay, settingsData.weekResetHour);
-          setNextOpenDate(nextDate);
+          // Set nextOpenDate if available, otherwise calculate from weekly settings
+          if (settingsData.nextOpenDate) {
+            const dateStr = new Date(settingsData.nextOpenDate).toISOString().split('T')[0];
+            setNextOpenDate(dateStr);
+          } else {
+            const nextDate = calculateNextOpenDate(settingsData.weekResetDay, settingsData.weekResetHour);
+            setNextOpenDate(nextDate);
+          }
         } catch (err) {
           console.error("Error fetching settings:", err);
           setError("فشل تحميل الإعدادات");
@@ -163,6 +169,7 @@ export default function ScheduleSettingsPage() {
           weekResetDay,
           weekResetHour,
           availabilityOpenHours,
+          nextOpenDate: nextOpenDate || null,
         }),
       });
 

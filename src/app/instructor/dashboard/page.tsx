@@ -24,6 +24,7 @@ import { useSessionStore, useTrackStore, useUIStore } from "@/stores";
 import SessionLinkModal from "@/app/components/instructor/SessionLinkModal";
 import AttendanceModal from "@/app/components/AttendanceModal";
 import SessionSchedulingModal from "@/app/components/coordinator/SessionSchedulingModal";
+import ActiveSessionAlert from "@/components/ActiveSessionAlert";
 import {
   BookOpen,
   Calendar,
@@ -253,6 +254,9 @@ export default function InstructorDashboard() {
 
   return (
     <DashboardLayout title='لوحة تحكم المدرب' role='instructor'>
+      {/* Active Session Alert */}
+      <ActiveSessionAlert role="instructor" />
+
       {/* Welcome Card */}
       <WelcomeCard
         name={session?.user?.name || "المدرب"}

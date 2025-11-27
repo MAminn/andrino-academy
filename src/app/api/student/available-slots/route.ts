@@ -54,11 +54,13 @@ export async function GET(request: NextRequest) {
     const where: any = {
       trackId,
       isConfirmed: true, // Only show confirmed slots
-      isBooked: false, // Only show unbooked slots
+      // Removed isBooked: false to allow multiple students to book the same slot
     };
 
     if (weekStartDate) {
-      where.weekStartDate = new Date(weekStartDate);
+      // Parse date in local time to avoid timezone shift issues
+      const [year, month, day] = weekStartDate.split('-').map(Number);
+      where.weekStartDate = new Date(year, month - 1, day);
     }
 
     // Fetch available slots

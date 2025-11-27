@@ -49,7 +49,7 @@ export default function StudentSessionsPage() {
   }
 
   // Only students can access this page
-  if (session.user.role !== "STUDENT") {
+  if (session.user.role !== "student") {
     redirect("/unauthorized");
   }
 

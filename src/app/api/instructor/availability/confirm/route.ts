@@ -28,7 +28,9 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const weekStart = new Date(weekStartDate);
+    // Parse date in local time to avoid timezone shift issues
+    const [year, month, day] = weekStartDate.split('-').map(Number);
+    const weekStart = new Date(year, month - 1, day);
 
     // Verify track exists and instructor is assigned to it
     const track = await prisma.track.findFirst({
