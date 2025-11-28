@@ -3,7 +3,12 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "../../backend/database/db";
 import * as schema from "../../backend/database/schema";
 
-const BASE_URL = process.env.NEXTAUTH_URL || "http://localhost:3000";
+const BASE_URL = process.env.NEXTAUTH_URL || process.env.BETTER_AUTH_URL || "http://localhost:3000";
+const AUTH_SECRET = process.env.BETTER_AUTH_SECRET || process.env.NEXTAUTH_SECRET;
+
+if (!AUTH_SECRET) {
+  throw new Error("BETTER_AUTH_SECRET or NEXTAUTH_SECRET environment variable is required");
+}
 
 // Better Auth configuration
 export const auth = betterAuth({
@@ -15,13 +20,14 @@ export const auth = betterAuth({
       verification: schema.verificationTokens,
       account: schema.accounts,
     },
+    usePlural: false,
   }),
   emailAndPassword: {
     enabled: true,
     autoSignIn: true,
   },
   baseURL: BASE_URL,
-  secret: process.env.NEXTAUTH_SECRET!,
+  secret: AUTH_SECRET,
   session: {
     expiresIn: 30 * 24 * 60 * 60, // 30 days
     updateAge: 24 * 60 * 60, // Update session every 24 hours
