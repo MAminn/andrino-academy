@@ -52,8 +52,8 @@ async function seed() {
         .limit(1);
 
       if (existingUser.length === 0) {
-        // Hash password
-        const hashedPassword = await bcrypt.hash(account.password, 10);
+        // Hash password with Better Auth compatible salt rounds (12)
+        const hashedPassword = await bcrypt.hash(account.password, 12);
         
         // Create user
         const userId = nanoid();
@@ -81,6 +81,32 @@ async function seed() {
 
         console.log(`✅ Created ${account.role.toUpperCase()} test account: ${account.email}`);
       } else {
+        // Update password hash for existing accounts to ensure compatibility
+        const hashedPassword = await bcrypt.hash(account.password, 12);
+        const userId = existingUser[0].id;
+        
+        // Update or create credential account
+        const existingAccount = await db
+          .select()
+          .from(schema.accounts)
+          .where(eq(schema.accounts.userId, userId))
+          .limit(1);
+        
+        if (existingAccount.length > 0) {
+          await db
+            .update(schema.accounts)
+            .set({ password: hashedPassword })
+            .where(eq(schema.accounts.userId, userId));
+        } else {
+          await db.insert(schema.accounts).values({
+            id: nanoid(),
+            userId: userId,
+            accountId: account.email,
+            providerId: "credential",
+            password: hashedPassword,
+          });
+        }
+        
         console.log(`⏭️  ${account.role.toUpperCase()} test account already exists: ${account.email}`);
       }
     }

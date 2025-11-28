@@ -10,6 +10,8 @@ if (!AUTH_SECRET) {
   throw new Error("BETTER_AUTH_SECRET or NEXTAUTH_SECRET environment variable is required");
 }
 
+console.log("[Better Auth] Initializing with baseURL:", BASE_URL);
+
 // Better Auth configuration
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
