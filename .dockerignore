@@ -49,6 +49,10 @@ prisma/*.db-journal
 !README.md
 docs/
 
+# Scripts (using instrumentation instead)
+scripts/
+*.sh
+
 # CI/CD
 .github/
 .gitlab-ci.yml

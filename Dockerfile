@@ -55,9 +55,8 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/backend ./backend
-COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
-COPY --from=builder /app/start.sh ./start.sh
+COPY --from=builder /app/instrumentation.ts ./instrumentation.ts
 
 # Create necessary directories with proper permissions
 RUN mkdir -p /app/public/uploads/assignments \
@@ -65,7 +64,6 @@ RUN mkdir -p /app/public/uploads/assignments \
     && mkdir -p /app/public/uploads/modules \
     && mkdir -p /app/assets \
     && mkdir -p /app/.next/cache/images \
-    && chmod +x /app/start.sh \
     && chown -R nextjs:nodejs /app/public \
     && chown -R nextjs:nodejs /app/assets \
     && chown -R nextjs:nodejs /app/.next/cache \
@@ -78,5 +76,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Start the application with database initialization
-CMD ["sh", "/app/start.sh"]
+# Start Next.js server (instrumentation will handle initialization)
+CMD ["node_modules/.bin/next", "start"]
