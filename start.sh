@@ -18,6 +18,6 @@ npm run db:migrate || echo "⚠️  Migrations failed or already applied"
 echo "🌱 Seeding database..."
 npm run db:seed || echo "⚠️  Seeding skipped or failed"
 
-# Start the application
+# Start the application directly (not via npm script to avoid double-seeding)
 echo "🌐 Starting Next.js server..."
-npm run start
+exec node_modules/.bin/next start
