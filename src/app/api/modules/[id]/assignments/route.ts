@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { db, schema, eq, and, asc, desc } from "@/lib/db";
 import { writeFile, mkdir, unlink } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
@@ -27,7 +26,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -35,10 +34,11 @@ export async function GET(
 
     const { id } = await params;
 
-    const assignments = await prisma.assignmentNew.findMany({
-      where: { moduleId: id },
-      orderBy: { order: "asc" },
-    });
+    const assignments = await db
+      .select()
+      .from(schema.assignments)
+      .where(eq(schema.assignments.moduleId, id))
+      .orderBy(asc(schema.assignments.order));
 
     return NextResponse.json({ assignments });
   } catch (error) {
@@ -56,7 +56,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -70,15 +70,18 @@ export async function POST(
     const { id: moduleId } = await params;
 
     // Verify module exists
-    const module = await prisma.module.findUnique({
-      where: { id: moduleId },
-      include: {
-        assignments: {
-          orderBy: { order: "desc" },
-          take: 1,
-        },
-      },
-    });
+    const [module] = await db
+      .select()
+      .from(schema.modules)
+      .where(eq(schema.modules.id, moduleId))
+      .limit(1);
+
+    const lastAssignment = await db
+      .select()
+      .from(schema.assignments)
+      .where(eq(schema.assignments.moduleId, moduleId))
+      .orderBy(desc(schema.assignments.order))
+      .limit(1);
 
     if (!module) {
       return NextResponse.json(
@@ -155,11 +158,12 @@ export async function POST(
     // Determine order (auto-increment if not provided)
     const assignmentOrder = order
       ? parseInt(order)
-      : (module.assignments[0]?.order ?? -1) + 1;
+      : (lastAssignment[0]?.order ?? -1) + 1;
 
     // Create assignment
-    const assignment = await prisma.assignmentNew.create({
-      data: {
+    const result = await db
+      .insert(schema.assignments)
+      .values({
         moduleId,
         title,
         description,
@@ -169,8 +173,13 @@ export async function POST(
         mimeType,
         dueDate: dueDate ? new Date(dueDate) : null,
         order: assignmentOrder,
-      },
-    });
+      });
+
+    const [assignment] = await db
+      .select()
+      .from(schema.assignments)
+      .where(eq(schema.assignments.id, String(result[0].insertId)))
+      .limit(1);
 
     return NextResponse.json(
       {
@@ -194,7 +203,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -226,10 +235,16 @@ export async function PUT(
     if (order !== undefined) updateData.order = order;
 
     // Update assignment
-    const assignment = await prisma.assignmentNew.update({
-      where: { id: assignmentId },
-      data: updateData,
-    });
+    await db
+      .update(schema.assignments)
+      .set(updateData)
+      .where(eq(schema.assignments.id, assignmentId));
+
+    const [assignment] = await db
+      .select()
+      .from(schema.assignments)
+      .where(eq(schema.assignments.id, assignmentId))
+      .limit(1);
 
     return NextResponse.json({
       message: "Assignment updated successfully",
@@ -250,7 +265,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -272,9 +287,11 @@ export async function DELETE(
     }
 
     // Fetch assignment
-    const assignment = await prisma.assignmentNew.findUnique({
-      where: { id: assignmentId },
-    });
+    const [assignment] = await db
+      .select()
+      .from(schema.assignments)
+      .where(eq(schema.assignments.id, assignmentId))
+      .limit(1);
 
     if (!assignment) {
       return NextResponse.json(
@@ -295,9 +312,9 @@ export async function DELETE(
     }
 
     // Delete assignment from database (submissions will cascade delete)
-    await prisma.assignmentNew.delete({
-      where: { id: assignmentId },
-    });
+    await db
+      .delete(schema.assignments)
+      .where(eq(schema.assignments.id, assignmentId));
 
     return NextResponse.json({
       message: "Assignment deleted successfully",

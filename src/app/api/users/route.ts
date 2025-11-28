@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { db, schema, eq, asc } from "@/lib/db";
 
 // GET /api/users - Get users with optional role filter
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({
+      headers: request.headers,
+    });
 
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -21,61 +22,46 @@ export async function GET(request: NextRequest) {
     const role = searchParams.get("role");
     const include = searchParams.get("include");
 
-    // Build where clause
-    const whereClause: { role?: string } = {};
-    if (role) {
-      whereClause.role = role;
-    }
+    // Build where clause  
+    const users = role 
+      ? await db.select().from(schema.users).where(eq(schema.users.role, role)).orderBy(asc(schema.users.name))
+      : await db.select().from(schema.users).orderBy(asc(schema.users.name));
 
-    // Build include/select clause based on include parameter
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const queryOptions: any = {
-      where: whereClause,
-      orderBy: { name: "asc" },
-    };
-
+    // If include=tracks, fetch tracks separately
     if (include === "tracks") {
-      queryOptions.select = {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        createdAt: true,
-        instructedTracks: {
-          include: {
-            grade: {
-              select: { id: true, name: true },
-            },
-            _count: {
-              select: { liveSessions: true },
-            },
-          },
-        },
-      };
-    } else {
-      queryOptions.select = {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        createdAt: true,
-      };
-    }
+      const usersWithTracks = await Promise.all(
+        users.map(async (user) => {
+          const tracks = await db
+            .select({
+              id: schema.tracks.id,
+              name: schema.tracks.name,
+              gradeId: schema.tracks.gradeId,
+            })
+            .from(schema.tracks)
+            .where(eq(schema.tracks.instructorId, user.id));
 
-    const users = await prisma.user.findMany(queryOptions);
+          return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            createdAt: user.createdAt,
+            tracks,
+            _count: { tracks: tracks.length },
+          };
+        })
+      );
+      return NextResponse.json({ users: usersWithTracks });
+    }
 
     // Transform data for consistency
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const transformedUsers = users.map((user: any) => ({
+    const transformedUsers = users.map((user) => ({
       id: user.id,
       name: user.name,
       email: user.email,
       role: user.role,
       createdAt: user.createdAt,
-      tracks: user.instructedTracks || [],
-      _count: {
-        tracks: user.instructedTracks?.length || 0,
-      },
+      _count: { tracks: 0 },
     }));
 
     return NextResponse.json({ users: transformedUsers });

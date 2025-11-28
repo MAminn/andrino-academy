@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { db, schema, eq, and } from "@/lib/db";
 
 export async function GET(
   request: NextRequest,
@@ -9,33 +9,73 @@ export async function GET(
     const { id } = await params;
 
     // Get student with attendance and track data
-    const student = await prisma.user.findUnique({
-      where: { id },
-      include: {
-        assignedGrade: {
-          include: {
-            tracks: {
-              include: {
-                liveSessions: {
-                  include: {
-                    attendances: {
-                      where: { studentId: id },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
+    const studentData = await db
+      .select({
+        id: schema.users.id,
+        name: schema.users.name,
+        gradeId: schema.users.gradeId,
+      })
+      .from(schema.users)
+      .where(eq(schema.users.id, id))
+      .limit(1);
 
-    if (!student) {
+    if (studentData.length === 0) {
       return NextResponse.json({ error: "الطالب غير موجود" }, { status: 404 });
     }
 
+    const student = studentData[0];
+
+    // Get assigned grade with tracks
+    let assignedGrade = null;
+    if (student.gradeId) {
+      const tracksData = await db
+        .select({
+          id: schema.tracks.id,
+          name: schema.tracks.name,
+        })
+        .from(schema.tracks)
+        .where(eq(schema.tracks.gradeId, student.gradeId));
+
+      const tracks = await Promise.all(
+        tracksData.map(async (track) => {
+          const liveSessionsData = await db
+            .select({
+              id: schema.liveSessions.id,
+            })
+            .from(schema.liveSessions)
+            .where(eq(schema.liveSessions.trackId, track.id));
+
+          const liveSessions = await Promise.all(
+            liveSessionsData.map(async (session) => {
+              const attendances = await db
+                .select({ status: schema.sessionAttendances.status })
+                .from(schema.sessionAttendances)
+                .where(
+                  and(
+                    eq(schema.sessionAttendances.sessionId, session.id),
+                    eq(schema.sessionAttendances.studentId, id)
+                  )
+                );
+
+              return {
+                ...session,
+                attendances,
+              };
+            })
+          );
+
+          return {
+            ...track,
+            liveSessions,
+          };
+        })
+      );
+
+      assignedGrade = { tracks };
+    }
+
     // Calculate achievement data
-    const tracks = student.assignedGrade?.tracks || [];
+    const tracks = assignedGrade?.tracks || [];
     let totalSessions = 0;
     let attendedSessions = 0;
     let completedTracks = 0;

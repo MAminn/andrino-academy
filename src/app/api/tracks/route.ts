@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+
+import { db, schema, eq, and, or, desc, asc, count, sql, isNull } from "@/lib/db";
 import {
   createSuccessResponse,
   ErrorResponses,
@@ -11,9 +11,9 @@ import {
 // GET /api/tracks - Get tracks (with optional grade filter)
 export async function GET(request: NextRequest) {
   const result = await withDatabaseErrorHandling(async () => {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
-    if (!session) {
+    if (!session?.user) {
       return ErrorResponses.unauthorized();
     }
 
@@ -49,44 +49,92 @@ export async function GET(request: NextRequest) {
 
     // For students, only show tracks from their assigned grade
     if (session.user.role === "student") {
-      const student = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { gradeId: true },
-      });
+      const [student] = await db
+        .select({ gradeId: schema.users.gradeId })
+        .from(schema.users)
+        .where(eq(schema.users.id, session.user.id));
       if (student?.gradeId) {
         whereClause.gradeId = student.gradeId;
       }
     }
 
-    const tracks = await prisma.track.findMany({
-      where: whereClause,
-      include: {
-        grade: {
-          select: { id: true, name: true, description: true },
-        },
-        instructor: {
-          select: { id: true, name: true, email: true },
-        },
-        coordinator: {
-          select: { id: true, name: true, email: true },
-        },
-        liveSessions: {
-          select: {
-            id: true,
-            title: true,
-            date: true,
-            startTime: true,
-            endTime: true,
-            status: true,
-          },
-          orderBy: { date: "asc" },
-        },
-        _count: {
-          select: { liveSessions: true },
-        },
-      },
-      orderBy: [{ grade: { order: "asc" } }, { order: "asc" }],
-    });
+    // Build Drizzle where conditions
+    const conditions = [];
+    if (whereClause.gradeId) {
+      conditions.push(eq(schema.tracks.gradeId, whereClause.gradeId));
+    }
+    if (whereClause.instructorId) {
+      conditions.push(eq(schema.tracks.instructorId, whereClause.instructorId));
+    }
+    if (whereClause.coordinatorId) {
+      conditions.push(eq(schema.tracks.coordinatorId, whereClause.coordinatorId));
+    }
+
+    const tracksRaw = await db
+      .select()
+      .from(schema.tracks)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(asc(schema.tracks.order));
+
+    // Manually fetch relations
+    const tracks = await Promise.all(
+      tracksRaw.map(async (track) => {
+        const [grade] = track.gradeId
+          ? await db
+              .select({
+                id: schema.grades.id,
+                name: schema.grades.name,
+                description: schema.grades.description,
+              })
+              .from(schema.grades)
+              .where(eq(schema.grades.id, track.gradeId))
+          : [null];
+
+        const [instructor] = track.instructorId
+          ? await db
+              .select({
+                id: schema.users.id,
+                name: schema.users.name,
+                email: schema.users.email,
+              })
+              .from(schema.users)
+              .where(eq(schema.users.id, track.instructorId))
+          : [null];
+
+        const [coordinator] = track.coordinatorId
+          ? await db
+              .select({
+                id: schema.users.id,
+                name: schema.users.name,
+                email: schema.users.email,
+              })
+              .from(schema.users)
+              .where(eq(schema.users.id, track.coordinatorId))
+          : [null];
+
+        const liveSessions = await db
+          .select({
+            id: schema.liveSessions.id,
+            title: schema.liveSessions.title,
+            date: schema.liveSessions.date,
+            startTime: schema.liveSessions.startTime,
+            endTime: schema.liveSessions.endTime,
+            status: schema.liveSessions.status,
+          })
+          .from(schema.liveSessions)
+          .where(eq(schema.liveSessions.trackId, track.id))
+          .orderBy(asc(schema.liveSessions.date));
+
+        return {
+          ...track,
+          grade,
+          instructor,
+          coordinator,
+          liveSessions,
+          _count: { liveSessions: liveSessions.length },
+        };
+      })
+    );
 
     return createSuccessResponse(tracks, "تم استرداد المسارات بنجاح");
   });
@@ -97,9 +145,9 @@ export async function GET(request: NextRequest) {
 // POST /api/tracks - Create a new track (Manager only)
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -148,18 +196,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify grade exists
-    const grade = await prisma.grade.findUnique({
-      where: { id: gradeId },
-    });
+    const [grade] = await db
+      .select()
+      .from(schema.grades)
+      .where(eq(schema.grades.id, gradeId));
 
     if (!grade) {
       return NextResponse.json({ error: "Grade not found" }, { status: 400 });
     }
 
     // Verify instructor exists and has instructor role
-    const instructor = await prisma.user.findUnique({
-      where: { id: instructorId },
-    });
+    const [instructor] = await db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.id, instructorId));
 
     if (!instructor || instructor.role !== "instructor") {
       return NextResponse.json(
@@ -169,9 +219,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify coordinator exists and has coordinator role
-    const coordinator = await prisma.user.findUnique({
-      where: { id: finalCoordinatorId },
-    });
+    const [coordinator] = await db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.id, finalCoordinatorId));
 
     if (!coordinator || coordinator.role !== "coordinator") {
       return NextResponse.json(
@@ -183,15 +234,18 @@ export async function POST(request: NextRequest) {
     // If no order provided, set it to the next available order within the grade
     let trackOrder = order;
     if (!trackOrder) {
-      const lastTrack = await prisma.track.findFirst({
-        where: { gradeId },
-        orderBy: { order: "desc" },
-      });
+      const [lastTrack] = await db
+        .select()
+        .from(schema.tracks)
+        .where(eq(schema.tracks.gradeId, gradeId))
+        .orderBy(desc(schema.tracks.order))
+        .limit(1);
       trackOrder = (lastTrack?.order || 0) + 1;
     }
 
-    const track = await prisma.track.create({
-      data: {
+    const [newTrackId] = await db
+      .insert(schema.tracks)
+      .values({
         name,
         description,
         gradeId,
@@ -199,22 +253,49 @@ export async function POST(request: NextRequest) {
         coordinatorId: finalCoordinatorId,
         order: trackOrder,
         isActive: true,
-      },
-      include: {
-        grade: {
-          select: { id: true, name: true, description: true },
-        },
-        instructor: {
-          select: { id: true, name: true, email: true },
-        },
-        coordinator: {
-          select: { id: true, name: true, email: true },
-        },
-        _count: {
-          select: { liveSessions: true },
-        },
-      },
-    });
+      })
+      .$returningId();
+
+    // Fetch created track with relations
+    const [newTrack] = await db
+      .select()
+      .from(schema.tracks)
+      .where(eq(schema.tracks.id, newTrackId.id));
+
+    const [trackGrade] = await db
+      .select({
+        id: schema.grades.id,
+        name: schema.grades.name,
+        description: schema.grades.description,
+      })
+      .from(schema.grades)
+      .where(eq(schema.grades.id, newTrack.gradeId));
+
+    const [trackInstructor] = await db
+      .select({
+        id: schema.users.id,
+        name: schema.users.name,
+        email: schema.users.email,
+      })
+      .from(schema.users)
+      .where(eq(schema.users.id, newTrack.instructorId));
+
+    const [trackCoordinator] = await db
+      .select({
+        id: schema.users.id,
+        name: schema.users.name,
+        email: schema.users.email,
+      })
+      .from(schema.users)
+      .where(eq(schema.users.id, newTrack.coordinatorId));
+
+    const track = {
+      ...newTrack,
+      grade: trackGrade,
+      instructor: trackInstructor,
+      coordinator: trackCoordinator,
+      _count: { liveSessions: 0 },
+    };
 
     return NextResponse.json({ track }, { status: 201 });
   } catch (error) {
@@ -225,3 +306,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

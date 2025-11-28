@@ -11,7 +11,7 @@
 
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth-client";
 import { useEffect, useState } from "react";
 import { redirect } from "next/navigation";
 import DashboardLayout from "@/app/components/dashboard/DashboardLayout";
@@ -19,7 +19,7 @@ import AvailabilityCalendar from "@/components/AvailabilityCalendar";
 import { Calendar, Info, BookOpen } from "lucide-react";
 
 export default function InstructorAvailabilityPage() {
-  const { data: session, status } = useSession();
+  const { data: session, isPending } = useSession();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -27,7 +27,7 @@ export default function InstructorAvailabilityPage() {
   }, []);
 
   // Handle authentication and authorization
-  if (status === "loading" || !mounted) {
+  if (isPending || !mounted) {
     return (
       <DashboardLayout title="إدارة التوافر" role="INSTRUCTOR">
         <div className="flex items-center justify-center min-h-screen">
@@ -124,43 +124,7 @@ export default function InstructorAvailabilityPage() {
           </div>
         </div>
 
-        {/* Important Notes */}
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 mb-6">
-          <div className="flex items-start gap-3">
-            <BookOpen className="h-6 w-6 text-amber-600 flex-shrink-0 mt-1" />
-            <div className="space-y-2">
-              <h3 className="font-semibold text-amber-900 text-lg">
-                ملاحظات هامة
-              </h3>
-              <ul className="space-y-2 text-amber-800">
-                <li className="flex items-start gap-2">
-                  <span className="text-amber-600">⚠️</span>
-                  <span>
-                    الأوقات المتاحة: من 1:00 ظهرًا إلى 10:00 مساءً فقط
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-amber-600">⚠️</span>
-                  <span>
-                    بعد تأكيد التوافر، لن تتمكن من تعديل الأوقات المؤكدة
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-amber-600">⚠️</span>
-                  <span>
-                    الفترات المحجوزة من قبل الطلاب لا يمكن حذفها أو تعديلها
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-amber-600">⚠️</span>
-                  <span>
-                    يمكنك تحديد أوقات مختلفة لكل مسار بشكل منفصل
-                  </span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
+        
 
         {/* Availability Calendar Component */}
         <AvailabilityCalendar
@@ -195,3 +159,4 @@ export default function InstructorAvailabilityPage() {
     </DashboardLayout>
   );
 }
+

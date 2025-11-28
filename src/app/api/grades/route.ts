@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { db, schema, eq, asc, count } from "@/lib/db";
 
 // GET /api/grades - Get all grades
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -18,35 +17,27 @@ export async function GET() {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const grades = await prisma.grade.findMany({
-      include: {
-        tracks: {
-          include: {
-            instructor: {
-              select: { id: true, name: true, email: true },
-            },
-            coordinator: {
-              select: { id: true, name: true, email: true },
-            },
-            _count: {
-              select: { liveSessions: true },
-            },
+    const grades = await db.select().from(schema.grades).orderBy(asc(schema.grades.order));
+    
+    // Fetch related data for each grade
+    const gradesWithDetails = await Promise.all(
+      grades.map(async (grade) => {
+        const tracks = await db.select().from(schema.tracks).where(eq(schema.tracks.gradeId, grade.id));
+        const students = await db.select({ id: schema.users.id, name: schema.users.name, email: schema.users.email }).from(schema.users).where(eq(schema.users.gradeId, grade.id));
+        
+        return {
+          ...grade,
+          tracks,
+          students,
+          _count: {
+            students: students.length,
+            tracks: tracks.length,
           },
-        },
-        students: {
-          select: { id: true, name: true, email: true },
-        },
-        _count: {
-          select: {
-            students: true,
-            tracks: true,
-          },
-        },
-      },
-      orderBy: { order: "asc" },
-    });
+        };
+      })
+    );
 
-    return NextResponse.json({ grades });
+    return NextResponse.json({ grades: gradesWithDetails });
   } catch (error) {
     console.error("Error fetching grades:", error);
     return NextResponse.json(
@@ -59,9 +50,9 @@ export async function GET() {
 // POST /api/grades - Create a new grade (Manager only)
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -82,9 +73,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if grade name already exists
-    const existingGrade = await prisma.grade.findUnique({
-      where: { name },
-    });
+    const [existingGrade] = await db.select().from(schema.grades).where(eq(schema.grades.name, name)).limit(1);
 
     if (existingGrade) {
       return NextResponse.json(
@@ -96,28 +85,16 @@ export async function POST(request: NextRequest) {
     // If no order provided, set it to the next available order
     let gradeOrder = order;
     if (!gradeOrder) {
-      const lastGrade = await prisma.grade.findFirst({
-        orderBy: { order: "desc" },
-      });
-      gradeOrder = (lastGrade?.order || 0) + 1;
+      const lastGrades = await db.select().from(schema.grades).orderBy(asc(schema.grades.order)).limit(1);
+      gradeOrder = (lastGrades[0]?.order || 0) + 1;
     }
 
-    const grade = await prisma.grade.create({
-      data: {
-        name,
-        description,
-        order: gradeOrder,
-        isActive: true,
-      },
-      include: {
-        _count: {
-          select: {
-            students: true,
-            tracks: true,
-          },
-        },
-      },
-    });
+    const [grade] = await db.insert(schema.grades).values({
+      name,
+      description,
+      order: gradeOrder,
+      isActive: true,
+    }).$returningId();
 
     return NextResponse.json({ grade }, { status: 201 });
   } catch (error) {

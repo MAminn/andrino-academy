@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { db, schema, eq, and, count, asc } from "@/lib/db";
 import { unlink } from "fs/promises";
 import fs from "fs";
 import path from "path";
-import { ModuleCategory } from "@prisma/client";
+
+type ModuleCategory = "LECTURE" | "TUTORIAL" | "EXERCISE" | "REFERENCE" | "SLIDES" | "HANDOUT" | "ASSIGNMENT" | "SOLUTION" | "SUPPLEMENTARY" | "PROJECT" | "UNCATEGORIZED";
 
 // Route segment config for large file uploads
 export const runtime = 'nodejs';
@@ -18,7 +18,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -26,36 +26,13 @@ export async function GET(
 
     const { id } = await params;
 
-    const module = await prisma.module.findUnique({
-      where: { id },
-      include: {
-        track: {
-          select: {
-            id: true,
-            name: true,
-            gradeId: true,
-          },
-        },
-        session: {
-          select: {
-            id: true,
-            title: true,
-            date: true,
-          },
-        },
-        contentItems: {
-          orderBy: { order: "asc" },
-        },
-        tasks: {
-          orderBy: { order: "asc" },
-        },
-        assignments: {
-          orderBy: { order: "asc" },
-        },
-      },
-    });
+    const [moduleData] = await db
+      .select()
+      .from(schema.modules)
+      .where(eq(schema.modules.id, id))
+      .limit(1);
 
-    if (!module) {
+    if (!moduleData) {
       return NextResponse.json(
         { error: "Module not found" },
         { status: 404 }
@@ -63,9 +40,53 @@ export async function GET(
     }
 
     // Students can only see published modules
-    if (session.user.role === "student" && !module.isPublished) {
+    if (session.user.role === "student" && !moduleData.isPublished) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+
+    // Fetch related data
+    const [track] = await db
+      .select({ id: schema.tracks.id, name: schema.tracks.name, gradeId: schema.tracks.gradeId })
+      .from(schema.tracks)
+      .where(eq(schema.tracks.id, moduleData.trackId))
+      .limit(1);
+
+    let session_data = null;
+    if (moduleData.sessionId) {
+      const [sess] = await db
+        .select({ id: schema.liveSessions.id, title: schema.liveSessions.title, date: schema.liveSessions.date })
+        .from(schema.liveSessions)
+        .where(eq(schema.liveSessions.id, moduleData.sessionId))
+        .limit(1);
+      session_data = sess;
+    }
+
+    const contentItems = await db
+      .select()
+      .from(schema.contentItems)
+      .where(eq(schema.contentItems.moduleId, id))
+      .orderBy(asc(schema.contentItems.order));
+
+    const tasks = await db
+      .select()
+      .from(schema.tasks)
+      .where(eq(schema.tasks.moduleId, id))
+      .orderBy(asc(schema.tasks.order));
+
+    const assignments = await db
+      .select()
+      .from(schema.assignments)
+      .where(eq(schema.assignments.moduleId, id))
+      .orderBy(asc(schema.assignments.order));
+
+    const module: any = {
+      ...moduleData,
+      track,
+      session: session_data,
+      contentItems,
+      tasks,
+      assignments,
+    };
 
     return NextResponse.json({ module });
   } catch (error) {
@@ -83,7 +104,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -97,9 +118,11 @@ export async function PUT(
     const { id } = await params;
 
     // Check if module exists
-    const existingModule = await prisma.module.findUnique({
-      where: { id },
-    });
+    const [existingModule] = await db
+      .select()
+      .from(schema.modules)
+      .where(eq(schema.modules.id, id))
+      .limit(1);
 
     if (!existingModule) {
       return NextResponse.json(
@@ -155,33 +178,60 @@ export async function PUT(
     if (startDate !== undefined && startDate !== null) updateData.startDate = new Date(startDate as string);
 
     // Update module
-    const module = await prisma.module.update({
-      where: { id },
-      data: updateData,
-      include: {
-        track: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        session: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
-        contentItems: {
-          orderBy: { order: "asc" },
-        },
-        tasks: {
-          orderBy: { order: "asc" },
-        },
-        assignments: {
-          orderBy: { order: "asc" },
-        },
-      },
-    });
+    await db
+      .update(schema.modules)
+      .set(updateData)
+      .where(eq(schema.modules.id, id));
+
+    // Fetch updated module with relations
+    const [updatedModule] = await db
+      .select()
+      .from(schema.modules)
+      .where(eq(schema.modules.id, id))
+      .limit(1);
+
+    const [track] = await db
+      .select({ id: schema.tracks.id, name: schema.tracks.name })
+      .from(schema.tracks)
+      .where(eq(schema.tracks.id, updatedModule.trackId))
+      .limit(1);
+
+    let session_data = null;
+    if (updatedModule.sessionId) {
+      const [sess] = await db
+        .select({ id: schema.liveSessions.id, title: schema.liveSessions.title })
+        .from(schema.liveSessions)
+        .where(eq(schema.liveSessions.id, updatedModule.sessionId))
+        .limit(1);
+      session_data = sess;
+    }
+
+    const contentItems = await db
+      .select()
+      .from(schema.contentItems)
+      .where(eq(schema.contentItems.moduleId, id))
+      .orderBy(asc(schema.contentItems.order));
+
+    const tasks = await db
+      .select()
+      .from(schema.tasks)
+      .where(eq(schema.tasks.moduleId, id))
+      .orderBy(asc(schema.tasks.order));
+
+    const assignments = await db
+      .select()
+      .from(schema.assignments)
+      .where(eq(schema.assignments.moduleId, id))
+      .orderBy(asc(schema.assignments.order));
+
+    const module: any = {
+      ...updatedModule,
+      track,
+      session: session_data,
+      contentItems,
+      tasks,
+      assignments,
+    };
 
     return NextResponse.json({ module, message: "Module updated successfully" });
   } catch (error) {
@@ -199,7 +249,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -213,12 +263,11 @@ export async function DELETE(
     const { id } = await params;
 
     // Check if module exists
-    const existingModule = await prisma.module.findUnique({
-      where: { id },
-      include: {
-        contentItems: true,
-      },
-    });
+    const [existingModule] = await db
+      .select()
+      .from(schema.modules)
+      .where(eq(schema.modules.id, id))
+      .limit(1);
 
     if (!existingModule) {
       return NextResponse.json(
@@ -227,8 +276,14 @@ export async function DELETE(
       );
     }
 
+    // Get content items for file deletion
+    const contentItems = await db
+      .select()
+      .from(schema.contentItems)
+      .where(eq(schema.contentItems.moduleId, id));
+
     // Delete all content item files from filesystem
-    for (const contentItem of existingModule.contentItems) {
+    for (const contentItem of contentItems) {
       try {
         const filePath = path.join(
           process.cwd(),
@@ -243,9 +298,9 @@ export async function DELETE(
     }
 
     // Delete module (contentItems, tasks, assignments will cascade delete)
-    await prisma.module.delete({
-      where: { id },
-    });
+    await db
+      .delete(schema.modules)
+      .where(eq(schema.modules.id, id));
 
     return NextResponse.json({ message: "Module deleted successfully" });
   } catch (error) {

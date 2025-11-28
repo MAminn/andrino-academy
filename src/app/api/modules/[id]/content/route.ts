@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { db, schema, eq, and, asc } from "@/lib/db";
 import { writeFile, mkdir, unlink } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
-import { ModuleType } from "@prisma/client";
+
+type ModuleType = "VIDEO" | "PDF" | "DOCUMENT" | "IMAGE";
 
 // Route segment config for large file uploads
 export const runtime = 'nodejs';
@@ -38,7 +38,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -46,10 +46,11 @@ export async function GET(
 
     const { id } = await params;
 
-    const contentItems = await prisma.contentItem.findMany({
-      where: { moduleId: id },
-      orderBy: { order: "asc" },
-    });
+    const contentItems = await db
+      .select()
+      .from(schema.contentItems)
+      .where(eq(schema.contentItems.moduleId, id))
+      .orderBy(asc(schema.contentItems.order));
 
     return NextResponse.json({ contentItems });
   } catch (error) {
@@ -67,7 +68,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -81,15 +82,18 @@ export async function POST(
     const { id: moduleId } = await params;
 
     // Verify module exists
-    const module = await prisma.module.findUnique({
-      where: { id: moduleId },
-      include: {
-        contentItems: {
-          orderBy: { order: "desc" },
-          take: 1,
-        },
-      },
-    });
+    const [module] = await db
+      .select()
+      .from(schema.modules)
+      .where(eq(schema.modules.id, moduleId))
+      .limit(1);
+
+    const lastContentItem = await db
+      .select()
+      .from(schema.contentItems)
+      .where(eq(schema.contentItems.moduleId, moduleId))
+      .orderBy(asc(schema.contentItems.order))
+      .limit(1);
 
     if (!module) {
       return NextResponse.json(
@@ -169,11 +173,12 @@ export async function POST(
     // Determine order (auto-increment if not provided)
     const contentOrder = order
       ? parseInt(order)
-      : (module.contentItems[0]?.order ?? -1) + 1;
+      : (lastContentItem[0]?.order ?? -1) + 1;
 
     // Create content item in database
-    const contentItem = await prisma.contentItem.create({
-      data: {
+    const result = await db
+      .insert(schema.contentItems)
+      .values({
         moduleId,
         type: type as ModuleType,
         fileUrl: `/api/uploads/modules/${filename}`,
@@ -183,8 +188,13 @@ export async function POST(
         duration,
         order: contentOrder,
         targetAudience: targetAudience || null,
-      },
-    });
+      });
+
+    const [contentItem] = await db
+      .select()
+      .from(schema.contentItems)
+      .where(eq(schema.contentItems.id, String(result[0].insertId)))
+      .limit(1);
 
     return NextResponse.json(
       {
@@ -208,7 +218,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -230,9 +240,11 @@ export async function DELETE(
     }
 
     // Fetch content item
-    const contentItem = await prisma.contentItem.findUnique({
-      where: { id: contentItemId },
-    });
+    const [contentItem] = await db
+      .select()
+      .from(schema.contentItems)
+      .where(eq(schema.contentItems.id, contentItemId))
+      .limit(1);
 
     if (!contentItem) {
       return NextResponse.json(
@@ -251,9 +263,9 @@ export async function DELETE(
     }
 
     // Delete content item from database
-    await prisma.contentItem.delete({
-      where: { id: contentItemId },
-    });
+    await db
+      .delete(schema.contentItems)
+      .where(eq(schema.contentItems.id, contentItemId));
 
     return NextResponse.json({
       message: "Content item deleted successfully",

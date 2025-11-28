@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+
+import { db, schema, eq, and, or, desc, asc, count, sql, isNull, inArray } from "@/lib/db";
 
 // POST /api/students/assign-grade - Bulk assign students to grade
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -49,9 +49,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify grade exists
-    const grade = await prisma.grade.findUnique({
-      where: { id: gradeId },
-    });
+    const grade = await db
+      .select()
+      .from(schema.grades)
+      .where(eq(schema.grades.id, gradeId))
+      .then((r) => r[0]);
 
     if (!grade) {
       return NextResponse.json({ error: "Grade not found" }, { status: 400 });
@@ -65,13 +67,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify all users are students
-    const users = await prisma.user.findMany({
-      where: {
-        id: { in: studentIdsArray },
-        role: "student",
-      },
-      select: { id: true, name: true, email: true },
-    });
+    const users = await db
+      .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
+      .from(schema.users)
+      .where(and(inArray(schema.users.id, studentIdsArray), eq(schema.users.role, "student")));
 
     if (users.length !== studentIdsArray.length) {
       return NextResponse.json(
@@ -81,47 +80,47 @@ export async function POST(request: NextRequest) {
     }
 
     // Bulk update students
-    const updateResult = await prisma.user.updateMany({
-      where: {
-        id: { in: studentIdsArray },
-        role: "student",
-      },
-      data: {
-        gradeId: gradeId,
-      },
-    });
+    const updateResult = await db
+      .update(schema.users)
+      .set({ gradeId: gradeId })
+      .where(and(inArray(schema.users.id, studentIdsArray), eq(schema.users.role, "student")));
 
-    // Get updated students for response
-    const updatedStudents = await prisma.user.findMany({
-      where: {
-        id: { in: studentIdsArray },
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        age: true,
-        priorExperience: true,
-        gradeId: true,
-        assignedGrade: {
-          select: {
-            id: true,
-            name: true,
-            description: true,
-          },
-        },
-      },
-    });
+    // Get updated students with grade relation
+    const updatedStudentsBase = await db
+      .select({
+        id: schema.users.id,
+        name: schema.users.name,
+        email: schema.users.email,
+        age: schema.users.age,
+        priorExperience: schema.users.priorExperience,
+        gradeId: schema.users.gradeId,
+      })
+      .from(schema.users)
+      .where(inArray(schema.users.id, studentIdsArray));
+
+    // Fetch grade relation for each student
+    const updatedStudents = await Promise.all(
+      updatedStudentsBase.map(async (student) => {
+        const assignedGrade = student.gradeId
+          ? await db
+              .select({ id: schema.grades.id, name: schema.grades.name, description: schema.grades.description })
+              .from(schema.grades)
+              .where(eq(schema.grades.id, student.gradeId))
+              .then((r) => r[0] || null)
+          : null;
+        return { ...student, assignedGrade };
+      })
+    );
 
     // Log the assignment
     console.log(
-      `${updateResult.count} students assigned to grade ${grade.name} by ${session.user.email}`
+      `${updatedStudents.length} students assigned to grade ${grade.name} by ${session.user.email}`
     );
 
     return NextResponse.json({
       students: updatedStudents,
-      assignedCount: updateResult.count,
-      message: `${updateResult.count} students assigned to grade ${grade.name} successfully`,
+      assignedCount: updatedStudents.length,
+      message: `${updatedStudents.length} students assigned to grade ${grade.name} successfully`,
     });
   } catch (error) {
     console.error("Error assigning students to grade:", error);
@@ -131,3 +130,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

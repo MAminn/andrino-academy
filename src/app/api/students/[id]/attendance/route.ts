@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { db, schema, eq } from "@/lib/db";
 
 export async function GET(
   request: NextRequest,
@@ -9,29 +9,81 @@ export async function GET(
     const { id } = await params;
 
     // Get all SessionAttendance records for the student (LiveSessions)
-    const sessionAttendanceRecords = await prisma.sessionAttendance.findMany({
-      where: { studentId: id },
-      include: {
-        session: {
-          include: {
+    const sessionAttendanceRecords = await db
+      .select({
+        id: schema.sessionAttendances.id,
+        status: schema.sessionAttendances.status,
+        markedAt: schema.sessionAttendances.markedAt,
+        notes: schema.sessionAttendances.notes,
+        sessionId: schema.sessionAttendances.sessionId,
+      })
+      .from(schema.sessionAttendances)
+      .where(eq(schema.sessionAttendances.studentId, id));
+
+    const recordsWithDetails = await Promise.all(
+      sessionAttendanceRecords.map(async (record) => {
+        const [session] = await db
+          .select({
+            id: schema.liveSessions.id,
+            title: schema.liveSessions.title,
+            date: schema.liveSessions.date,
+            startTime: schema.liveSessions.startTime,
+            endTime: schema.liveSessions.endTime,
+            trackId: schema.liveSessions.trackId,
+          })
+          .from(schema.liveSessions)
+          .where(eq(schema.liveSessions.id, record.sessionId))
+          .limit(1);
+
+        const [track] = await db
+          .select({
+            id: schema.tracks.id,
+            name: schema.tracks.name,
+            gradeId: schema.tracks.gradeId,
+            instructorId: schema.tracks.instructorId,
+          })
+          .from(schema.tracks)
+          .where(eq(schema.tracks.id, session.trackId))
+          .limit(1);
+
+        const [grade, instructor] = await Promise.all([
+          db
+            .select({ name: schema.grades.name })
+            .from(schema.grades)
+            .where(eq(schema.grades.id, track.gradeId))
+            .limit(1),
+          db
+            .select({ name: schema.users.name })
+            .from(schema.users)
+            .where(eq(schema.users.id, track.instructorId))
+            .limit(1),
+        ]);
+
+        return {
+          ...record,
+          session: {
+            ...session,
             track: {
-              include: {
-                grade: true,
-                instructor: true,
-              },
+              ...track,
+              grade: { name: grade[0]?.name || "" },
+              instructor: instructor[0] || null,
             },
           },
-        },
-      },
-      orderBy: [
-        { session: { date: "desc" } },
-        { session: { startTime: "desc" } },
-      ],
+        };
+      })
+    );
+
+    const sorted = recordsWithDetails.sort((a, b) => {
+      const dateCompare =
+        new Date(b.session.date).getTime() -
+        new Date(a.session.date).getTime();
+      if (dateCompare !== 0) return dateCompare;
+      return b.session.startTime.localeCompare(a.session.startTime);
     });
 
     // Transform the data for the frontend
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const records = sessionAttendanceRecords.map((record: any) => ({
+    const records = sorted.map((record: any) => ({
       id: record.id,
       sessionId: record.session.id,
       sessionTitle: record.session.title,

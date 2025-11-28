@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { db, schema, eq, and, desc } from "@/lib/db";
 import { writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
@@ -29,7 +28,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -38,20 +37,11 @@ export async function GET(
     const { id: assignmentId } = await params;
 
     // Verify assignment exists
-    const assignment = await prisma.assignmentNew.findUnique({
-      where: { id: assignmentId },
-      include: {
-        module: {
-          include: {
-            track: {
-              include: {
-                instructor: true,
-              },
-            },
-          },
-        },
-      },
-    });
+    const [assignment] = await db
+      .select()
+      .from(schema.assignments)
+      .where(eq(schema.assignments.id, assignmentId))
+      .limit(1);
 
     if (!assignment) {
       return NextResponse.json(
@@ -60,43 +50,77 @@ export async function GET(
       );
     }
 
+    // Fetch nested relations
+    const [module] = await db
+      .select()
+      .from(schema.modules)
+      .where(eq(schema.modules.id, assignment.moduleId!))
+      .limit(1);
+
+    const [track] = await db
+      .select()
+      .from(schema.tracks)
+      .where(eq(schema.tracks.id, module!.trackId!))
+      .limit(1);
+
+    const [instructor] = track!.instructorId ? await db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.id, track!.instructorId))
+      .limit(1) : [null];
+
+    const assignmentWithRelations = {
+      ...assignment,
+      module: {
+        ...module,
+        track: {
+          ...track,
+          instructor
+        }
+      }
+    };
+
     // Students can only see their own submissions
     // Instructors/Managers/CEO can see all submissions
-    const where: any = { assignmentId };
+    const whereConditions: any[] = [eq(schema.assignmentSubmissions.assignmentId, assignmentId)];
 
     if (session.user.role === "student") {
-      where.studentId = session.user.id;
+      whereConditions.push(eq(schema.assignmentSubmissions.studentId, session.user.id));
     } else if (session.user.role === "instructor") {
       // Verify instructor is assigned to the track
-      if (assignment.module.track.instructorId !== session.user.id) {
+      if (assignmentWithRelations.module.track.instructorId !== session.user.id) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
     } else if (!["manager", "ceo", "coordinator"].includes(session.user.role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const submissions = await prisma.assignmentSubmissionNew.findMany({
-      where,
-      include: {
-        student: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        grader: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const submissions = await db
+      .select()
+      .from(schema.assignmentSubmissions)
+      .where(and(...whereConditions))
+      .orderBy(desc(schema.assignmentSubmissions.submittedAt));
 
-    return NextResponse.json({ submissions });
+    // Fetch student and grader for each submission
+    const submissionsWithRelations = await Promise.all(
+      submissions.map(async (sub: any) => {
+        const [student, grader] = await Promise.all([
+          db.select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
+            .from(schema.users)
+            .where(eq(schema.users.id, sub.studentId))
+            .limit(1)
+            .then(r => r[0] || null),
+          sub.gradedBy ? db.select({ id: schema.users.id, name: schema.users.name })
+            .from(schema.users)
+            .where(eq(schema.users.id, sub.gradedBy))
+            .limit(1)
+            .then(r => r[0] || null) : Promise.resolve(null)
+        ]);
+        return { ...sub, student, grader };
+      })
+    );
+
+    return NextResponse.json({ submissions: submissionsWithRelations });
   } catch (error) {
     console.error("Error fetching submissions:", error);
     return NextResponse.json(
@@ -112,7 +136,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -126,9 +150,11 @@ export async function POST(
     const { id: assignmentId } = await params;
 
     // Verify assignment exists
-    const assignment = await prisma.assignmentNew.findUnique({
-      where: { id: assignmentId },
-    });
+    const [assignment] = await db
+      .select()
+      .from(schema.assignments)
+      .where(eq(schema.assignments.id, assignmentId))
+      .limit(1);
 
     if (!assignment) {
       return NextResponse.json(
@@ -138,12 +164,16 @@ export async function POST(
     }
 
     // Check if student already submitted
-    const existingSubmission = await prisma.assignmentSubmissionNew.findFirst({
-      where: {
-        assignmentId,
-        studentId: session.user.id,
-      },
-    });
+    const existingSubmission = await db
+      .select()
+      .from(schema.assignmentSubmissions)
+      .where(
+        and(
+          eq(schema.assignmentSubmissions.assignmentId, assignmentId),
+          eq(schema.assignmentSubmissions.studentId, session.user.id)
+        )
+      )
+      .limit(1);
 
     if (existingSubmission) {
       return NextResponse.json(
@@ -201,30 +231,38 @@ export async function POST(
     await writeFile(filePath, buffer);
 
     // Create submission
-    const submission = await prisma.assignmentSubmissionNew.create({
-      data: {
+    const result = await db
+      .insert(schema.assignmentSubmissions)
+      .values({
         assignmentId,
         studentId: session.user.id,
         fileUrl: `/uploads/submissions/${filename}`,
         fileName: file.name,
         fileSize: file.size,
         mimeType: file.type,
-      },
-      include: {
-        assignment: {
-          select: {
-            id: true,
-            title: true,
-            dueDate: true,
-          },
-        },
-      },
-    });
+      });
+
+    const [submission] = await db
+      .select()
+      .from(schema.assignmentSubmissions)
+      .where(eq(schema.assignmentSubmissions.id, String(result[0].insertId)))
+      .limit(1);
+
+    const [assignmentData] = await db
+      .select({ id: schema.assignments.id, title: schema.assignments.title, dueDate: schema.assignments.dueDate })
+      .from(schema.assignments)
+      .where(eq(schema.assignments.id, assignmentId))
+      .limit(1);
+
+    const submissionWithRelations = {
+      ...submission,
+      assignment: assignmentData
+    };
 
     return NextResponse.json(
       {
         message: "Assignment submitted successfully",
-        submission,
+        submission: submissionWithRelations,
       },
       { status: 201 }
     );

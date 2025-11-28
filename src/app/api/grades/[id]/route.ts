@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { db, schema, eq, and, asc, count } from "@/lib/db";
 
 // GET /api/grades/[id] - Get a specific grade
 export async function GET(
@@ -9,7 +8,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -24,54 +23,96 @@ export async function GET(
     // Await params in Next.js 15
     const { id } = await params;
 
-    const grade = await prisma.grade.findUnique({
-      where: { id },
-      include: {
-        tracks: {
-          include: {
-            instructor: {
-              select: { id: true, name: true, email: true },
-            },
-            coordinator: {
-              select: { id: true, name: true, email: true },
-            },
-            liveSessions: {
-              select: {
-                id: true,
-                title: true,
-                date: true,
-                startTime: true,
-                endTime: true,
-                status: true,
-              },
-              orderBy: { date: "asc" },
-            },
-            _count: {
-              select: { liveSessions: true },
-            },
-          },
-        },
-        students: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            age: true,
-            priorExperience: true,
-          },
-        },
-        _count: {
-          select: {
-            students: true,
-            tracks: true,
-          },
-        },
-      },
-    });
+    const [gradeData] = await db
+      .select()
+      .from(schema.grades)
+      .where(eq(schema.grades.id, id))
+      .limit(1);
 
-    if (!grade) {
+    if (!gradeData) {
       return NextResponse.json({ error: "Grade not found" }, { status: 404 });
     }
+
+    // Fetch tracks with nested relations
+    const tracks = await db
+      .select()
+      .from(schema.tracks)
+      .where(eq(schema.tracks.gradeId, id));
+
+    const tracksWithDetails = await Promise.all(
+      tracks.map(async (track: any) => {
+        const [instructor] = await db
+          .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
+          .from(schema.users)
+          .where(eq(schema.users.id, track.instructorId))
+          .limit(1);
+
+        const [coordinator] = await db
+          .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
+          .from(schema.users)
+          .where(eq(schema.users.id, track.coordinatorId))
+          .limit(1);
+
+        const liveSessions = await db
+          .select({
+            id: schema.liveSessions.id,
+            title: schema.liveSessions.title,
+            date: schema.liveSessions.date,
+            startTime: schema.liveSessions.startTime,
+            endTime: schema.liveSessions.endTime,
+            status: schema.liveSessions.status,
+          })
+          .from(schema.liveSessions)
+          .where(eq(schema.liveSessions.trackId, track.id))
+          .orderBy(asc(schema.liveSessions.date));
+
+        const [sessionCount] = await db
+          .select({ count: count() })
+          .from(schema.liveSessions)
+          .where(eq(schema.liveSessions.trackId, track.id));
+
+        return {
+          ...track,
+          instructor,
+          coordinator,
+          liveSessions,
+          _count: { liveSessions: sessionCount.count },
+        };
+      })
+    );
+
+    // Fetch students
+    const students = await db
+      .select({
+        id: schema.users.id,
+        name: schema.users.name,
+        email: schema.users.email,
+        age: schema.users.age,
+        priorExperience: schema.users.priorExperience,
+      })
+      .from(schema.users)
+      .where(eq(schema.users.gradeId, id));
+
+    // Count students and tracks
+    const [studentCount] = await db
+      .select({ count: count() })
+      .from(schema.users)
+      .where(eq(schema.users.gradeId, id));
+
+    const [trackCount] = await db
+      .select({ count: count() })
+      .from(schema.tracks)
+      .where(eq(schema.tracks.gradeId, id));
+
+    const grade: any = {
+      ...gradeData,
+      tracks: tracksWithDetails,
+      students,
+      _count: {
+        students: studentCount.count,
+        tracks: trackCount.count,
+      },
+    };
 
     return NextResponse.json({ grade });
   } catch (error) {
@@ -89,7 +130,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -107,9 +148,11 @@ export async function PUT(
     const { id } = await params;
 
     // Check if grade exists
-    const existingGrade = await prisma.grade.findUnique({
-      where: { id },
-    });
+    const [existingGrade] = await db
+      .select()
+      .from(schema.grades)
+      .where(eq(schema.grades.id, id))
+      .limit(1);
 
     if (!existingGrade) {
       return NextResponse.json({ error: "Grade not found" }, { status: 404 });
@@ -125,9 +168,11 @@ export async function PUT(
 
     // Check if new name already exists (if changing name)
     if (name && name !== existingGrade.name) {
-      const nameExists = await prisma.grade.findUnique({
-        where: { name },
-      });
+      const [nameExists] = await db
+        .select()
+        .from(schema.grades)
+        .where(eq(schema.grades.name, name))
+        .limit(1);
 
       if (nameExists) {
         return NextResponse.json(
@@ -149,18 +194,35 @@ export async function PUT(
     if (order !== undefined) updateData.order = order;
     if (isActive !== undefined) updateData.isActive = isActive;
 
-    const grade = await prisma.grade.update({
-      where: { id },
-      data: updateData,
-      include: {
-        _count: {
-          select: {
-            students: true,
-            tracks: true,
-          },
-        },
+    await db
+      .update(schema.grades)
+      .set(updateData)
+      .where(eq(schema.grades.id, id));
+
+    // Fetch updated grade with counts
+    const [updatedGrade] = await db
+      .select()
+      .from(schema.grades)
+      .where(eq(schema.grades.id, id))
+      .limit(1);
+
+    const [studentCount] = await db
+      .select({ count: count() })
+      .from(schema.users)
+      .where(eq(schema.users.gradeId, id));
+
+    const [trackCount] = await db
+      .select({ count: count() })
+      .from(schema.tracks)
+      .where(eq(schema.tracks.gradeId, id));
+
+    const grade: any = {
+      ...updatedGrade,
+      _count: {
+        students: studentCount.count,
+        tracks: trackCount.count,
       },
-    });
+    };
 
     return NextResponse.json({ grade });
   } catch (error) {
@@ -178,7 +240,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -193,40 +255,44 @@ export async function DELETE(
     const { id } = await params;
 
     // Check if grade exists
-    const existingGrade = await prisma.grade.findUnique({
-      where: { id },
-      include: {
-        _count: {
-          select: {
-            students: true,
-            tracks: true,
-          },
-        },
-      },
-    });
+    const [existingGrade] = await db
+      .select()
+      .from(schema.grades)
+      .where(eq(schema.grades.id, id))
+      .limit(1);
 
     if (!existingGrade) {
       return NextResponse.json({ error: "Grade not found" }, { status: 404 });
     }
 
     // Check if grade has students or tracks assigned
-    if (existingGrade._count.students > 0) {
+    const [studentCount] = await db
+      .select({ count: count() })
+      .from(schema.users)
+      .where(eq(schema.users.gradeId, id));
+
+    const [trackCount] = await db
+      .select({ count: count() })
+      .from(schema.tracks)
+      .where(eq(schema.tracks.gradeId, id));
+
+    if (studentCount.count > 0) {
       return NextResponse.json(
         { error: "Cannot delete grade with assigned students" },
         { status: 400 }
       );
     }
 
-    if (existingGrade._count.tracks > 0) {
+    if (trackCount.count > 0) {
       return NextResponse.json(
         { error: "Cannot delete grade with existing tracks" },
         { status: 400 }
       );
     }
 
-    await prisma.grade.delete({
-      where: { id },
-    });
+    await db
+      .delete(schema.grades)
+      .where(eq(schema.grades.id, id));
 
     return NextResponse.json({ message: "Grade deleted successfully" });
   } catch (error) {

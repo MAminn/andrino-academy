@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { db, schema, eq } from "@/lib/db";
 
 // PUT /api/assignments/submissions/[id]/grade - Grade a submission (instructor/manager/ceo)
 export async function PUT(
@@ -9,7 +8,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -17,43 +16,69 @@ export async function PUT(
 
     const { id: submissionId } = await params;
 
-    // Fetch submission with assignment and module details
-    const submission = await prisma.assignmentSubmissionNew.findUnique({
-      where: { id: submissionId },
-      include: {
-        assignment: {
-          include: {
-            module: {
-              include: {
-                track: {
-                  include: {
-                    instructor: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-        student: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-    });
+    // Fetch submission
+    const [submissionData] = await db
+      .select()
+      .from(schema.assignmentSubmissions)
+      .where(eq(schema.assignmentSubmissions.id, submissionId))
+      .limit(1);
 
-    if (!submission) {
+    if (!submissionData) {
       return NextResponse.json(
         { error: "Submission not found" },
         { status: 404 }
       );
     }
 
+    // Fetch assignment with module and track
+    const [assignment] = await db
+      .select()
+      .from(schema.assignments)
+      .where(eq(schema.assignments.id, submissionData.assignmentId))
+      .limit(1);
+
+    const [module] = await db
+      .select()
+      .from(schema.modules)
+      .where(eq(schema.modules.id, assignment.moduleId))
+      .limit(1);
+
+    const [track] = await db
+      .select()
+      .from(schema.tracks)
+      .where(eq(schema.tracks.id, module.trackId))
+      .limit(1);
+
+    const [instructor] = await db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.id, track.instructorId))
+      .limit(1);
+
+    const [student] = await db
+      .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
+      .from(schema.users)
+      .where(eq(schema.users.id, submissionData.studentId))
+      .limit(1);
+
+    const submission: any = {
+      ...submissionData,
+      assignment: {
+        ...assignment,
+        module: {
+          ...module,
+          track: {
+            ...track,
+            instructor,
+          },
+        },
+      },
+      student,
+    };
+
     // Permission check
     const isInstructor = session.user.role === "instructor" &&
-      submission.assignment.module.track.instructorId === session.user.id;
+      track.instructorId === session.user.id;
     const isAdmin = ["manager", "ceo"].includes(session.user.role);
 
     if (!isInstructor && !isAdmin) {
@@ -82,38 +107,51 @@ export async function PUT(
     }
 
     // Update submission with grade
-    const gradedSubmission = await prisma.assignmentSubmissionNew.update({
-      where: { id: submissionId },
-      data: {
+    await db
+      .update(schema.assignmentSubmissions)
+      .set({
         grade,
         feedback: feedback || null,
         gradedAt: new Date(),
         gradedBy: session.user.id,
-      },
-      include: {
-        student: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        grader: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        assignment: {
-          select: {
-            id: true,
-            title: true,
-            dueDate: true,
-          },
-        },
-      },
-    });
+      })
+      .where(eq(schema.assignmentSubmissions.id, submissionId));
+
+    // Fetch updated submission with related data
+    const [updatedSubmission] = await db
+      .select()
+      .from(schema.assignmentSubmissions)
+      .where(eq(schema.assignmentSubmissions.id, submissionId))
+      .limit(1);
+
+    const [updatedStudent] = await db
+      .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
+      .from(schema.users)
+      .where(eq(schema.users.id, updatedSubmission.studentId))
+      .limit(1);
+
+    let grader: any = null;
+    if (updatedSubmission.gradedBy) {
+      const [graderData] = await db
+        .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
+        .from(schema.users)
+        .where(eq(schema.users.id, updatedSubmission.gradedBy))
+        .limit(1);
+      grader = graderData;
+    }
+
+    const [assignmentData] = await db
+      .select({ id: schema.assignments.id, title: schema.assignments.title, dueDate: schema.assignments.dueDate })
+      .from(schema.assignments)
+      .where(eq(schema.assignments.id, updatedSubmission.assignmentId))
+      .limit(1);
+
+    const gradedSubmission: any = {
+      ...updatedSubmission,
+      student: updatedStudent,
+      grader,
+      assignment: assignmentData,
+    };
 
     return NextResponse.json({
       message: "Submission graded successfully",

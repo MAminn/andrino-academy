@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+
+import { db, schema, eq, and, or, desc, asc, count, sql, isNull } from "@/lib/db";
 
 // GET /api/settings/schedule - Get schedule settings
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -16,17 +16,28 @@ export async function GET(request: NextRequest) {
     // Only manager and CEO can modify them (handled in PUT endpoint)
 
     // Fetch settings (should only be one record)
-    const settings = await prisma.scheduleSettings.findFirst();
+    const settings = await db
+      .select()
+      .from(schema.scheduleSettings)
+      .limit(1)
+      .then((r) => r[0]);
 
     if (!settings) {
       // Create default settings if none exist
-      const defaultSettings = await prisma.scheduleSettings.create({
-        data: {
+      const [settingsId] = await db
+        .insert(schema.scheduleSettings)
+        .values({
           weekResetDay: 0, // Sunday
           weekResetHour: 22, // 10 PM
           availabilityOpenHours: 168, // Full week
-        },
-      });
+        })
+        .$returningId();
+
+      const defaultSettings = await db
+        .select()
+        .from(schema.scheduleSettings)
+        .where(eq(schema.scheduleSettings.id, settingsId.id))
+        .then((r) => r[0]);
 
       return NextResponse.json({ settings: defaultSettings });
     }
@@ -44,9 +55,9 @@ export async function GET(request: NextRequest) {
 // PUT /api/settings/schedule - Update schedule settings
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -122,25 +133,42 @@ export async function PUT(request: NextRequest) {
     }
 
     // Fetch existing settings
-    const existingSettings = await prisma.scheduleSettings.findFirst();
+    const existingSettings = await db
+      .select()
+      .from(schema.scheduleSettings)
+      .limit(1)
+      .then((r) => r[0]);
 
     let settings;
 
     if (existingSettings) {
       // Update existing settings
-      settings = await prisma.scheduleSettings.update({
-        where: { id: existingSettings.id },
-        data: updateData,
-      });
+      await db
+        .update(schema.scheduleSettings)
+        .set(updateData)
+        .where(eq(schema.scheduleSettings.id, existingSettings.id));
+      
+      settings = await db
+        .select()
+        .from(schema.scheduleSettings)
+        .where(eq(schema.scheduleSettings.id, existingSettings.id))
+        .then((r) => r[0]);
     } else {
       // Create new settings with provided values
-      settings = await prisma.scheduleSettings.create({
-        data: {
+      const [settingsId] = await db
+        .insert(schema.scheduleSettings)
+        .values({
           weekResetDay: weekResetDay ?? 0,
           weekResetHour: weekResetHour ?? 22,
           availabilityOpenHours: availabilityOpenHours ?? 168,
-        },
-      });
+        })
+        .$returningId();
+      
+      settings = await db
+        .select()
+        .from(schema.scheduleSettings)
+        .where(eq(schema.scheduleSettings.id, settingsId.id))
+        .then((r) => r[0]);
     }
 
     return NextResponse.json({
@@ -155,3 +183,4 @@ export async function PUT(request: NextRequest) {
     );
   }
 }
+

@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+
+import { db, schema, eq, and, or, desc, asc, count, sql, isNull, inArray } from "@/lib/db";
 
 // POST /api/sessions/manage - Create or update sessions
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -47,19 +47,33 @@ export async function POST(request: NextRequest) {
       }
 
       // Verify track exists
-      const track = await prisma.track.findUnique({
-        where: { id: trackId },
-        include: { grade: true },
-      });
+      const trackBase = await db
+        .select()
+        .from(schema.tracks)
+        .where(eq(schema.tracks.id, trackId))
+        .then((r) => r[0]);
 
-      if (!track) {
+      if (!trackBase) {
         return NextResponse.json({ error: "Track not found" }, { status: 404 });
       }
 
+      // Fetch grade relation
+      const grade = trackBase.gradeId
+        ? await db
+            .select()
+            .from(schema.grades)
+            .where(eq(schema.grades.id, trackBase.gradeId))
+            .then((r) => r[0] || null)
+        : null;
+      
+      const track = { ...trackBase, grade };
+
       // Verify instructor exists
-      const instructor = await prisma.user.findUnique({
-        where: { id: instructorId, role: "instructor" },
-      });
+      const instructor = await db
+        .select()
+        .from(schema.users)
+        .where(and(eq(schema.users.id, instructorId), eq(schema.users.role, "instructor")))
+        .then((r) => r[0]);
 
       if (!instructor) {
         return NextResponse.json(
@@ -70,32 +84,29 @@ export async function POST(request: NextRequest) {
 
       // Check for scheduling conflicts
       const sessionDate = new Date(date);
-      const conflicts = await prisma.liveSession.findMany({
-        where: {
-          instructorId,
-          date: sessionDate,
-          OR: [
-            {
-              AND: [
-                { startTime: { lte: startTime } },
-                { endTime: { gt: startTime } },
-              ],
-            },
-            {
-              AND: [
-                { startTime: { lt: endTime } },
-                { endTime: { gte: endTime } },
-              ],
-            },
-            {
-              AND: [
-                { startTime: { gte: startTime } },
-                { endTime: { lte: endTime } },
-              ],
-            },
-          ],
-        },
-      });
+      const conflicts = await db
+        .select()
+        .from(schema.liveSessions)
+        .where(
+          and(
+            eq(schema.liveSessions.instructorId, instructorId),
+            eq(schema.liveSessions.date, sessionDate),
+            or(
+              and(
+                sql`${schema.liveSessions.startTime} <= ${startTime}`,
+                sql`${schema.liveSessions.endTime} > ${startTime}`
+              ),
+              and(
+                sql`${schema.liveSessions.startTime} < ${endTime}`,
+                sql`${schema.liveSessions.endTime} >= ${endTime}`
+              ),
+              and(
+                sql`${schema.liveSessions.startTime} >= ${startTime}`,
+                sql`${schema.liveSessions.endTime} <= ${endTime}`
+              )
+            )
+          )
+        );
 
       if (conflicts.length > 0) {
         return NextResponse.json(
@@ -105,8 +116,9 @@ export async function POST(request: NextRequest) {
       }
 
       // Create the session
-      const newSession = await prisma.liveSession.create({
-        data: {
+      const [sessionId] = await db
+        .insert(schema.liveSessions)
+        .values({
           title,
           description: description || "",
           date: sessionDate,
@@ -115,16 +127,26 @@ export async function POST(request: NextRequest) {
           trackId,
           instructorId,
           status: "SCHEDULED",
-        },
-        include: {
-          track: {
-            include: { grade: true },
-          },
-          instructor: {
-            select: { id: true, name: true, email: true },
-          },
-        },
-      });
+        })
+        .$returningId();
+
+      // Fetch the created session with relations
+      const [createdSession, sessionTrack, sessionGrade, sessionInstructor] = await Promise.all([
+        db.select().from(schema.liveSessions).where(eq(schema.liveSessions.id, sessionId.id)).then((r) => r[0]),
+        db.select().from(schema.tracks).where(eq(schema.tracks.id, trackId)).then((r) => r[0]),
+        db.select().from(schema.grades).where(eq(schema.grades.id, track.gradeId!)).then((r) => r[0] || null),
+        db
+          .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
+          .from(schema.users)
+          .where(eq(schema.users.id, instructorId))
+          .then((r) => r[0]),
+      ]);
+
+      const newSession = {
+        ...createdSession,
+        track: { ...sessionTrack, grade: sessionGrade },
+        instructor: sessionInstructor,
+      };
 
       return NextResponse.json(
         {
@@ -144,9 +166,11 @@ export async function POST(request: NextRequest) {
       }
 
       // Verify session exists
-      const existingSession = await prisma.liveSession.findUnique({
-        where: { id: sessionId },
-      });
+      const existingSession = await db
+        .select()
+        .from(schema.liveSessions)
+        .where(eq(schema.liveSessions.id, sessionId))
+        .then((r) => r[0]);
 
       if (!existingSession) {
         return NextResponse.json(
@@ -156,18 +180,36 @@ export async function POST(request: NextRequest) {
       }
 
       // Update the session
-      const updatedSession = await prisma.liveSession.update({
-        where: { id: sessionId },
-        data: updateData,
-        include: {
-          track: {
-            include: { grade: true },
-          },
-          instructor: {
-            select: { id: true, name: true, email: true },
-          },
-        },
-      });
+      await db
+        .update(schema.liveSessions)
+        .set(updateData)
+        .where(eq(schema.liveSessions.id, sessionId));
+
+      // Fetch updated session with relations
+      const [updated, sessionTrack, sessionInstructor] = await Promise.all([
+        db.select().from(schema.liveSessions).where(eq(schema.liveSessions.id, sessionId)).then((r) => r[0]),
+        db.select().from(schema.tracks).where(eq(schema.tracks.id, existingSession.trackId)).then((r) => r[0]),
+        db
+          .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
+          .from(schema.users)
+          .where(eq(schema.users.id, existingSession.instructorId))
+          .then((r) => r[0]),
+      ]);
+
+      // Fetch grade for track
+      const sessionGrade = sessionTrack.gradeId
+        ? await db
+            .select()
+            .from(schema.grades)
+            .where(eq(schema.grades.id, sessionTrack.gradeId))
+            .then((r) => r[0] || null)
+        : null;
+
+      const updatedSession = {
+        ...updated,
+        track: { ...sessionTrack, grade: sessionGrade },
+        instructor: sessionInstructor,
+      };
 
       return NextResponse.json({
         session: updatedSession,
@@ -191,9 +233,9 @@ export async function POST(request: NextRequest) {
 // DELETE /api/sessions/manage - Delete a session
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -213,9 +255,11 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Verify session exists
-    const existingSession = await prisma.liveSession.findUnique({
-      where: { id: sessionId },
-    });
+    const existingSession = await db
+      .select()
+      .from(schema.liveSessions)
+      .where(eq(schema.liveSessions.id, sessionId))
+      .then((r) => r[0]);
 
     if (!existingSession) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
@@ -235,14 +279,14 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete related attendance records first
-    await prisma.sessionAttendance.deleteMany({
-      where: { sessionId },
-    });
+    await db
+      .delete(schema.sessionAttendances)
+      .where(eq(schema.sessionAttendances.sessionId, sessionId));
 
     // Delete the session
-    await prisma.liveSession.delete({
-      where: { id: sessionId },
-    });
+    await db
+      .delete(schema.liveSessions)
+      .where(eq(schema.liveSessions.id, sessionId));
 
     return NextResponse.json({
       message: "Session deleted successfully",
@@ -255,3 +299,4 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
+

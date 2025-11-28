@@ -1,14 +1,14 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+
+import { db, schema, eq, and, or, desc, asc, count, sql, isNull, gte, lt } from "@/lib/db";
 
 // GET /api/analytics/ceo - Get CEO dashboard analytics
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -24,39 +24,70 @@ export async function GET() {
 
     // Get user statistics
     const [
-      totalUsers,
-      totalStudents,
-      totalInstructors,
-      totalCoordinators,
-      totalManagers,
-      studentsThisMonth,
-      studentsLastMonth,
-      instructorsThisMonth,
+      totalUsersResult,
+      totalStudentsResult,
+      totalInstructorsResult,
+      totalCoordinatorsResult,
+      totalManagersResult,
+      studentsThisMonthResult,
+      studentsLastMonthResult,
+      instructorsThisMonthResult,
     ] = await Promise.all([
-      prisma.user.count(),
-      prisma.user.count({ where: { role: "student" } }),
-      prisma.user.count({ where: { role: "instructor" } }),
-      prisma.user.count({ where: { role: "coordinator" } }),
-      prisma.user.count({ where: { role: "manager" } }),
-      prisma.user.count({
-        where: {
-          role: "student",
-          createdAt: { gte: startOfMonth },
-        },
-      }),
-      prisma.user.count({
-        where: {
-          role: "student",
-          createdAt: { gte: lastMonth, lt: startOfMonth },
-        },
-      }),
-      prisma.user.count({
-        where: {
-          role: "instructor",
-          createdAt: { gte: startOfMonth },
-        },
-      }),
+      db.select({ count: count() }).from(schema.users),
+      db
+        .select({ count: count() })
+        .from(schema.users)
+        .where(eq(schema.users.role, "student")),
+      db
+        .select({ count: count() })
+        .from(schema.users)
+        .where(eq(schema.users.role, "instructor")),
+      db
+        .select({ count: count() })
+        .from(schema.users)
+        .where(eq(schema.users.role, "coordinator")),
+      db
+        .select({ count: count() })
+        .from(schema.users)
+        .where(eq(schema.users.role, "manager")),
+      db
+        .select({ count: count() })
+        .from(schema.users)
+        .where(
+          and(
+            eq(schema.users.role, "student"),
+            gte(schema.users.createdAt, startOfMonth)
+          )
+        ),
+      db
+        .select({ count: count() })
+        .from(schema.users)
+        .where(
+          and(
+            eq(schema.users.role, "student"),
+            gte(schema.users.createdAt, lastMonth),
+            lt(schema.users.createdAt, startOfMonth)
+          )
+        ),
+      db
+        .select({ count: count() })
+        .from(schema.users)
+        .where(
+          and(
+            eq(schema.users.role, "instructor"),
+            gte(schema.users.createdAt, startOfMonth)
+          )
+        ),
     ]);
+
+    const totalUsers = totalUsersResult[0]?.count || 0;
+    const totalStudents = totalStudentsResult[0]?.count || 0;
+    const totalInstructors = totalInstructorsResult[0]?.count || 0;
+    const totalCoordinators = totalCoordinatorsResult[0]?.count || 0;
+    const totalManagers = totalManagersResult[0]?.count || 0;
+    const studentsThisMonth = studentsThisMonthResult[0]?.count || 0;
+    const studentsLastMonth = studentsLastMonthResult[0]?.count || 0;
+    const instructorsThisMonth = instructorsThisMonthResult[0]?.count || 0;
 
     // Calculate growth percentages
     const studentGrowth =
@@ -69,47 +100,81 @@ export async function GET() {
         : 0;
 
     // Get grade and track statistics
-    const [totalGrades, activeGrades, totalTracks, activeTracks] =
-      await Promise.all([
-        prisma.grade.count(),
-        prisma.grade.count({ where: { isActive: true } }),
-        prisma.track.count(),
-        prisma.track.count({ where: { isActive: true } }),
-      ]);
+    const [
+      totalGradesResult,
+      activeGradesResult,
+      totalTracksResult,
+      activeTracksResult,
+    ] = await Promise.all([
+      db.select({ count: count() }).from(schema.grades),
+      db
+        .select({ count: count() })
+        .from(schema.grades)
+        .where(eq(schema.grades.isActive, true)),
+      db.select({ count: count() }).from(schema.tracks),
+      db
+        .select({ count: count() })
+        .from(schema.tracks)
+        .where(eq(schema.tracks.isActive, true)),
+    ]);
+
+    const totalGrades = totalGradesResult[0]?.count || 0;
+    const activeGrades = activeGradesResult[0]?.count || 0;
+    const totalTracks = totalTracksResult[0]?.count || 0;
+    const activeTracks = activeTracksResult[0]?.count || 0;
 
     // Get session statistics
-    const [totalSessions, upcomingSessions, todaySessions, completedSessions] =
-      await Promise.all([
-        prisma.liveSession.count(),
-        prisma.liveSession.count({
-          where: { date: { gte: now } },
-        }),
-        prisma.liveSession.count({
-          where: {
-            date: {
-              gte: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
-              lt: new Date(
-                now.getFullYear(),
-                now.getMonth(),
-                now.getDate() + 1
-              ),
-            },
-          },
-        }),
-        prisma.liveSession.count({
-          where: { date: { lt: now } },
-        }),
-      ]);
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate() + 1
+    );
+
+    const [
+      totalSessionsResult,
+      upcomingSessionsResult,
+      todaySessionsResult,
+      completedSessionsResult,
+    ] = await Promise.all([
+      db.select({ count: count() }).from(schema.liveSessions),
+      db
+        .select({ count: count() })
+        .from(schema.liveSessions)
+        .where(gte(schema.liveSessions.date, now)),
+      db
+        .select({ count: count() })
+        .from(schema.liveSessions)
+        .where(
+          and(
+            gte(schema.liveSessions.date, today),
+            lt(schema.liveSessions.date, tomorrow)
+          )
+        ),
+      db
+        .select({ count: count() })
+        .from(schema.liveSessions)
+        .where(lt(schema.liveSessions.date, now)),
+    ]);
+
+    const totalSessions = totalSessionsResult[0]?.count || 0;
+    const upcomingSessions = upcomingSessionsResult[0]?.count || 0;
+    const todaySessions = todaySessionsResult[0]?.count || 0;
+    const completedSessions = completedSessionsResult[0]?.count || 0;
 
     // Get attendance statistics
-    const totalAttendance = await prisma.sessionAttendance
-      .count()
-      .catch(() => 0);
-    const presentAttendance = await prisma.sessionAttendance
-      .count({
-        where: { status: "present" },
-      })
-      .catch(() => 0);
+    const totalAttendanceResult = await db
+      .select({ count: count() })
+      .from(schema.sessionAttendances)
+      .catch(() => [{ count: 0 }]);
+    const presentAttendanceResult = await db
+      .select({ count: count() })
+      .from(schema.sessionAttendances)
+      .where(eq(schema.sessionAttendances.status, "present"))
+      .catch(() => [{ count: 0 }]);
+
+    const totalAttendance = totalAttendanceResult[0]?.count || 0;
+    const presentAttendance = presentAttendanceResult[0]?.count || 0;
 
     const attendanceRate =
       totalAttendance > 0
@@ -117,39 +182,86 @@ export async function GET() {
         : 0;
 
     // Get students by grade for distribution analysis
-    const studentsByGrade = await prisma.grade.findMany({
-      include: {
-        _count: {
-          select: { students: true },
-        },
-      },
-      orderBy: { order: "asc" },
-    });
+    const studentsByGradeData = await db
+      .select({
+        id: schema.grades.id,
+        name: schema.grades.name,
+        order: schema.grades.order,
+        isActive: schema.grades.isActive,
+      })
+      .from(schema.grades)
+      .orderBy(asc(schema.grades.order));
+
+    const studentsByGrade = await Promise.all(
+      studentsByGradeData.map(async (grade) => {
+        const studentCount = await db
+          .select({ count: count() })
+          .from(schema.users)
+          .where(
+            and(
+              eq(schema.users.role, "student"),
+              eq(schema.users.gradeId, grade.id)
+            )
+          );
+
+        return {
+          ...grade,
+          _count: { students: studentCount[0]?.count || 0 },
+        };
+      })
+    );
 
     // Get tracks with student count
-    const trackStats = await prisma.track.findMany({
-      include: {
-        _count: {
-          select: { liveSessions: true },
-        },
-        grade: {
-          select: { name: true },
-        },
-        instructor: {
-          select: { name: true },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-      take: 8, // Top 8 tracks
-    });
+    const trackStatsData = await db
+      .select({
+        id: schema.tracks.id,
+        name: schema.tracks.name,
+        isActive: schema.tracks.isActive,
+        createdAt: schema.tracks.createdAt,
+        gradeId: schema.tracks.gradeId,
+        instructorId: schema.tracks.instructorId,
+      })
+      .from(schema.tracks)
+      .orderBy(desc(schema.tracks.createdAt))
+      .limit(8);
+
+    const trackStats = await Promise.all(
+      trackStatsData.map(async (track) => {
+        const [sessionCount, grade, instructor] = await Promise.all([
+          db
+            .select({ count: count() })
+            .from(schema.liveSessions)
+            .where(eq(schema.liveSessions.trackId, track.id)),
+          db
+            .select({ name: schema.grades.name })
+            .from(schema.grades)
+            .where(eq(schema.grades.id, track.gradeId))
+            .limit(1),
+          db
+            .select({ name: schema.users.name })
+            .from(schema.users)
+            .where(eq(schema.users.id, track.instructorId))
+            .limit(1),
+        ]);
+
+        return {
+          ...track,
+          _count: { liveSessions: sessionCount[0]?.count || 0 },
+          grade: { name: grade[0]?.name || "" },
+          instructor: { name: instructor[0]?.name || "" },
+        };
+      })
+    );
 
     // System health indicators
-    const unassignedStudents = await prisma.user.count({
-      where: {
-        role: "student",
-        gradeId: null,
-      },
-    });
+    const unassignedStudentsResult = await db
+      .select({ count: count() })
+      .from(schema.users)
+      .where(
+        and(eq(schema.users.role, "student"), isNull(schema.users.gradeId))
+      );
+
+    const unassignedStudents = unassignedStudentsResult[0]?.count || 0;
 
     const inactiveTracks = totalTracks - activeTracks;
     const inactiveGrades = totalGrades - activeGrades;
@@ -239,3 +351,4 @@ export async function GET() {
     );
   }
 }
+

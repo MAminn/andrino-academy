@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+
+import { db, schema, eq, and, or, desc, asc, count, sql, isNull } from "@/lib/db";
 
 // POST /api/sessions/meeting-link - Add/update meeting link for a session
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -28,26 +28,47 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify booking exists and instructor owns it
-    const booking = await prisma.sessionBooking.findUnique({
-      where: { id: bookingId },
-      include: {
-        availability: {
-          select: {
-            instructorId: true,
-            trackId: true,
-            weekStartDate: true,
-            dayOfWeek: true,
-            startHour: true,
-            endHour: true,
-          },
-        },
-        track: {
-          select: {
-            name: true,
-          },
-        },
-      },
-    });
+    const [bookingData] = await db
+      .select({
+        id: schema.sessionBookings.id,
+        trackId: schema.sessionBookings.trackId,
+        availabilityId: schema.sessionBookings.availabilityId,
+        sessionId: schema.sessionBookings.sessionId,
+      })
+      .from(schema.sessionBookings)
+      .where(eq(schema.sessionBookings.id, bookingId))
+      .limit(1);
+
+    const [availability] = bookingData
+      ? await db
+          .select({
+            instructorId: schema.instructorAvailabilities.instructorId,
+            trackId: schema.instructorAvailabilities.trackId,
+            weekStartDate: schema.instructorAvailabilities.weekStartDate,
+            dayOfWeek: schema.instructorAvailabilities.dayOfWeek,
+            startHour: schema.instructorAvailabilities.startHour,
+            endHour: schema.instructorAvailabilities.endHour,
+          })
+          .from(schema.instructorAvailabilities)
+          .where(eq(schema.instructorAvailabilities.id, bookingData.availabilityId))
+          .limit(1)
+      : [null];
+
+    const [track] = bookingData
+      ? await db
+          .select({ name: schema.tracks.name })
+          .from(schema.tracks)
+          .where(eq(schema.tracks.id, bookingData.trackId))
+          .limit(1)
+      : [null];
+
+    const booking: any = bookingData
+      ? {
+          ...bookingData,
+          availability,
+          track,
+        }
+      : null;
 
     if (!booking) {
       return NextResponse.json(
@@ -71,19 +92,30 @@ export async function POST(request: NextRequest) {
     let liveSession;
     if (booking.sessionId) {
       // Update existing session
-      liveSession = await prisma.liveSession.update({
-        where: { id: booking.sessionId },
-        data: {
-          externalLink: meetingLink,
-          linkAddedAt: new Date(),
-          status: "READY",
-          ...(title && { title }),
-        },
-      });
+      const updateData: any = {
+        externalLink: meetingLink,
+        linkAddedAt: new Date(),
+        status: "READY",
+      };
+      if (title) {
+        updateData.title = title;
+      }
+
+      await db
+        .update(schema.liveSessions)
+        .set(updateData)
+        .where(eq(schema.liveSessions.id, booking.sessionId));
+
+      [liveSession] = await db
+        .select()
+        .from(schema.liveSessions)
+        .where(eq(schema.liveSessions.id, booking.sessionId))
+        .limit(1);
     } else {
       // Create new session
-      liveSession = await prisma.liveSession.create({
-        data: {
+      const [newSessionId] = await db
+        .insert(schema.liveSessions)
+        .values({
           title: title || `${booking.track.name} - Session`,
           trackId: booking.trackId,
           instructorId: session.user.id,
@@ -93,14 +125,20 @@ export async function POST(request: NextRequest) {
           externalLink: meetingLink,
           linkAddedAt: new Date(),
           status: "READY",
-        },
-      });
+        })
+        .$returningId();
+
+      [liveSession] = await db
+        .select()
+        .from(schema.liveSessions)
+        .where(eq(schema.liveSessions.id, newSessionId.id))
+        .limit(1);
 
       // Link the booking to the session
-      await prisma.sessionBooking.update({
-        where: { id: bookingId },
-        data: { sessionId: liveSession.id },
-      });
+      await db
+        .update(schema.sessionBookings)
+        .set({ sessionId: liveSession.id })
+        .where(eq(schema.sessionBookings.id, bookingId));
     }
 
     return NextResponse.json({
@@ -119,9 +157,9 @@ export async function POST(request: NextRequest) {
 // PUT /api/sessions/meeting-link - Bulk add meeting link to all bookings for a time slot
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -141,19 +179,47 @@ export async function PUT(request: NextRequest) {
     }
 
     // Get all bookings for this availability slot
-    const availability = await prisma.instructorAvailability.findUnique({
-      where: { id: availabilityId },
-      include: {
-        bookings: {
-          where: { status: "confirmed" },
-        },
-        track: {
-          select: {
-            name: true,
-          },
-        },
-      },
-    });
+    const [availabilityData] = await db
+      .select({
+        id: schema.instructorAvailabilities.id,
+        instructorId: schema.instructorAvailabilities.instructorId,
+        trackId: schema.instructorAvailabilities.trackId,
+        weekStartDate: schema.instructorAvailabilities.weekStartDate,
+        dayOfWeek: schema.instructorAvailabilities.dayOfWeek,
+        startHour: schema.instructorAvailabilities.startHour,
+        endHour: schema.instructorAvailabilities.endHour,
+      })
+      .from(schema.instructorAvailabilities)
+      .where(eq(schema.instructorAvailabilities.id, availabilityId))
+      .limit(1);
+
+    const bookings = availabilityData
+      ? await db
+          .select({ id: schema.sessionBookings.id })
+          .from(schema.sessionBookings)
+          .where(
+            and(
+              eq(schema.sessionBookings.availabilityId, availabilityData.id),
+              eq(schema.sessionBookings.status, "confirmed")
+            )
+          )
+      : [];
+
+    const [track] = availabilityData
+      ? await db
+          .select({ name: schema.tracks.name })
+          .from(schema.tracks)
+          .where(eq(schema.tracks.id, availabilityData.trackId))
+          .limit(1)
+      : [null];
+
+    const availability: any = availabilityData
+      ? {
+          ...availabilityData,
+          bookings,
+          track,
+        }
+      : null;
 
     if (!availability) {
       return NextResponse.json(
@@ -174,30 +240,46 @@ export async function PUT(request: NextRequest) {
     sessionDate.setDate(sessionDate.getDate() + availability.dayOfWeek);
 
     // Create or get the LiveSession for this slot
-    let liveSession = await prisma.liveSession.findFirst({
-      where: {
-        trackId: availability.trackId,
-        instructorId: session.user.id,
-        date: sessionDate,
-        startTime: `${String(availability.startHour).padStart(2, '0')}:00`,
-      },
-    });
+    const [existingSession] = await db
+      .select()
+      .from(schema.liveSessions)
+      .where(
+        and(
+          eq(schema.liveSessions.trackId, availability.trackId),
+          eq(schema.liveSessions.instructorId, session.user.id),
+          eq(schema.liveSessions.date, sessionDate),
+          eq(schema.liveSessions.startTime, `${String(availability.startHour).padStart(2, '0')}:00`)
+        )
+      )
+      .limit(1);
 
-    if (liveSession) {
+    let liveSession;
+    if (existingSession) {
       // Update existing session
-      liveSession = await prisma.liveSession.update({
-        where: { id: liveSession.id },
-        data: {
-          externalLink: meetingLink,
-          linkAddedAt: new Date(),
-          status: "READY",
-          ...(title && { title }),
-        },
-      });
+      const updateData: any = {
+        externalLink: meetingLink,
+        linkAddedAt: new Date(),
+        status: "READY",
+      };
+      if (title) {
+        updateData.title = title;
+      }
+
+      await db
+        .update(schema.liveSessions)
+        .set(updateData)
+        .where(eq(schema.liveSessions.id, existingSession.id));
+
+      [liveSession] = await db
+        .select()
+        .from(schema.liveSessions)
+        .where(eq(schema.liveSessions.id, existingSession.id))
+        .limit(1);
     } else {
       // Create new session
-      liveSession = await prisma.liveSession.create({
-        data: {
+      const [newSessionId] = await db
+        .insert(schema.liveSessions)
+        .values({
           title: title || `${availability.track.name} - Session`,
           trackId: availability.trackId,
           instructorId: session.user.id,
@@ -207,20 +289,26 @@ export async function PUT(request: NextRequest) {
           externalLink: meetingLink,
           linkAddedAt: new Date(),
           status: "READY",
-        },
-      });
+        })
+        .$returningId();
+
+      [liveSession] = await db
+        .select()
+        .from(schema.liveSessions)
+        .where(eq(schema.liveSessions.id, newSessionId.id))
+        .limit(1);
     }
 
     // Link all bookings to this session
-    await prisma.sessionBooking.updateMany({
-      where: {
-        availabilityId: availability.id,
-        status: "confirmed",
-      },
-      data: {
-        sessionId: liveSession.id,
-      },
-    });
+    await db
+      .update(schema.sessionBookings)
+      .set({ sessionId: liveSession.id })
+      .where(
+        and(
+          eq(schema.sessionBookings.availabilityId, availability.id),
+          eq(schema.sessionBookings.status, "confirmed")
+        )
+      );
 
     return NextResponse.json({
       message: `Meeting link added for ${availability.bookings.length} students`,
@@ -235,3 +323,4 @@ export async function PUT(request: NextRequest) {
     );
   }
 }
+

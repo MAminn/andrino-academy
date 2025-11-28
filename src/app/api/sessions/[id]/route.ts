@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { db, schema, eq, and, or, gte, lt, lte, gt } from "@/lib/db";
 import {
   validateExternalMeetingLink,
   getSessionStatusFromLink,
@@ -19,7 +18,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const result = await withDatabaseErrorHandling(async () => {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
       return ErrorResponses.unauthorized();
@@ -27,57 +26,99 @@ export async function GET(
 
     const { id } = await params;
 
-    const liveSession = await prisma.liveSession.findUnique({
-      where: { id },
-      include: {
-        track: {
-          include: {
-            grade: {
-              select: { id: true, name: true },
-            },
-            coordinator: {
-              select: { id: true, name: true, email: true },
-            },
-          },
-        },
-        instructor: {
-          select: { id: true, name: true, email: true },
-        },
-        attendances: {
-          include: {
-            student: {
-              select: { id: true, name: true, email: true },
-            },
-          },
-          orderBy: { student: { name: "asc" } },
-        },
-        _count: {
-          select: { attendances: true },
-        },
-      },
-    });
+    const [liveSession] = await db
+      .select()
+      .from(schema.liveSessions)
+      .where(eq(schema.liveSessions.id, id))
+      .limit(1);
 
     if (!liveSession) {
       return ErrorResponses.notFound("الجلسة");
     }
 
+    // Fetch track with grade and coordinator
+    const [track] = await db
+      .select()
+      .from(schema.tracks)
+      .where(eq(schema.tracks.id, liveSession.trackId))
+      .limit(1);
+
+    const [grade, coordinator] = await Promise.all([
+      track!.gradeId ? db.select({ id: schema.grades.id, name: schema.grades.name })
+        .from(schema.grades)
+        .where(eq(schema.grades.id, track!.gradeId))
+        .limit(1)
+        .then(r => r[0] || null) : Promise.resolve(null),
+      track!.coordinatorId ? db.select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
+        .from(schema.users)
+        .where(eq(schema.users.id, track!.coordinatorId))
+        .limit(1)
+        .then(r => r[0] || null) : Promise.resolve(null)
+    ]);
+
+    // Fetch instructor
+    const instructor = liveSession.instructorId ? await db
+      .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
+      .from(schema.users)
+      .where(eq(schema.users.id, liveSession.instructorId))
+      .limit(1)
+      .then(r => r[0] || null) : null;
+
+    // Fetch attendances with students
+    const attendances = await db
+      .select()
+      .from(schema.sessionAttendances)
+      .where(eq(schema.sessionAttendances.sessionId, id));
+
+    const attendancesWithStudents = await Promise.all(
+      attendances.map(async (att: any) => {
+        const [student] = await db
+          .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
+          .from(schema.users)
+          .where(eq(schema.users.id, att.studentId))
+          .limit(1);
+        return { ...att, student: student || null };
+      })
+    );
+
+    // Sort by student name
+    attendancesWithStudents.sort((a, b) => {
+      if (!a.student || !b.student) return 0;
+      return (a.student.name || "").localeCompare(b.student.name || "");
+    });
+
+    const liveSessionWithRelations = {
+      ...liveSession,
+      track: {
+        ...track,
+        grade,
+        coordinator
+      },
+      instructor,
+      attendances: attendancesWithStudents,
+      _count: {
+        attendances: attendancesWithStudents.length
+      }
+    };
+
     // Permission check
     const allowedRoles = ["manager", "ceo"];
     const isInstructor =
       session.user.role === "instructor" &&
-      liveSession.instructorId === session.user.id;
+      liveSessionWithRelations.instructorId === session.user.id;
     const isCoordinator =
       session.user.role === "coordinator" &&
-      liveSession.track.coordinator.id === session.user.id;
+      liveSessionWithRelations.track.coordinator?.id === session.user.id;
 
     // For students, check if they're in the right grade
     let isStudentInGrade = false;
     if (session.user.role === "student") {
-      const student = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { gradeId: true },
-      });
-      isStudentInGrade = student?.gradeId === liveSession.track.grade.id;
+      const [student] = await db
+        .select({ gradeId: schema.users.gradeId })
+        .from(schema.users)
+        .where(eq(schema.users.id, session.user.id))
+        .limit(1);
+      isStudentInGrade = student?.gradeId === liveSessionWithRelations.track.grade?.id;
     }
 
     if (
@@ -89,7 +130,7 @@ export async function GET(
       return ErrorResponses.forbidden();
     }
 
-    return createSuccessResponse(liveSession, "تم استرداد الجلسة بنجاح");
+    return createSuccessResponse(liveSessionWithRelations, "تم استرداد الجلسة بنجاح");
   });
 
   return result instanceof NextResponse ? result : result;
@@ -101,7 +142,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const result = await withDatabaseErrorHandling(async () => {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
       return ErrorResponses.unauthorized();
@@ -129,29 +170,46 @@ export async function PUT(
     const linkToUpdate = externalLink || meetLink;
 
     // Check if session exists
-    const existingSession = await prisma.liveSession.findUnique({
-      where: { id },
-      include: {
-        track: {
-          include: {
-            coordinator: true,
-          },
-        },
-      },
-    });
+    const [existingSession] = await db
+      .select()
+      .from(schema.liveSessions)
+      .where(eq(schema.liveSessions.id, id))
+      .limit(1);
 
     if (!existingSession) {
       return ErrorResponses.notFound("الجلسة");
     }
 
+    // Fetch track with coordinator
+    const [track] = await db
+      .select()
+      .from(schema.tracks)
+      .where(eq(schema.tracks.id, existingSession.trackId))
+      .limit(1);
+
+    const coordinator = track!.coordinatorId ? await db
+      .select({ id: schema.users.id })
+      .from(schema.users)
+      .where(eq(schema.users.id, track!.coordinatorId))
+      .limit(1)
+      .then(r => r[0] || null) : null;
+
+    const existingSessionWithRelations = {
+      ...existingSession,
+      track: {
+        ...track,
+        coordinator
+      }
+    };
+
     // Permission check
     const allowedRoles = ["manager", "ceo"];
     const isInstructor =
       session.user.role === "instructor" &&
-      existingSession.instructorId === session.user.id;
+      existingSessionWithRelations.instructorId === session.user.id;
     const isCoordinator =
       session.user.role === "coordinator" &&
-      existingSession.track.coordinator.id === session.user.id;
+      existingSessionWithRelations.track.coordinator?.id === session.user.id;
 
     if (
       !allowedRoles.includes(session.user.role) &&
@@ -167,21 +225,42 @@ export async function PUT(
     }
 
     // Validate trackId if changing track
-    if (trackId && trackId !== existingSession.trackId) {
-      const newTrack = await prisma.track.findUnique({
-        where: { id: trackId },
-        include: { instructor: true, coordinator: true },
-      });
+    if (trackId && trackId !== existingSessionWithRelations.trackId) {
+      const [newTrack] = await db
+        .select()
+        .from(schema.tracks)
+        .where(eq(schema.tracks.id, trackId))
+        .limit(1);
 
       if (!newTrack) {
         return createErrorResponse("المسار المحدد غير موجود", 400);
       }
 
+      // Fetch instructor and coordinator for permission check
+      const [newTrackInstructor, newTrackCoordinator] = await Promise.all([
+        newTrack.instructorId ? db.select({ id: schema.users.id })
+          .from(schema.users)
+          .where(eq(schema.users.id, newTrack.instructorId))
+          .limit(1)
+          .then(r => r[0] || null) : Promise.resolve(null),
+        newTrack.coordinatorId ? db.select({ id: schema.users.id })
+          .from(schema.users)
+          .where(eq(schema.users.id, newTrack.coordinatorId))
+          .limit(1)
+          .then(r => r[0] || null) : Promise.resolve(null)
+      ]);
+
+      const newTrackWithRelations = {
+        ...newTrack,
+        instructor: newTrackInstructor,
+        coordinator: newTrackCoordinator
+      };
+
       // Check permission for new track
       const canAccessNewTrack =
         allowedRoles.includes(session.user.role) ||
         (session.user.role === "coordinator" &&
-          newTrack.coordinatorId === session.user.id);
+          newTrackWithRelations.coordinatorId === session.user.id);
 
       if (!canAccessNewTrack) {
         return ErrorResponses.forbidden();
@@ -189,10 +268,12 @@ export async function PUT(
     }
 
     // Validate instructorId if provided
-    if (instructorId && instructorId !== existingSession.instructorId) {
-      const instructor = await prisma.user.findUnique({
-        where: { id: instructorId },
-      });
+    if (instructorId && instructorId !== existingSessionWithRelations.instructorId) {
+      const [instructor] = await db
+        .select({ id: schema.users.id, role: schema.users.role })
+        .from(schema.users)
+        .where(eq(schema.users.id, instructorId))
+        .limit(1);
 
       if (!instructor || instructor.role !== "instructor") {
         return createErrorResponse("المعلم المحدد غير موجود", 400);
@@ -225,40 +306,39 @@ export async function PUT(
 
     // Check for time conflicts if date/time/track is being updated
     if (date || startTime || endTime || trackId) {
-      const checkDate = date ? new Date(date) : existingSession.date;
-      const checkStartTime = startTime || existingSession.startTime;
-      const checkEndTime = endTime || existingSession.endTime;
-      const checkTrackId = trackId || existingSession.trackId;
+      const checkDate = date ? new Date(date) : existingSessionWithRelations.date;
+      const checkStartTime = startTime || existingSessionWithRelations.startTime;
+      const checkEndTime = endTime || existingSessionWithRelations.endTime;
+      const checkTrackId = trackId || existingSessionWithRelations.trackId;
 
-      const conflictingSessions = await prisma.liveSession.findMany({
-        where: {
-          id: { not: id }, // Exclude current session
-          trackId: checkTrackId,
-          date: checkDate,
-          OR: [
-            {
-              AND: [
-                { startTime: { lte: checkStartTime } },
-                { endTime: { gt: checkStartTime } },
-              ],
-            },
-            {
-              AND: [
-                { startTime: { lt: checkEndTime } },
-                { endTime: { gte: checkEndTime } },
-              ],
-            },
-            {
-              AND: [
-                { startTime: { gte: checkStartTime } },
-                { endTime: { lte: checkEndTime } },
-              ],
-            },
-          ],
-        },
-      });
+      const conflictingSessions = await db
+        .select({ id: schema.liveSessions.id })
+        .from(schema.liveSessions)
+        .where(
+          and(
+            eq(schema.liveSessions.trackId, checkTrackId),
+            eq(schema.liveSessions.date, checkDate),
+            or(
+              and(
+                lte(schema.liveSessions.startTime, checkStartTime),
+                gt(schema.liveSessions.endTime, checkStartTime)
+              ),
+              and(
+                lt(schema.liveSessions.startTime, checkEndTime),
+                gte(schema.liveSessions.endTime, checkEndTime)
+              ),
+              and(
+                gte(schema.liveSessions.startTime, checkStartTime),
+                lte(schema.liveSessions.endTime, checkEndTime)
+              )
+            )
+          )
+        );
 
-      if (conflictingSessions.length > 0) {
+      // Filter out current session
+      const conflicts = conflictingSessions.filter((s: any) => s.id !== id);
+
+      if (conflicts.length > 0) {
         return createErrorResponse("تعارض زمني مع جلسة موجودة", 400);
       }
     }
@@ -292,11 +372,12 @@ export async function PUT(
     if (endTime !== undefined) updateData.endTime = endTime;
 
     // If trackId is being changed, automatically update instructorId to match the new track's instructor
-    if (trackId !== undefined && trackId !== existingSession.trackId) {
-      const newTrack = await prisma.track.findUnique({
-        where: { id: trackId },
-        select: { instructorId: true },
-      });
+    if (trackId !== undefined && trackId !== existingSessionWithRelations.trackId) {
+      const [newTrack] = await db
+        .select({ instructorId: schema.tracks.instructorId })
+        .from(schema.tracks)
+        .where(eq(schema.tracks.id, trackId))
+        .limit(1);
       if (newTrack) {
         updateData.trackId = trackId;
         updateData.instructorId = newTrack.instructorId; // Auto-assign track's instructor
@@ -319,25 +400,54 @@ export async function PUT(
         | "COMPLETED"
         | "CANCELLED";
 
-    const updatedSession = await prisma.liveSession.update({
-      where: { id },
-      data: updateData,
-      include: {
-        track: {
-          include: {
-            grade: {
-              select: { id: true, name: true },
-            },
-          },
-        },
-        instructor: {
-          select: { id: true, name: true, email: true },
-        },
-        _count: {
-          select: { attendances: true },
-        },
+    await db
+      .update(schema.liveSessions)
+      .set(updateData)
+      .where(eq(schema.liveSessions.id, id));
+
+    // Fetch updated session with nested relations
+    const [updatedLiveSession] = await db
+      .select()
+      .from(schema.liveSessions)
+      .where(eq(schema.liveSessions.id, id))
+      .limit(1);
+
+    const [updatedTrack] = await db
+      .select()
+      .from(schema.tracks)
+      .where(eq(schema.tracks.id, updatedLiveSession!.trackId))
+      .limit(1);
+
+    const [updatedGrade, updatedInstructor] = await Promise.all([
+      updatedTrack!.gradeId ? db.select({ id: schema.grades.id, name: schema.grades.name })
+        .from(schema.grades)
+        .where(eq(schema.grades.id, updatedTrack!.gradeId))
+        .limit(1)
+        .then(r => r[0] || null) : Promise.resolve(null),
+      updatedLiveSession!.instructorId ? db.select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
+        .from(schema.users)
+        .where(eq(schema.users.id, updatedLiveSession!.instructorId))
+        .limit(1)
+        .then(r => r[0] || null) : Promise.resolve(null)
+    ]);
+
+    // Get attendance count
+    const attendances = await db
+      .select({ id: schema.sessionAttendances.id })
+      .from(schema.sessionAttendances)
+      .where(eq(schema.sessionAttendances.sessionId, id));
+
+    const updatedSession = {
+      ...updatedLiveSession,
+      track: {
+        ...updatedTrack,
+        grade: updatedGrade
       },
-    });
+      instructor: updatedInstructor,
+      _count: {
+        attendances: attendances.length
+      }
+    };
 
     return createSuccessResponse(updatedSession, "تم تحديث الجلسة بنجاح");
   });
@@ -351,7 +461,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const result = await withDatabaseErrorHandling(async () => {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
       return ErrorResponses.unauthorized();
@@ -366,25 +476,42 @@ export async function PATCH(
     const linkToUpdate = externalLink || meetLink;
 
     // Check if session exists
-    const existingSession = await prisma.liveSession.findUnique({
-      where: { id },
-      include: {
-        track: {
-          include: {
-            coordinator: true,
-          },
-        },
-      },
-    });
+    const [existingSession] = await db
+      .select()
+      .from(schema.liveSessions)
+      .where(eq(schema.liveSessions.id, id))
+      .limit(1);
 
     if (!existingSession) {
       return ErrorResponses.notFound("الجلسة");
     }
 
+    // Fetch track with coordinator
+    const [track] = await db
+      .select()
+      .from(schema.tracks)
+      .where(eq(schema.tracks.id, existingSession.trackId))
+      .limit(1);
+
+    const coordinator = track!.coordinatorId ? await db
+      .select({ id: schema.users.id })
+      .from(schema.users)
+      .where(eq(schema.users.id, track!.coordinatorId))
+      .limit(1)
+      .then(r => r[0] || null) : null;
+
+    const existingSessionWithRelations = {
+      ...existingSession,
+      track: {
+        ...track,
+        coordinator
+      }
+    };
+
     // Permission check - Only instructor of the session can update external link
     if (
       session.user.role !== "instructor" ||
-      existingSession.instructorId !== session.user.id
+      existingSessionWithRelations.instructorId !== session.user.id
     ) {
       return ErrorResponses.forbidden();
     }
@@ -405,14 +532,14 @@ export async function PATCH(
     // Determine new session status based on external link
     const newStatus = getSessionStatusFromLink(
       linkToUpdate,
-      existingSession.status,
-      !!(existingSession.date && existingSession.startTime)
+      existingSessionWithRelations.status,
+      !!(existingSessionWithRelations.date && existingSessionWithRelations.startTime)
     );
 
     // Update external link and status
-    const updatedSession = await prisma.liveSession.update({
-      where: { id },
-      data: {
+    await db
+      .update(schema.liveSessions)
+      .set({
         externalLink: linkToUpdate?.trim() || null,
         status: newStatus as
           | "DRAFT"
@@ -422,23 +549,52 @@ export async function PATCH(
           | "PAUSED"
           | "COMPLETED"
           | "CANCELLED",
+      })
+      .where(eq(schema.liveSessions.id, id));
+
+    // Fetch updated session with nested relations
+    const [updatedLiveSession] = await db
+      .select()
+      .from(schema.liveSessions)
+      .where(eq(schema.liveSessions.id, id))
+      .limit(1);
+
+    const [updatedTrack] = await db
+      .select()
+      .from(schema.tracks)
+      .where(eq(schema.tracks.id, updatedLiveSession!.trackId))
+      .limit(1);
+
+    const [updatedGrade, updatedInstructor] = await Promise.all([
+      updatedTrack!.gradeId ? db.select({ id: schema.grades.id, name: schema.grades.name })
+        .from(schema.grades)
+        .where(eq(schema.grades.id, updatedTrack!.gradeId))
+        .limit(1)
+        .then(r => r[0] || null) : Promise.resolve(null),
+      updatedLiveSession!.instructorId ? db.select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
+        .from(schema.users)
+        .where(eq(schema.users.id, updatedLiveSession!.instructorId))
+        .limit(1)
+        .then(r => r[0] || null) : Promise.resolve(null)
+    ]);
+
+    // Get attendance count
+    const attendances = await db
+      .select({ id: schema.sessionAttendances.id })
+      .from(schema.sessionAttendances)
+      .where(eq(schema.sessionAttendances.sessionId, id));
+
+    const updatedSession = {
+      ...updatedLiveSession,
+      track: {
+        ...updatedTrack,
+        grade: updatedGrade
       },
-      include: {
-        track: {
-          include: {
-            grade: {
-              select: { id: true, name: true },
-            },
-          },
-        },
-        instructor: {
-          select: { id: true, name: true, email: true },
-        },
-        _count: {
-          select: { attendances: true },
-        },
-      },
-    });
+      instructor: updatedInstructor,
+      _count: {
+        attendances: attendances.length
+      }
+    };
 
     return createSuccessResponse(
       updatedSession,
@@ -455,7 +611,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const result = await withDatabaseErrorHandling(async () => {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
       return ErrorResponses.unauthorized();
@@ -464,32 +620,55 @@ export async function DELETE(
     const { id } = await params;
 
     // Check if session exists
-    const existingSession = await prisma.liveSession.findUnique({
-      where: { id },
-      include: {
-        track: {
-          include: {
-            coordinator: true,
-          },
-        },
-        _count: {
-          select: { attendances: true },
-        },
-      },
-    });
+    const [existingSession] = await db
+      .select()
+      .from(schema.liveSessions)
+      .where(eq(schema.liveSessions.id, id))
+      .limit(1);
 
     if (!existingSession) {
       return ErrorResponses.notFound("الجلسة");
     }
 
+    // Fetch track with coordinator
+    const [track] = await db
+      .select()
+      .from(schema.tracks)
+      .where(eq(schema.tracks.id, existingSession.trackId))
+      .limit(1);
+
+    const coordinator = track!.coordinatorId ? await db
+      .select({ id: schema.users.id })
+      .from(schema.users)
+      .where(eq(schema.users.id, track!.coordinatorId))
+      .limit(1)
+      .then(r => r[0] || null) : null;
+
+    // Get attendance count
+    const attendances = await db
+      .select({ id: schema.sessionAttendances.id })
+      .from(schema.sessionAttendances)
+      .where(eq(schema.sessionAttendances.sessionId, id));
+
+    const existingSessionWithRelations = {
+      ...existingSession,
+      track: {
+        ...track,
+        coordinator
+      },
+      _count: {
+        attendances: attendances.length
+      }
+    };
+
     // Permission check
     const allowedRoles = ["manager", "ceo"];
     const isInstructor =
       session.user.role === "instructor" &&
-      existingSession.instructorId === session.user.id;
+      existingSessionWithRelations.instructorId === session.user.id;
     const isCoordinator =
       session.user.role === "coordinator" &&
-      existingSession.track.coordinator.id === session.user.id;
+      existingSessionWithRelations.track.coordinator?.id === session.user.id;
 
     if (
       !allowedRoles.includes(session.user.role) &&
@@ -500,13 +679,13 @@ export async function DELETE(
     }
 
     // Check if session has attendances
-    if (existingSession._count.attendances > 0) {
+    if (existingSessionWithRelations._count.attendances > 0) {
       return createErrorResponse("لا يمكن حذف جلسة مسجل بها حضور", 400);
     }
 
-    await prisma.liveSession.delete({
-      where: { id },
-    });
+    await db
+      .delete(schema.liveSessions)
+      .where(eq(schema.liveSessions.id, id));
 
     return createSuccessResponse(null, "تم حذف الجلسة بنجاح");
   });

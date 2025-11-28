@@ -12,7 +12,7 @@
 
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth-client";
 import { useEffect } from "react";
 import DashboardLayout from "@/app/components/dashboard/DashboardLayout";
 import {

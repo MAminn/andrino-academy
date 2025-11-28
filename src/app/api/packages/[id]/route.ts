@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { db, schema, eq } from "@/lib/db";
 
 // GET /api/packages/[id] - Get single package
 export async function GET(
@@ -9,17 +8,20 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({
+      headers: request.headers,
+    });
 
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
 
-    const packageData = await prisma.package.findUnique({
-      where: { id },
-    });
+    const [packageData] = await db
+      .select()
+      .from(schema.packages)
+      .where(eq(schema.packages.id, id));
 
     if (!packageData) {
       return NextResponse.json({ error: "Package not found" }, { status: 404 });
@@ -46,9 +48,11 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({
+      headers: request.headers,
+    });
 
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -61,9 +65,10 @@ export async function PUT(
     const body = await request.json();
 
     // Check if package exists
-    const existingPackage = await prisma.package.findUnique({
-      where: { id },
-    });
+    const [existingPackage] = await db
+      .select()
+      .from(schema.packages)
+      .where(eq(schema.packages.id, id));
 
     if (!existingPackage) {
       return NextResponse.json({ error: "Package not found" }, { status: 404 });
@@ -92,9 +97,9 @@ export async function PUT(
     // Convert perks array to JSON if provided
     const perksJson = perks ? JSON.stringify(perks) : existingPackage.perks;
 
-    const updatedPackage = await prisma.package.update({
-      where: { id },
-      data: {
+    await db
+      .update(schema.packages)
+      .set({
         name: name || existingPackage.name,
         price: finalPrice,
         discountedPrice: discountedPrice !== undefined ? (discountedPrice ? parseFloat(discountedPrice) : null) : existingPackage.discountedPrice,
@@ -108,8 +113,13 @@ export async function PUT(
         badge: badge !== undefined ? (badge || null) : existingPackage.badge,
         order: order !== undefined ? parseInt(order) : existingPackage.order,
         isActive: isActive !== undefined ? isActive : existingPackage.isActive,
-      },
-    });
+      })
+      .where(eq(schema.packages.id, id));
+
+    const [updatedPackage] = await db
+      .select()
+      .from(schema.packages)
+      .where(eq(schema.packages.id, id));
 
     return NextResponse.json({ package: updatedPackage });
   } catch (error) {
@@ -127,9 +137,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({
+      headers: request.headers,
+    });
 
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -141,17 +153,16 @@ export async function DELETE(
     const { id } = await params;
 
     // Check if package exists
-    const existingPackage = await prisma.package.findUnique({
-      where: { id },
-    });
+    const [existingPackage] = await db
+      .select()
+      .from(schema.packages)
+      .where(eq(schema.packages.id, id));
 
     if (!existingPackage) {
       return NextResponse.json({ error: "Package not found" }, { status: 404 });
     }
 
-    await prisma.package.delete({
-      where: { id },
-    });
+    await db.delete(schema.packages).where(eq(schema.packages.id, id));
 
     return NextResponse.json({ message: "Package deleted successfully" });
   } catch (error) {

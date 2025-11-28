@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
+import { useSession, signOut } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { useEffect, ReactNode } from "react";
 import { LogOut, User } from "lucide-react";
@@ -16,11 +16,11 @@ export default function DashboardLayout({
   title,
   role,
 }: DashboardLayoutProps) {
-  const { data: session, status } = useSession();
+  const { data: session, isPending } = useSession();
   const router = useRouter();
 
   useEffect(() => {
-    if (status === "loading") return;
+    if (isPending) return;
 
     if (!session) {
       router.push("/auth/signin");
@@ -40,9 +40,9 @@ export default function DashboardLayout({
       router.push("/");
       return;
     }
-  }, [session, status, router, role]);
+  }, [session, isPending, router, role]);
 
-  if (status === "loading") {
+  if (isPending) {
     return (
       <div className='min-h-screen bg-gradient-to-br from-gray-50 via-[#f5f5f5] to-gray-100 flex items-center justify-center'>
         <div className='text-center'>
@@ -61,7 +61,7 @@ export default function DashboardLayout({
   }
 
   const handleSignOut = () => {
-    signOut({ callbackUrl: "/" });
+    signOut();
   };
 
   return (

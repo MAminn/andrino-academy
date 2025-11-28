@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth-client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import DashboardLayout from "@/app/components/dashboard/DashboardLayout";
@@ -24,7 +24,7 @@ import {
 import MultiContentUpload from "@/components/MultiContentUpload";
 
 export default function ContentManagementPage() {
-  const { data: session, status } = useSession();
+  const { data: session, isPending } = useSession();
   const router = useRouter();
 
   const {
@@ -66,9 +66,9 @@ export default function ContentManagementPage() {
   });
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    if (!session) {
       router.push("/api/auth/signin");
-    } else if (status === "authenticated") {
+    } else if (!!session) {
       if (!["manager", "ceo"].includes(session?.user?.role || "")) {
         router.push("/unauthorized");
       } else {
@@ -269,7 +269,7 @@ export default function ContentManagementPage() {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  if (status === "loading" || loading) {
+  if (isPending || loading) {
     return (
       <DashboardLayout title="Manager Dashboard" role="manager">
         <div className="flex items-center justify-center h-64">
@@ -1251,3 +1251,4 @@ export default function ContentManagementPage() {
     </DashboardLayout>
   );
 }
+

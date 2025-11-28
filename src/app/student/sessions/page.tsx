@@ -12,7 +12,7 @@
 
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth-client";
 import { useEffect, useState } from "react";
 import { redirect } from "next/navigation";
 import DashboardLayout from "@/app/components/dashboard/DashboardLayout";
@@ -21,7 +21,7 @@ import MyBookings from "@/components/MyBookings";
 import { Calendar, BookOpen, Info } from "lucide-react";
 
 export default function StudentSessionsPage() {
-  const { data: session, status } = useSession();
+  const { data: session, isPending } = useSession();
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<"available" | "bookings">("available");
 
@@ -30,7 +30,7 @@ export default function StudentSessionsPage() {
   }, []);
 
   // Handle authentication and authorization
-  if (status === "loading" || !mounted) {
+  if (isPending || !mounted) {
     return (
       <DashboardLayout title="إدارة الجلسات" role="STUDENT">
         <div className="flex items-center justify-center min-h-screen">
@@ -192,3 +192,4 @@ export default function StudentSessionsPage() {
     </DashboardLayout>
   );
 }
+

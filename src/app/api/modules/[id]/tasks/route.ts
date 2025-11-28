@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { db, schema, eq, and, asc } from "@/lib/db";
 
 // GET /api/modules/[id]/tasks - List all tasks for a module
 export async function GET(
@@ -9,7 +8,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -17,10 +16,11 @@ export async function GET(
 
     const { id } = await params;
 
-    const tasks = await prisma.task.findMany({
-      where: { moduleId: id },
-      orderBy: { order: "asc" },
-    });
+    const tasks = await db
+      .select()
+      .from(schema.tasks)
+      .where(eq(schema.tasks.moduleId, id))
+      .orderBy(asc(schema.tasks.order));
 
     return NextResponse.json({ tasks });
   } catch (error) {
@@ -38,7 +38,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -52,15 +52,18 @@ export async function POST(
     const { id: moduleId } = await params;
 
     // Verify module exists
-    const module = await prisma.module.findUnique({
-      where: { id: moduleId },
-      include: {
-        tasks: {
-          orderBy: { order: "desc" },
-          take: 1,
-        },
-      },
-    });
+    const [module] = await db
+      .select()
+      .from(schema.modules)
+      .where(eq(schema.modules.id, moduleId))
+      .limit(1);
+
+    const lastTask = await db
+      .select()
+      .from(schema.tasks)
+      .where(eq(schema.tasks.moduleId, moduleId))
+      .orderBy(asc(schema.tasks.order))
+      .limit(1);
 
     if (!module) {
       return NextResponse.json(
@@ -81,17 +84,23 @@ export async function POST(
     }
 
     // Determine order (auto-increment if not provided)
-    const taskOrder = order ?? (module.tasks[0]?.order ?? -1) + 1;
+    const taskOrder = order ?? (lastTask[0]?.order ?? -1) + 1;
 
     // Create task
-    const task = await prisma.task.create({
-      data: {
-        moduleId,
-        title,
-        description,
-        order: taskOrder,
-      },
+    const taskId = crypto.randomUUID();
+    await db.insert(schema.tasks).values({
+      id: taskId,
+      moduleId,
+      title,
+      description,
+      order: taskOrder,
     });
+
+    const [task] = await db
+      .select()
+      .from(schema.tasks)
+      .where(eq(schema.tasks.id, taskId))
+      .limit(1);
 
     return NextResponse.json(
       {
@@ -115,7 +124,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -146,10 +155,16 @@ export async function PUT(
     if (order !== undefined) updateData.order = order;
 
     // Update task
-    const task = await prisma.task.update({
-      where: { id: taskId },
-      data: updateData,
-    });
+    await db
+      .update(schema.tasks)
+      .set(updateData)
+      .where(eq(schema.tasks.id, taskId));
+
+    const [task] = await db
+      .select()
+      .from(schema.tasks)
+      .where(eq(schema.tasks.id, taskId))
+      .limit(1);
 
     return NextResponse.json({
       message: "Task updated successfully",
@@ -170,7 +185,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -191,9 +206,9 @@ export async function DELETE(
       );
     }
 
-    await prisma.task.delete({
-      where: { id: taskId },
-    });
+    await db
+      .delete(schema.tasks)
+      .where(eq(schema.tasks.id, taskId));
 
     return NextResponse.json({
       message: "Task deleted successfully",

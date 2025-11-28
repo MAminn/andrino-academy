@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import { signIn, getSession } from "next-auth/react";
+import { signIn } from "@/lib/auth-client";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff, LogIn, AlertCircle } from "lucide-react";
@@ -34,40 +34,36 @@ function SigninForm() {
     setError("");
 
     try {
-      const result = await signIn("credentials", {
+      const { data, error } = await signIn.email({
         email: formData.email,
         password: formData.password,
-        redirect: false,
       });
 
-      if (result?.error) {
+      if (error) {
         setError("البريد الإلكتروني أو كلمة المرور غير صحيحة");
-      } else {
-        // Get session to determine user role and redirect accordingly
-        const session = await getSession();
-        if (session?.user?.role) {
-          switch (session.user.role) {
-            case "student":
-              router.push("/student/dashboard");
-              break;
-            case "instructor":
-              router.push("/instructor/dashboard");
-              break;
-            case "coordinator":
-              router.push("/coordinator/dashboard");
-              break;
-            case "manager":
-              router.push("/manager/dashboard");
-              break;
-            case "ceo":
-              router.push("/ceo/dashboard");
-              break;
-            default:
-              router.push(callbackUrl);
-          }
-        } else {
-          router.push(callbackUrl);
+      } else if (data?.user?.role) {
+        // Redirect based on user role
+        switch (data.user.role) {
+          case "student":
+            router.push("/student/dashboard");
+            break;
+          case "instructor":
+            router.push("/instructor/dashboard");
+            break;
+          case "coordinator":
+            router.push("/coordinator/dashboard");
+            break;
+          case "manager":
+            router.push("/manager/dashboard");
+            break;
+          case "ceo":
+            router.push("/ceo/dashboard");
+            break;
+          default:
+            router.push(callbackUrl);
         }
+      } else {
+        router.push(callbackUrl);
       }
     } catch (err) {
       console.error("Sign in error:", err);

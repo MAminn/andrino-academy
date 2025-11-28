@@ -12,7 +12,7 @@
 
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth-client";
 import { useEffect, useState } from "react";
 import { useParams, redirect } from "next/navigation";
 import DashboardLayout from "@/app/components/dashboard/DashboardLayout";
@@ -64,7 +64,7 @@ interface Module {
 }
 
 export default function StudentModuleContentPage() {
-  const { data: session, status } = useSession();
+  const { data: session, isPending } = useSession();
   const params = useParams();
   const moduleId = params?.moduleId as string;
 

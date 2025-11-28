@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import DashboardLayout from "@/app/components/dashboard/DashboardLayout";
 import {
@@ -34,7 +34,7 @@ interface Package {
 }
 
 export default function PackagesPage() {
-  const { data: session, status } = useSession();
+  const { data: session, isPending } = useSession();
   const router = useRouter();
 
   const [packages, setPackages] = useState<Package[]>([]);
@@ -60,7 +60,7 @@ export default function PackagesPage() {
 
   // Auth check
   useEffect(() => {
-    if (status === "loading") return;
+    if (isPending) return;
     if (!session) {
       router.push("/auth/signin");
       return;
@@ -235,7 +235,7 @@ export default function PackagesPage() {
     setFormData({ ...formData, perks: newPerks });
   };
 
-  if (status === "loading" || loading) {
+  if (isPending || loading) {
     return (
       <DashboardLayout title="إدارة الباقات" role="manager">
         <div className="flex items-center justify-center h-64">
@@ -618,3 +618,4 @@ export default function PackagesPage() {
     </DashboardLayout>
   );
 }
+

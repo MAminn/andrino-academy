@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+
+import { db, schema, eq, and, or, desc, asc, count, sql, isNull } from "@/lib/db";
 
 // GET /api/analytics/instructor - Get instructor-specific analytics
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -37,74 +37,136 @@ export async function GET(request: NextRequest) {
         break;
     }
 
-    // Get instructor's tracks and related data
-    const instructorTracks = await prisma.track.findMany({
-      where: { instructorId },
-      include: {
-        grade: {
-          select: { id: true, name: true },
-        },
-        liveSessions: {
-          where: {
-            date: {
-              gte: startDate,
-            },
-          },
-          include: {
-            attendances: {
-              include: {
-                student: {
-                  select: { id: true, name: true },
-                },
-              },
-            },
-          },
-        },
-        _count: {
-          select: {
-            liveSessions: true,
-          },
-        },
-      },
-    });
+    // Get instructor's tracks
+    const tracksData = await db
+      .select({
+        id: schema.tracks.id,
+        name: schema.tracks.name,
+        gradeId: schema.tracks.gradeId,
+      })
+      .from(schema.tracks)
+      .where(eq(schema.tracks.instructorId, instructorId));
+
+    const instructorTracks = await Promise.all(
+      tracksData.map(async (track) => {
+        const [grade] = await db
+          .select({ id: schema.grades.id, name: schema.grades.name })
+          .from(schema.grades)
+          .where(eq(schema.grades.id, track.gradeId))
+          .limit(1);
+
+        const liveSessions = await db
+          .select({
+            id: schema.liveSessions.id,
+            title: schema.liveSessions.title,
+            date: schema.liveSessions.date,
+            trackId: schema.liveSessions.trackId,
+          })
+          .from(schema.liveSessions)
+          .where(
+            and(
+              eq(schema.liveSessions.trackId, track.id),
+              sql`${schema.liveSessions.date} >= ${startDate}`
+            )
+          );
+
+        const sessionsWithAttendance = await Promise.all(
+          liveSessions.map(async (session) => {
+            const attendanceData = await db
+              .select({
+                id: schema.sessionAttendances.id,
+                status: schema.sessionAttendances.status,
+                studentId: schema.sessionAttendances.studentId,
+              })
+              .from(schema.sessionAttendances)
+              .where(eq(schema.sessionAttendances.sessionId, session.id));
+
+            const attendances = await Promise.all(
+              attendanceData.map(async (att) => {
+                const [student] = await db
+                  .select({ id: schema.users.id, name: schema.users.name })
+                  .from(schema.users)
+                  .where(eq(schema.users.id, att.studentId))
+                  .limit(1);
+
+                return { ...att, student };
+              })
+            );
+
+            return { ...session, attendances };
+          })
+        );
+
+        return {
+          ...track,
+          grade,
+          liveSessions: sessionsWithAttendance,
+          _count: { liveSessions: liveSessions.length },
+        };
+      })
+    );
 
     // Get students in instructor's tracks (via grade assignments)
-    const trackGradeIds = instructorTracks.map((track: any) => track.gradeId);
-    const students = await prisma.user.findMany({
-      where: {
-        role: "student",
-        gradeId: {
-          in: trackGradeIds,
-        },
-      },
-      select: {
-        id: true,
-        name: true,
-        gradeId: true,
-        sessionAttendances: {
-          where: {
-            session: {
-              trackId: {
-                in: instructorTracks.map((t: any) => t.id),
-              },
-              date: {
-                gte: startDate,
-              },
-            },
-          },
-          include: {
-            session: {
-              select: {
-                id: true,
-                title: true,
-                date: true,
-                trackId: true,
-              },
-            },
-          },
-        },
-      },
-    });
+    const trackGradeIds = instructorTracks.map((track: any) => track.gradeId).filter(Boolean);
+    const trackIds = instructorTracks.map((t: any) => t.id);
+
+    let students: any[] = [];
+    if (trackGradeIds.length > 0) {
+      const studentsData = await db
+        .select({
+          id: schema.users.id,
+          name: schema.users.name,
+          gradeId: schema.users.gradeId,
+        })
+        .from(schema.users)
+        .where(
+          and(
+            eq(schema.users.role, "student"),
+            sql`${schema.users.gradeId} IN (${sql.join(trackGradeIds.map((id: string) => sql`${id}`), sql`, `)})`
+          )
+        );
+
+      students = await Promise.all(
+        studentsData.map(async (student) => {
+          const allAttendances = await db
+            .select({
+              id: schema.sessionAttendances.id,
+              sessionId: schema.sessionAttendances.sessionId,
+              status: schema.sessionAttendances.status,
+            })
+            .from(schema.sessionAttendances)
+            .where(eq(schema.sessionAttendances.studentId, student.id));
+
+          const relevantSessions = await db
+            .select({
+              id: schema.liveSessions.id,
+              title: schema.liveSessions.title,
+              date: schema.liveSessions.date,
+              trackId: schema.liveSessions.trackId,
+            })
+            .from(schema.liveSessions)
+            .where(
+              and(
+                sql`${schema.liveSessions.trackId} IN (${sql.join(trackIds.map((id: string) => sql`${id}`), sql`, `)})`,
+                sql`${schema.liveSessions.date} >= ${startDate}`
+              )
+            );
+
+          const relevantSessionIds = relevantSessions.map(s => s.id);
+          const sessionAttendances = allAttendances
+            .filter(att => relevantSessionIds.includes(att.sessionId))
+            .map(att => ({
+              ...att,
+              session: relevantSessions.find(s => s.id === att.sessionId),
+            }));
+
+          return {
+            ...student,
+            sessionAttendances,
+          };
+        })
+      );
+    }
 
     // Calculate teaching effectiveness metrics
     const totalSessions = instructorTracks.reduce(
@@ -333,3 +395,4 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+

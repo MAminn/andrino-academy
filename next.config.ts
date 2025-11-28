@@ -4,6 +4,9 @@ import path from "path";
 const nextConfig: NextConfig = {
   /* config options here */
 
+  // Prevent Next.js from scanning parent directories for lockfiles  
+  outputFileTracingRoot: path.join(__dirname),
+
   // Temporarily skip TypeScript type checking during build
   // TypeScript errors are already fixed (18 remaining are mostly optional monitoring)
   typescript: {
@@ -34,10 +37,7 @@ const nextConfig: NextConfig = {
           "**/.git/**",
           "**/.next/**",
           "**/Application Data/**",
-          "C:/Users/**/Application Data/**",
-          /node_modules/,
-          /.git/,
-          /.next/,
+          "**/.npm/**",
         ],
       };
     }

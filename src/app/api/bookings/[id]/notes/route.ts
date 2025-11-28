@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { db, schema, eq } from "@/lib/db";
 
 // PUT /api/bookings/[id]/notes - Add/update notes on a booking
 export async function PUT(
@@ -9,7 +8,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -18,24 +17,53 @@ export async function PUT(
     const { id: bookingId } = await params;
 
     // Fetch the booking
-    const booking = await prisma.sessionBooking.findUnique({
-      where: { id: bookingId },
-      include: {
-        availability: {
-          include: {
-            instructor: true,
-          },
-        },
-        student: true,
-      },
-    });
+    const [bookingData] = await db
+      .select({
+        id: schema.sessionBookings.id,
+        studentId: schema.sessionBookings.studentId,
+        availabilityId: schema.sessionBookings.availabilityId,
+        studentNotes: schema.sessionBookings.studentNotes,
+        instructorNotes: schema.sessionBookings.instructorNotes,
+      })
+      .from(schema.sessionBookings)
+      .where(eq(schema.sessionBookings.id, bookingId))
+      .limit(1);
 
-    if (!booking) {
+    if (!bookingData) {
       return NextResponse.json(
         { error: "Booking not found" },
         { status: 404 }
       );
     }
+
+    const availabilityData = await db
+      .select({
+        id: schema.instructorAvailabilities.id,
+        instructorId: schema.instructorAvailabilities.instructorId,
+      })
+      .from(schema.instructorAvailabilities)
+      .where(eq(schema.instructorAvailabilities.id, bookingData.availabilityId))
+      .limit(1);
+
+    const availability = availabilityData[0];
+
+    const [instructor] = await db
+      .select({ id: schema.users.id, name: schema.users.name })
+      .from(schema.users)
+      .where(eq(schema.users.id, availability.instructorId))
+      .limit(1);
+
+    const [student] = await db
+      .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
+      .from(schema.users)
+      .where(eq(schema.users.id, bookingData.studentId))
+      .limit(1);
+
+    const booking = {
+      ...bookingData,
+      availability: { ...availability, instructor },
+      student,
+    };
 
     const body = await request.json();
     const { studentNotes, instructorNotes } = body;
@@ -86,36 +114,50 @@ export async function PUT(
     }
 
     // Update booking
-    const updatedBooking = await prisma.sessionBooking.update({
-      where: { id: bookingId },
-      data: updateData,
-      include: {
-        student: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        availability: {
-          include: {
-            instructor: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-          },
-        },
-        track: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
+    await db
+      .update(schema.sessionBookings)
+      .set(updateData)
+      .where(eq(schema.sessionBookings.id, bookingId));
+
+    const [updatedBookingData] = await db
+      .select()
+      .from(schema.sessionBookings)
+      .where(eq(schema.sessionBookings.id, bookingId))
+      .limit(1);
+
+    const [updatedStudent] = await db
+      .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
+      .from(schema.users)
+      .where(eq(schema.users.id, updatedBookingData.studentId))
+      .limit(1);
+
+    const [updatedAvailability] = await db
+      .select()
+      .from(schema.instructorAvailabilities)
+      .where(eq(schema.instructorAvailabilities.id, updatedBookingData.availabilityId))
+      .limit(1);
+
+    const [updatedInstructor] = await db
+      .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
+      .from(schema.users)
+      .where(eq(schema.users.id, updatedAvailability.instructorId))
+      .limit(1);
+
+    const [updatedTrack] = await db
+      .select({ id: schema.tracks.id, name: schema.tracks.name })
+      .from(schema.tracks)
+      .where(eq(schema.tracks.id, updatedAvailability.trackId))
+      .limit(1);
+
+    const updatedBooking = {
+      ...updatedBookingData,
+      student: updatedStudent,
+      availability: {
+        ...updatedAvailability,
+        instructor: updatedInstructor,
+        track: updatedTrack,
       },
-    });
+    };
 
     return NextResponse.json({
       message: "Notes updated successfully",

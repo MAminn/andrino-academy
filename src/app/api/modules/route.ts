@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+
+import { db, schema, eq, and, or, desc, asc, count, sql, isNull, inArray } from "@/lib/db";
 import { writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
-import { ModuleType, ModuleCategory } from "@prisma/client";
+
+type ModuleType = "VIDEO" | "PDF" | "DOCUMENT" | "IMAGE";
+type ModuleCategory = "LECTURE" | "TUTORIAL" | "EXERCISE" | "REFERENCE" | "SLIDES" | "HANDOUT" | "ASSIGNMENT" | "SOLUTION" | "SUPPLEMENTARY" | "PROJECT" | "UNCATEGORIZED";
 
 // File size limits (in bytes)
 const FILE_SIZE_LIMITS = {
@@ -41,9 +43,9 @@ const ALLOWED_MIME_TYPES = {
 // GET /api/modules - Get all modules (with filters)
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -80,35 +82,70 @@ export async function GET(request: NextRequest) {
       where.isPublished = isPublished === "true";
     }
 
-    const modules = await prisma.module.findMany({
-      where,
-      include: {
-        track: {
-          select: {
-            id: true,
-            name: true,
-            gradeId: true,
-          },
-        },
-        session: {
-          select: {
-            id: true,
-            title: true,
-            date: true,
-          },
-        },
-        contentItems: {
-          orderBy: { order: "asc" },
-        },
-        tasks: {
-          orderBy: { order: "asc" },
-        },
-        assignments: {
-          orderBy: { order: "asc" },
-        },
-      },
-      orderBy: [{ order: "asc" }, { createdAt: "asc" }],
-    });
+    // Build WHERE conditions
+    const conditions = [];
+    if (trackId) conditions.push(eq(schema.modules.trackId, trackId));
+    if (sessionId) conditions.push(eq(schema.modules.sessionId, sessionId));
+    // Note: type filter removed - modules table doesn't have type field, it's in contentItems
+    if (category) conditions.push(eq(schema.modules.category, category));
+    if (session.user.role === "student") {
+      conditions.push(eq(schema.modules.isPublished, true));
+    } else if (isPublished !== null && isPublished !== undefined) {
+      conditions.push(eq(schema.modules.isPublished, isPublished === "true"));
+    }
+
+    // Query base modules
+    const baseModules = await db
+      .select()
+      .from(schema.modules)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(asc(schema.modules.order), asc(schema.modules.createdAt));
+
+    // Fetch relations for each module
+    const modules = await Promise.all(
+      baseModules.map(async (module) => {
+        const [track, session, contentItems, tasks, assignments] = await Promise.all([
+          module.trackId
+            ? db
+                .select({ id: schema.tracks.id, name: schema.tracks.name, gradeId: schema.tracks.gradeId })
+                .from(schema.tracks)
+                .where(eq(schema.tracks.id, module.trackId))
+                .then((r) => r[0] || null)
+            : null,
+          module.sessionId
+            ? db
+                .select({ id: schema.liveSessions.id, title: schema.liveSessions.title, date: schema.liveSessions.date })
+                .from(schema.liveSessions)
+                .where(eq(schema.liveSessions.id, module.sessionId))
+                .then((r) => r[0] || null)
+            : null,
+          db
+            .select()
+            .from(schema.contentItems)
+            .where(eq(schema.contentItems.moduleId, module.id))
+            .orderBy(asc(schema.contentItems.order)),
+          db
+            .select()
+            .from(schema.tasks)
+            .where(eq(schema.tasks.moduleId, module.id))
+            .orderBy(asc(schema.tasks.order)),
+          db
+            .select()
+            .from(schema.assignments)
+            .where(eq(schema.assignments.moduleId, module.id))
+            .orderBy(asc(schema.assignments.order)),
+        ]);
+
+        return {
+          ...module,
+          track,
+          session,
+          contentItems,
+          tasks,
+          assignments,
+        };
+      })
+    );
 
     return NextResponse.json({ modules });
   } catch (error) {
@@ -123,9 +160,9 @@ export async function GET(request: NextRequest) {
 // POST /api/modules - Create a new module with file upload (Manager only)
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -157,9 +194,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify track exists
-    const track = await prisma.track.findUnique({
-      where: { id: trackId },
-    });
+    const track = await db
+      .select()
+      .from(schema.tracks)
+      .where(eq(schema.tracks.id, trackId))
+      .then((r) => r[0]);
 
     if (!track) {
       return NextResponse.json(
@@ -170,9 +209,11 @@ export async function POST(request: NextRequest) {
 
     // Verify session if provided
     if (sessionId) {
-      const liveSession = await prisma.liveSession.findUnique({
-        where: { id: sessionId },
-      });
+      const liveSession = await db
+        .select()
+        .from(schema.liveSessions)
+        .where(eq(schema.liveSessions.id, sessionId))
+        .then((r) => r[0]);
 
       if (!liveSession) {
         return NextResponse.json(
@@ -183,8 +224,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Create module in database
-    const module = await prisma.module.create({
-      data: {
+    const [moduleId] = await db
+      .insert(schema.modules)
+      .values({
         title,
         description: description || null,
         category: category || "UNCATEGORIZED",
@@ -196,31 +238,37 @@ export async function POST(request: NextRequest) {
         weekNumber: weekNumber ? parseInt(weekNumber) : null,
         startDate: startDate ? new Date(startDate) : null,
         uploadedBy: session.user.email || "",
-      },
-      include: {
-        track: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        session: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
-        contentItems: {
-          orderBy: { order: "asc" },
-        },
-        tasks: {
-          orderBy: { order: "asc" },
-        },
-        assignments: {
-          orderBy: { order: "asc" },
-        },
-      },
-    });
+      })
+      .$returningId();
+
+    // Fetch the created module with relations
+    const [createdModule, moduleTrack, moduleSession, contentItems, tasks, assignments] = await Promise.all([
+      db.select().from(schema.modules).where(eq(schema.modules.id, moduleId.id)).then((r) => r[0]),
+      db
+        .select({ id: schema.tracks.id, name: schema.tracks.name })
+        .from(schema.tracks)
+        .where(eq(schema.tracks.id, trackId))
+        .then((r) => r[0] || null),
+      sessionId
+        ? db
+            .select({ id: schema.liveSessions.id, title: schema.liveSessions.title })
+            .from(schema.liveSessions)
+            .where(eq(schema.liveSessions.id, sessionId))
+            .then((r) => r[0] || null)
+        : Promise.resolve(null),
+      db.select().from(schema.contentItems).where(eq(schema.contentItems.moduleId, moduleId.id)).orderBy(asc(schema.contentItems.order)),
+      db.select().from(schema.tasks).where(eq(schema.tasks.moduleId, moduleId.id)).orderBy(asc(schema.tasks.order)),
+      db.select().from(schema.assignments).where(eq(schema.assignments.moduleId, moduleId.id)).orderBy(asc(schema.assignments.order)),
+    ]);
+
+    const module = {
+      ...createdModule,
+      track: moduleTrack,
+      session: moduleSession,
+      contentItems,
+      tasks,
+      assignments,
+    };
 
     return NextResponse.json(
       { module, message: "Module created successfully" },
@@ -238,9 +286,9 @@ export async function POST(request: NextRequest) {
 // DELETE /api/modules - Delete multiple modules (Manager only)
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -259,14 +307,8 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Delete modules
-    await prisma.module.deleteMany({
-      where: {
-        id: {
-          in: ids,
-        },
-      },
-    });
+    // Delete modules (inArray is already imported from @/lib/db at top)
+    await db.delete(schema.modules).where(inArray(schema.modules.id, ids));
 
     return NextResponse.json({
       message: `${ids.length} module(s) deleted successfully`,
@@ -279,3 +321,4 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
+

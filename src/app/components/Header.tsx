@@ -3,14 +3,16 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useSession, signOut } from "@/lib/auth-client";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
 import { User, LogOut } from "lucide-react";
 import LogoImage from "@/../assets/andrino-logo-03.png";
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { data: session, status } = useSession();
+  const { data: session, isPending } = useSession();
+  const router = useRouter();
 
   // Smooth scroll function
   const scrollToSection = (sectionId: string) => {
@@ -25,8 +27,9 @@ export default function Header() {
     setIsMobileMenuOpen(false);
   };
 
-  const handleSignOut = () => {
-    signOut({ callbackUrl: "/" });
+  const handleSignOut = async () => {
+    await signOut();
+    router.push("/");
   };
 
   const getDashboardUrl = () => {

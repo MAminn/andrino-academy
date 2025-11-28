@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+
+import { db, schema, eq, and, or, desc, asc, count, sql, isNull } from "@/lib/db";
 
 // POST /api/student/book-session - Book an available time slot
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -29,13 +29,44 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch the availability slot
-    const availability = await prisma.instructorAvailability.findUnique({
-      where: { id: availabilityId },
-      include: {
-        track: true,
-        bookings: true,
-      },
-    });
+    const [availabilityData] = await db
+      .select({
+        id: schema.instructorAvailabilities.id,
+        trackId: schema.instructorAvailabilities.trackId,
+        isConfirmed: schema.instructorAvailabilities.isConfirmed,
+      })
+      .from(schema.instructorAvailabilities)
+      .where(eq(schema.instructorAvailabilities.id, availabilityId))
+      .limit(1);
+
+    const [track] = availabilityData
+      ? await db
+          .select({
+            id: schema.tracks.id,
+            name: schema.tracks.name,
+          })
+          .from(schema.tracks)
+          .where(eq(schema.tracks.id, availabilityData.trackId))
+          .limit(1)
+      : [null];
+
+    const bookings = availabilityData
+      ? await db
+          .select({
+            id: schema.sessionBookings.id,
+            studentId: schema.sessionBookings.studentId,
+          })
+          .from(schema.sessionBookings)
+          .where(eq(schema.sessionBookings.availabilityId, availabilityData.id))
+      : [];
+
+    const availability: any = availabilityData
+      ? {
+          ...availabilityData,
+          track,
+          bookings,
+        }
+      : null;
 
     if (!availability) {
       return NextResponse.json(
@@ -54,7 +85,7 @@ export async function POST(request: NextRequest) {
 
     // Check if student already has a booking for this slot (prevent duplicate bookings by same student)
     const existingBooking = availability.bookings.find(
-      (b) => b.studentId === session.user.id
+      (b: any) => b.studentId === session.user.id
     );
 
     if (existingBooking) {
@@ -65,34 +96,70 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the booking (multiple students can book the same slot)
-    const booking = await prisma.sessionBooking.create({
-      data: {
+    const [bookingId] = await db
+      .insert(schema.sessionBookings)
+      .values({
         availabilityId,
         studentId: session.user.id,
         trackId: availability.trackId,
-        status: "confirmed", // Changed from "booked" to "confirmed"
+        status: "confirmed",
         studentNotes: studentNotes || null,
-      },
-      include: {
-        availability: {
-          include: {
-            instructor: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-          },
-        },
-        track: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-    });
+      })
+      .$returningId();
+
+    const [newBooking] = await db
+      .select({
+        id: schema.sessionBookings.id,
+        availabilityId: schema.sessionBookings.availabilityId,
+        studentId: schema.sessionBookings.studentId,
+        trackId: schema.sessionBookings.trackId,
+        status: schema.sessionBookings.status,
+        studentNotes: schema.sessionBookings.studentNotes,
+      })
+      .from(schema.sessionBookings)
+      .where(eq(schema.sessionBookings.id, bookingId.id))
+      .limit(1);
+
+    const [bookingAvail] = await db
+      .select({
+        id: schema.instructorAvailabilities.id,
+        instructorId: schema.instructorAvailabilities.instructorId,
+      })
+      .from(schema.instructorAvailabilities)
+      .where(eq(schema.instructorAvailabilities.id, newBooking.availabilityId))
+      .limit(1);
+
+    const [instructor] = bookingAvail
+      ? await db
+          .select({
+            id: schema.users.id,
+            name: schema.users.name,
+            email: schema.users.email,
+          })
+          .from(schema.users)
+          .where(eq(schema.users.id, bookingAvail.instructorId))
+          .limit(1)
+      : [null];
+
+    const [bookingTrack] = await db
+      .select({
+        id: schema.tracks.id,
+        name: schema.tracks.name,
+      })
+      .from(schema.tracks)
+      .where(eq(schema.tracks.id, newBooking.trackId))
+      .limit(1);
+
+    const booking: any = {
+      ...newBooking,
+      availability: bookingAvail
+        ? {
+            ...bookingAvail,
+            instructor,
+          }
+        : null,
+      track: bookingTrack,
+    };
 
     return NextResponse.json(
       {
@@ -113,9 +180,9 @@ export async function POST(request: NextRequest) {
 // DELETE /api/student/book-session - Cancel a booking
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -136,12 +203,17 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Fetch the booking
-    const booking = await prisma.sessionBooking.findUnique({
-      where: { id: bookingId },
-      include: {
-        availability: true,
-      },
-    });
+    const [booking] = await db
+      .select({
+        id: schema.sessionBookings.id,
+        studentId: schema.sessionBookings.studentId,
+        availabilityId: schema.sessionBookings.availabilityId,
+        sessionId: schema.sessionBookings.sessionId,
+        status: schema.sessionBookings.status,
+      })
+      .from(schema.sessionBookings)
+      .where(eq(schema.sessionBookings.id, bookingId))
+      .limit(1);
 
     if (!booking) {
       return NextResponse.json(
@@ -174,16 +246,15 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Delete booking and mark availability as not booked in a transaction
-    await prisma.$transaction([
-      prisma.sessionBooking.delete({
-        where: { id: bookingId },
-      }),
-      prisma.instructorAvailability.update({
-        where: { id: booking.availabilityId },
-        data: { isBooked: false },
-      }),
-    ]);
+    // Delete booking and mark availability as not booked
+    await db
+      .delete(schema.sessionBookings)
+      .where(eq(schema.sessionBookings.id, bookingId));
+
+    await db
+      .update(schema.instructorAvailabilities)
+      .set({ isBooked: false })
+      .where(eq(schema.instructorAvailabilities.id, booking.availabilityId));
 
     return NextResponse.json({
       message: "Booking cancelled successfully",
@@ -196,3 +267,4 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
+

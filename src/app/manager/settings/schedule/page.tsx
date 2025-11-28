@@ -13,7 +13,7 @@
 
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth-client";
 import { useEffect, useState } from "react";
 import { redirect } from "next/navigation";
 import DashboardLayout from "@/app/components/dashboard/DashboardLayout";
@@ -62,7 +62,7 @@ function calculateNextOpenDate(weekResetDay: number, weekResetHour: number): str
 }
 
 export default function ScheduleSettingsPage() {
-  const { data: session, status } = useSession();
+  const { data: session, isPending } = useSession();
   const [settings, setSettings] = useState<ScheduleSettings | null>(null);
   const [nextOpenDate, setNextOpenDate] = useState<string>("");  // New: Specific date when calendar opens
   const [weekResetDay, setWeekResetDay] = useState<number>(6); // Keep for backward compatibility
@@ -112,7 +112,7 @@ export default function ScheduleSettingsPage() {
   }, [session, status]);
 
   // Handle authentication and authorization
-  if (status === "loading") {
+  if (isPending) {
     return (
       <DashboardLayout title="إعدادات الجدول" role="manager">
         <div className="flex items-center justify-center min-h-screen">
@@ -442,3 +442,4 @@ export default function ScheduleSettingsPage() {
     </DashboardLayout>
   );
 }
+

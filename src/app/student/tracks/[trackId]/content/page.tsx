@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth-client";
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import DashboardLayout from "@/app/components/dashboard/DashboardLayout";
@@ -35,7 +35,7 @@ interface Track {
 }
 
 export default function TrackContentPage() {
-  const { data: session, status } = useSession();
+  const { data: session, isPending } = useSession();
   const router = useRouter();
   const params = useParams();
   const trackId = params?.trackId as string;
@@ -45,18 +45,23 @@ export default function TrackContentPage() {
   const [trackInfo, setTrackInfo] = useState<Track | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/api/auth/signin");
-    } else if (status === "authenticated") {
-      if (session?.user?.role !== "student") {
-        router.push("/unauthorized");
-      } else if (trackId) {
-        loadTrackContent();
-      }
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted || isPending) return;
+    
+    if (!session?.user) {
+      router.push("/auth/signin");
+    } else if (session.user.role !== "student") {
+      router.push("/unauthorized");
+    } else if (trackId) {
+      loadTrackContent();
     }
-  }, [status, session, trackId]);
+  }, [mounted, isPending, session, trackId, router]);
 
   const loadTrackContent = async () => {
     setLoading(true);

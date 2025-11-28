@@ -194,6 +194,7 @@ export default function AvailabilityCalendar({
         if (!response.ok) throw new Error("Failed to fetch availability");
 
         const { availability: data } = await response.json();
+        console.log("Fetched availability data:", data);
 
         // Convert API data to TimeSlot format
         const newSlots: TimeSlot[] = [];
@@ -230,6 +231,13 @@ export default function AvailabilityCalendar({
           }
         });
 
+        console.log("Setting slots:", {
+          totalSlots: newSlots.length,
+          selectedSlots: newSlots.filter(s => s.isSelected).length,
+          confirmedSlots: newSlots.filter(s => s.isConfirmed).length,
+          bookedSlots: newSlots.filter(s => s.isBooked).length,
+          sample: newSlots.filter(s => s.isSelected).slice(0, 3)
+        });
         setSlots(newSlots);
       } catch (err) {
         console.error("Error fetching availability:", err);
@@ -250,6 +258,8 @@ export default function AvailabilityCalendar({
     if (!slot || slot.isConfirmed) return; // Cannot edit confirmed slots
 
     const newIsSelected = !slot.isSelected;
+    
+    console.log(`Slot clicked: day=${day}, hour=${hour}, newIsSelected=${newIsSelected}`);
     
     setSlots(prev =>
       prev.map(s =>
@@ -298,6 +308,14 @@ export default function AvailabilityCalendar({
 
   // Save availability
   const handleSave = async () => {
+    console.log("handleSave called", {
+      selectedTrackId,
+      weekStartDate,
+      totalSlots: slots.length,
+      selectedSlots: slots.filter(s => s.isSelected).length,
+      isCalendarLocked
+    });
+
     if (!selectedTrackId || !weekStartDate) {
       setError("الرجاء اختيار مسار وتاريخ");
       return;
@@ -536,7 +554,7 @@ export default function AvailabilityCalendar({
         </div>
 
         {/* Week Navigation */}
-        <div className="flex items-center justify-between gap-4 mb-4">
+        <div className="flex items-center justify-start gap-4 mb-4">
           <button
             onClick={() => navigateWeek("prev")}
             className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
@@ -550,13 +568,13 @@ export default function AvailabilityCalendar({
             <p className="font-semibold text-gray-900">{weekStartDate}</p>
           </div>
 
-          <button
+          {/* <button
             onClick={() => navigateWeek("next")}
             className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
             disabled={loading}
           >
             الأسبوع التالي →
-          </button>
+          </button> */}
         </div>
 
         {/* Legend */}
@@ -688,6 +706,11 @@ export default function AvailabilityCalendar({
 
       {/* Action Buttons */}
       <div className="flex gap-4 justify-end">
+        <button onClick={handleSave}
+        disabled={hasConfirmedSlots || !hasSelectedSlots || confirming || loading || isCalendarLocked}
+        className="px-6 py-3 bg-[#7e5b3f] hover:bg-[#6a4d35] text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >حفظ التوافر
+        </button>
 
         <button
           onClick={handleConfirm}

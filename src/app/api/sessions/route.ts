@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+
+import { db, schema, eq, and, or, desc, asc, count, sql, isNull, inArray } from "@/lib/db";
 import { SessionStatus } from "@/types/api";
 
 // GET /api/sessions - Get sessions (with optional filters)
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -85,10 +85,10 @@ export async function GET(request: NextRequest) {
 
     if (session.user.role === "coordinator") {
       // Coordinators can only see sessions from tracks they coordinate
-      const coordinatedTracks = await prisma.track.findMany({
-        where: { coordinatorId: session.user.id },
-        select: { id: true },
-      });
+      const coordinatedTracks = await db
+        .select({ id: schema.tracks.id })
+        .from(schema.tracks)
+        .where(eq(schema.tracks.coordinatorId, session.user.id));
 
       if (coordinatedTracks.length === 0) {
         return NextResponse.json({ sessions: [] });
@@ -110,24 +110,23 @@ export async function GET(request: NextRequest) {
 
     if (session.user.role === "student") {
       // Students can only see sessions from their assigned grade's tracks
-      const student = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        include: {
-          assignedGrade: {
-            include: {
-              tracks: {
-                select: { id: true },
-              },
-            },
-          },
-        },
-      });
+      const [student] = await db
+        .select({
+          gradeId: schema.users.gradeId,
+        })
+        .from(schema.users)
+        .where(eq(schema.users.id, session.user.id));
 
-      if (!student?.assignedGrade) {
+      if (!student?.gradeId) {
         return NextResponse.json({ sessions: [] });
       }
 
-      const trackIds = student.assignedGrade.tracks.map((t) => t.id);
+      const gradeTracks = await db
+        .select({ id: schema.tracks.id })
+        .from(schema.tracks)
+        .where(eq(schema.tracks.gradeId, student.gradeId));
+
+      const trackIds = gradeTracks.map((t) => t.id);
       if (trackIds.length === 0) {
         return NextResponse.json({ sessions: [] });
       }
@@ -145,35 +144,103 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const sessions = await prisma.liveSession.findMany({
-      where: whereClause,
-      include: {
-        track: {
-          include: {
-            grade: {
-              select: { id: true, name: true },
-            },
-            instructor: {
-              select: { id: true, name: true, email: true },
-            },
-          },
-        },
-        instructor: {
-          select: { id: true, name: true, email: true },
-        },
-        attendances: {
-          include: {
-            student: {
-              select: { id: true, name: true, email: true },
-            },
-          },
-        },
-        _count: {
-          select: { attendances: true },
-        },
-      },
-      orderBy: [{ date: "asc" }, { startTime: "asc" }],
-    });
+    // Build Drizzle where conditions
+    const conditions = [];
+    if (whereClause.trackId) {
+      if (typeof whereClause.trackId === 'string') {
+        conditions.push(eq(schema.liveSessions.trackId, whereClause.trackId));
+      } else if (whereClause.trackId.in) {
+        conditions.push(inArray(schema.liveSessions.trackId, whereClause.trackId.in));
+      }
+    }
+    if (whereClause.instructorId) {
+      conditions.push(eq(schema.liveSessions.instructorId, whereClause.instructorId));
+    }
+    if (whereClause.status) {
+      conditions.push(eq(schema.liveSessions.status, whereClause.status));
+    }
+    if (whereClause.date?.gte) {
+      conditions.push(sql`${schema.liveSessions.date} >= ${whereClause.date.gte}`);
+    }
+    if (whereClause.date?.lte) {
+      conditions.push(sql`${schema.liveSessions.date} <= ${whereClause.date.lte}`);
+    }
+
+    const sessionsRaw = await db
+      .select()
+      .from(schema.liveSessions)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(asc(schema.liveSessions.date), asc(schema.liveSessions.startTime));
+
+    // Manually fetch relations
+    const sessions = await Promise.all(
+      sessionsRaw.map(async (session) => {
+        const [track] = await db
+          .select()
+          .from(schema.tracks)
+          .where(eq(schema.tracks.id, session.trackId));
+
+        const [grade] = track?.gradeId
+          ? await db
+              .select({ id: schema.grades.id, name: schema.grades.name })
+              .from(schema.grades)
+              .where(eq(schema.grades.id, track.gradeId))
+          : [null];
+
+        const [trackInstructor] = track?.instructorId
+          ? await db
+              .select({
+                id: schema.users.id,
+                name: schema.users.name,
+                email: schema.users.email,
+              })
+              .from(schema.users)
+              .where(eq(schema.users.id, track.instructorId))
+          : [null];
+
+        const [instructor] = await db
+          .select({
+            id: schema.users.id,
+            name: schema.users.name,
+            email: schema.users.email,
+          })
+          .from(schema.users)
+          .where(eq(schema.users.id, session.instructorId));
+
+        const attendances = await db
+          .select()
+          .from(schema.sessionAttendances)
+          .where(eq(schema.sessionAttendances.sessionId, session.id));
+
+        const attendancesWithStudents = await Promise.all(
+          attendances.map(async (attendance) => {
+            const [student] = await db
+              .select({
+                id: schema.users.id,
+                name: schema.users.name,
+                email: schema.users.email,
+              })
+              .from(schema.users)
+              .where(eq(schema.users.id, attendance.studentId));
+            return { ...attendance, student };
+          })
+        );
+
+        return {
+          ...session,
+          track: track
+            ? {
+                ...track,
+                grade,
+                instructor: trackInstructor,
+              }
+            : null,
+          instructor,
+          attendances: attendancesWithStudents,
+          _count: { attendances: attendances.length },
+        };
+      })
+    );
 
     return NextResponse.json({ sessions });
   } catch (error) {
@@ -188,9 +255,9 @@ export async function GET(request: NextRequest) {
 // POST /api/sessions - Create a new session
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -240,13 +307,26 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify track exists
-    const track = await prisma.track.findUnique({
-      where: { id: trackId },
-      include: {
-        instructor: true,
-        coordinator: true,
-      },
-    });
+    const [track] = await db
+      .select()
+      .from(schema.tracks)
+      .where(eq(schema.tracks.id, trackId));
+
+    if (track) {
+      const [instructor] = track.instructorId
+        ? await db
+            .select()
+            .from(schema.users)
+            .where(eq(schema.users.id, track.instructorId))
+        : [null];
+      const [coordinator] = track.coordinatorId
+        ? await db
+            .select()
+            .from(schema.users)
+            .where(eq(schema.users.id, track.coordinatorId))
+        : [null];
+      Object.assign(track, { instructor, coordinator });
+    }
 
     if (!track) {
       return NextResponse.json({ error: "Track not found" }, { status: 400 });
@@ -274,9 +354,10 @@ export async function POST(request: NextRequest) {
 
     // Verify instructor if provided
     if (instructorId && instructorId !== track.instructorId) {
-      const instructor = await prisma.user.findUnique({
-        where: { id: instructorId },
-      });
+      const [instructor] = await db
+        .select()
+        .from(schema.users)
+        .where(eq(schema.users.id, instructorId));
 
       if (!instructor || instructor.role !== "instructor") {
         return NextResponse.json(
@@ -305,32 +386,32 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for time conflicts
-    const conflictingSessions = await prisma.liveSession.findMany({
-      where: {
-        trackId,
-        date: sessionDate,
-        OR: [
-          {
-            AND: [
-              { startTime: { lte: startTime } },
-              { endTime: { gt: startTime } },
-            ],
-          },
-          {
-            AND: [
-              { startTime: { lt: endTime } },
-              { endTime: { gte: endTime } },
-            ],
-          },
-          {
-            AND: [
-              { startTime: { gte: startTime } },
-              { endTime: { lte: endTime } },
-            ],
-          },
-        ],
-      },
-    });
+    const conflictingSessions = await db
+      .select()
+      .from(schema.liveSessions)
+      .where(
+        and(
+          eq(schema.liveSessions.trackId, trackId),
+          eq(schema.liveSessions.date, sessionDate),
+          or(
+            // Case 1: existing session starts before new start and ends after new start
+            and(
+              sql`${schema.liveSessions.startTime} <= ${startTime}`,
+              sql`${schema.liveSessions.endTime} > ${startTime}`
+            ),
+            // Case 2: existing session starts before new end and ends after new end  
+            and(
+              sql`${schema.liveSessions.startTime} < ${endTime}`,
+              sql`${schema.liveSessions.endTime} >= ${endTime}`
+            ),
+            // Case 3: existing session is completely within new session
+            and(
+              sql`${schema.liveSessions.startTime} >= ${startTime}`,
+              sql`${schema.liveSessions.endTime} <= ${endTime}`
+            )
+          )
+        )
+      );
 
     if (conflictingSessions.length > 0) {
       // Map to minimal conflict info to help frontend show details
@@ -348,8 +429,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const newSession = await prisma.liveSession.create({
-      data: {
+    const [newSessionId] = await db
+      .insert(schema.liveSessions)
+      .values({
         title,
         description,
         trackId,
@@ -361,39 +443,60 @@ export async function POST(request: NextRequest) {
         materials,
         notes,
         status: "SCHEDULED",
-      },
-      include: {
-        track: {
-          include: {
-            grade: {
-              select: { id: true, name: true },
-            },
-          },
-        },
-        instructor: {
-          select: { id: true, name: true, email: true },
-        },
-        _count: {
-          select: { attendances: true },
-        },
-      },
-    });
+      })
+      .$returningId();
+
+    // Fetch created session with relations
+    const [newSession] = await db
+      .select()
+      .from(schema.liveSessions)
+      .where(eq(schema.liveSessions.id, newSessionId.id));
+
+    const [sessionTrack] = await db
+      .select()
+      .from(schema.tracks)
+      .where(eq(schema.tracks.id, newSession.trackId));
+
+    const [sessionGrade] = sessionTrack?.gradeId
+      ? await db
+          .select({ id: schema.grades.id, name: schema.grades.name })
+          .from(schema.grades)
+          .where(eq(schema.grades.id, sessionTrack.gradeId))
+      : [null];
+
+    const [sessionInstructor] = await db
+      .select({
+        id: schema.users.id,
+        name: schema.users.name,
+        email: schema.users.email,
+      })
+      .from(schema.users)
+      .where(eq(schema.users.id, newSession.instructorId));
+
+    const sessionWithRelations = {
+      ...newSession,
+      track: sessionTrack ? { ...sessionTrack, grade: sessionGrade } : null,
+      instructor: sessionInstructor,
+      _count: { attendances: 0 },
+    };
 
     // Link bookings to session if bookingIds provided
     if (bookingIds && Array.isArray(bookingIds) && bookingIds.length > 0) {
-      await prisma.sessionBooking.updateMany({
-        where: {
-          id: { in: bookingIds },
-          sessionId: null, // Only update bookings not already linked
-        },
-        data: {
+      await db
+        .update(schema.sessionBookings)
+        .set({
           sessionId: newSession.id,
           status: "confirmed",
-        },
-      });
+        })
+        .where(
+          and(
+            inArray(schema.sessionBookings.id, bookingIds),
+            isNull(schema.sessionBookings.sessionId)
+          )
+        );
     }
 
-    return NextResponse.json({ session: newSession }, { status: 201 });
+    return NextResponse.json({ session: sessionWithRelations }, { status: 201 });
   } catch (error) {
     console.error("Error creating session:", error);
     return NextResponse.json(
@@ -402,3 +505,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

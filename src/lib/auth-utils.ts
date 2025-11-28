@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { prisma } from "./prisma";
+import { db, schema } from "./db";
 
 // Types for better TypeScript support
 export type UserRole =
@@ -87,6 +87,53 @@ export async function verifyPassword(
 }
 
 /**
+ * Validate student registration data
+ */
+export function validateStudentRegistration(data: any): {
+  isValid: boolean;
+  errors?: string[];
+} {
+  const errors: string[] = [];
+
+  if (!data.name || typeof data.name !== "string" || data.name.trim().length < 2) {
+    errors.push("الاسم مطلوب ويجب أن يكون حرفين على الأقل");
+  }
+
+  if (!data.email || !data.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+    errors.push("البريد الإلكتروني غير صالح");
+  }
+
+  if (!data.password || data.password.length < 8) {
+    errors.push("كلمة المرور يجب أن تكون 8 أحرف على الأقل");
+  }
+
+  if (!data.age || typeof data.age !== "number" || data.age < 6 || data.age > 18) {
+    errors.push("العمر يجب أن يكون بين 6 و 18 سنة");
+  }
+
+  if (!data.parentName || typeof data.parentName !== "string") {
+    errors.push("اسم ولي الأمر مطلوب");
+  }
+
+  if (!data.parentEmail || !data.parentEmail.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+    errors.push("البريد الإلكتروني لولي الأمر غير صالح");
+  }
+
+  if (!data.parentPhone || typeof data.parentPhone !== "string") {
+    errors.push("رقم هاتف ولي الأمر مطلوب");
+  }
+
+  if (!data.priorExperience || !["none", "basic", "intermediate", "advanced"].includes(data.priorExperience)) {
+    errors.push("يجب تحديد مستوى الخبرة السابقة");
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors: errors.length > 0 ? errors : undefined,
+  };
+}
+
+/**
  * Create a new student account with grade placement
  */
 export async function createStudentAccount(data: StudentRegistrationData) {
@@ -94,176 +141,53 @@ export async function createStudentAccount(data: StudentRegistrationData) {
   const gradeLevel = calculateGradeLevel(data.age, data.priorExperience);
 
   try {
-    const user = await prisma.user.create({
-      data: {
+    // Check if email already exists
+    const { eq } = await import("drizzle-orm");
+    const [existingUser] = await db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.email, data.email))
+      .limit(1);
+
+    if (existingUser) {
+      return {
+        success: false,
+        error: "البريد الإلكتروني مستخدم بالفعل",
+      };
+    }
+
+    // Create user with better-auth format
+    const [user] = await db.insert(schema.users).values({
+      name: data.name,
+      email: data.email,
+      password: hashedPassword,
+      role: "student",
+      age: data.age,
+      parentName: data.parentName,
+      parentEmail: data.parentEmail,
+      parentPhone: data.parentPhone,
+      priorExperience: data.priorExperience,
+      gradeLevel: gradeLevel,
+      phone: data.phone,
+      address: data.address,
+      emailVerified: false,
+    }).$returningId();
+
+    return {
+      success: true,
+      user: {
+        id: user.id,
         name: data.name,
         email: data.email,
-        password: hashedPassword,
         role: "student",
-        age: data.age,
-        parentName: data.parentName,
-        parentEmail: data.parentEmail,
-        parentPhone: data.parentPhone,
-        priorExperience: data.priorExperience,
         gradeLevel,
-        phone: data.phone,
-        address: data.address,
       },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        age: true,
-        gradeLevel: true,
-        createdAt: true,
-      },
-    });
-
-    return { success: true, user };
-  } catch (error: any) {
-    if (error.code === "P2002") {
-      return { success: false, error: "البريد الإلكتروني مستخدم مسبقاً" };
-    }
-    return { success: false, error: "حدث خطأ أثناء إنشاء الحساب" };
-  }
-}
-
-/**
- * Validate student registration data
- */
-export function validateStudentRegistration(
-  data: Partial<StudentRegistrationData>
-): {
-  isValid: boolean;
-  errors: string[];
-} {
-  const errors: string[] = [];
-
-  if (!data.name || data.name.trim().length < 2) {
-    errors.push("الاسم يجب أن يحتوي على حرفين على الأقل");
-  }
-
-  if (!data.email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(data.email)) {
-    errors.push("البريد الإلكتروني غير صحيح (مثال: student@example.com)");
-  }
-
-  if (!data.password || data.password.length < 6) {
-    errors.push("كلمة المرور يجب أن تحتوي على 6 أحرف على الأقل");
-  }
-
-  if (!data.age || data.age < 6 || data.age > 18) {
-    errors.push("العمر يجب أن يكون بين 6 و 18 سنة");
-  }
-
-  if (!data.parentName || data.parentName.trim().length < 2) {
-    errors.push("اسم ولي الأمر مطلوب");
-  }
-
-  if (
-    !data.parentEmail ||
-    !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(data.parentEmail)
-  ) {
-    errors.push(
-      "البريد الإلكتروني لولي الأمر غير صحيح (مثال: parent@example.com)"
-    );
-  }
-
-  if (!data.parentPhone || !/^[+]?[\d\s-()]+$/.test(data.parentPhone)) {
-    errors.push("رقم هاتف ولي الأمر غير صحيح");
-  }
-
-  if (
-    !data.priorExperience ||
-    !["none", "basic", "intermediate", "advanced"].includes(
-      data.priorExperience
-    )
-  ) {
-    errors.push("مستوى الخبرة السابقة مطلوب");
-  }
-
-  return {
-    isValid: errors.length === 0,
-    errors,
-  };
-}
-
-/**
- * Check if user has required role
- */
-export function hasRole(userRole: string, requiredRoles: UserRole[]): boolean {
-  return requiredRoles.includes(userRole as UserRole);
-}
-
-/**
- * Get user permissions based on role
- */
-export function getUserPermissions(role: UserRole) {
-  const permissions = {
-    student: [
-      "view_courses",
-      "enroll_courses",
-      "submit_assignments",
-      "view_progress",
-    ],
-    instructor: [
-      "create_courses",
-      "manage_courses",
-      "grade_assignments",
-      "view_students",
-    ],
-    coordinator: [
-      "manage_instructors",
-      "manage_courses",
-      "view_analytics",
-      "manage_enrollments",
-    ],
-    manager: [
-      "manage_users",
-      "view_reports",
-      "manage_payments",
-      "system_settings",
-    ],
-    ceo: ["full_access"],
-  };
-
-  return permissions[role] || [];
-}
-
-/**
- * Create initial admin accounts (run once)
- */
-export async function createInitialAccounts() {
-  const accounts = [
-    {
-      name: "المدير التنفيذي",
-      email: "ceo@andrino-academy.com",
-      password: await hashPassword("Andrino2024!"),
-      role: "ceo",
-    },
-    {
-      name: "مدير النظام",
-      email: "manager@andrino-academy.com",
-      password: await hashPassword("Manager2024!"),
-      role: "manager",
-    },
-    {
-      name: "منسق الأكاديمية",
-      email: "coordinator@andrino-academy.com",
-      password: await hashPassword("Coord2024!"),
-      role: "coordinator",
-    },
-  ];
-
-  for (const account of accounts) {
-    try {
-      await prisma.user.upsert({
-        where: { email: account.email },
-        update: {},
-        create: account,
-      });
-    } catch (error) {
-      console.error(`Error creating account for ${account.email}:`, error);
-    }
+    };
+  } catch (error) {
+    console.error("Error creating student account:", error);
+    return {
+      success: false,
+      error: "فشل إنشاء الحساب. حاول مرة أخرى.",
+    };
   }
 }

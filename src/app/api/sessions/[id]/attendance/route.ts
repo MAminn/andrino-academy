@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { db, schema, eq, and } from "@/lib/db";
 
 /**
  * POST /api/sessions/[id]/attendance
@@ -12,7 +11,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -36,21 +35,44 @@ export async function POST(
     }
 
     // Verify session exists
-    const liveSession = await prisma.liveSession.findUnique({
-      where: { id: sessionId },
-      include: {
-        track: {
-          include: {
-            coordinator: true,
-            instructor: true,
-          },
-        },
-      },
-    });
+    const [liveSession] = await db
+      .select()
+      .from(schema.liveSessions)
+      .where(eq(schema.liveSessions.id, sessionId))
+      .limit(1);
 
     if (!liveSession) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
+
+    // Fetch track with coordinator and instructor
+    const [track] = await db
+      .select()
+      .from(schema.tracks)
+      .where(eq(schema.tracks.id, liveSession.trackId))
+      .limit(1);
+
+    const [coordinator, instructor] = await Promise.all([
+      track!.coordinatorId ? db.select()
+        .from(schema.users)
+        .where(eq(schema.users.id, track!.coordinatorId))
+        .limit(1)
+        .then(r => r[0] || null) : Promise.resolve(null),
+      track!.instructorId ? db.select()
+        .from(schema.users)
+        .where(eq(schema.users.id, track!.instructorId))
+        .limit(1)
+        .then(r => r[0] || null) : Promise.resolve(null)
+    ]);
+
+    const liveSessionWithRelations = {
+      ...liveSession,
+      track: {
+        ...track,
+        coordinator,
+        instructor
+      }
+    };
 
     // Check if user has permission for this specific session
     const userRole = session.user.role;
@@ -58,8 +80,8 @@ export async function POST(
 
     if (userRole === "coordinator" || userRole === "instructor") {
       // Coordinator must be assigned to the track, or instructor must be teaching it
-      const isCoordinator = liveSession.track.coordinatorId === userId;
-      const isInstructor = liveSession.track.instructorId === userId;
+      const isCoordinator = liveSessionWithRelations.track.coordinatorId === userId;
+      const isInstructor = liveSessionWithRelations.track.instructorId === userId;
 
       if (!isCoordinator && !isInstructor) {
         return NextResponse.json(
@@ -73,36 +95,40 @@ export async function POST(
     const updatePromises = attendance.map(
       async (record: { studentId: string; status: string; notes?: string }) => {
         // Find existing attendance record
-        const existingRecord = await prisma.sessionAttendance.findFirst({
-          where: {
-            sessionId: sessionId,
-            studentId: record.studentId,
-          },
-        });
+        const existingRecord = await db
+          .select()
+          .from(schema.sessionAttendances)
+          .where(
+            and(
+              eq(schema.sessionAttendances.sessionId, sessionId),
+              eq(schema.sessionAttendances.studentId, record.studentId)
+            )
+          )
+          .limit(1);
 
-        if (existingRecord) {
+        if (existingRecord.length > 0) {
           // Update existing record
-          return prisma.sessionAttendance.update({
-            where: { id: existingRecord.id },
-            data: {
+          return db
+            .update(schema.sessionAttendances)
+            .set({
               status: record.status,
-              notes: record.notes,
+              notes: record.notes || null,
               markedBy: session.user.id,
               markedAt: new Date(),
-            },
-          });
+            })
+            .where(eq(schema.sessionAttendances.id, existingRecord[0].id));
         } else {
           // Create new record
-          return prisma.sessionAttendance.create({
-            data: {
+          return db
+            .insert(schema.sessionAttendances)
+            .values({
               sessionId: sessionId,
               studentId: record.studentId,
               status: record.status,
-              notes: record.notes,
+              notes: record.notes || null,
               markedBy: session.user.id,
               markedAt: new Date(),
-            },
-          });
+            });
         }
       }
     );
@@ -110,24 +136,32 @@ export async function POST(
     await Promise.all(updatePromises);
 
     // Fetch updated attendance records
-    const updatedAttendance = await prisma.sessionAttendance.findMany({
-      where: { sessionId: sessionId },
-      include: {
-        student: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-      orderBy: { student: { name: "asc" } },
-    });
+    const updatedAttendance = await db
+      .select()
+      .from(schema.sessionAttendances)
+      .where(eq(schema.sessionAttendances.sessionId, sessionId));
+
+    // Fetch student for each attendance record
+    const attendanceWithStudents = await Promise.all(
+      updatedAttendance.map(async (att: any) => {
+        const [student] = await db
+          .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
+          .from(schema.users)
+          .where(eq(schema.users.id, att.studentId))
+          .limit(1);
+        return { ...att, student: student || null };
+      })
+    );
+
+    // Sort by student name
+    attendanceWithStudents.sort((a, b) => 
+      (a.student?.name || '').localeCompare(b.student?.name || '')
+    );
 
     return NextResponse.json({
       success: true,
       message: "Attendance updated successfully",
-      attendance: updatedAttendance,
+      attendance: attendanceWithStudents,
     });
   } catch (error) {
     console.error("Error updating attendance:", error);

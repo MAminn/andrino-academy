@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { db, schema, eq, and } from "@/lib/db";
 
 // GET /api/attendance/session/[sessionId] - Get attendance for a specific session
 export async function GET(
@@ -10,7 +9,7 @@ export async function GET(
 ) {
   try {
     const { sessionId } = await params;
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -26,131 +25,148 @@ export async function GET(
     }
 
     // Get the session with attendance data
-    const liveSession = await prisma.liveSession.findUnique({
-      where: { id: sessionId },
-      include: {
-        track: {
-          include: {
-            grade: {
-              select: { id: true, name: true },
-            },
-          },
-        },
-        instructor: {
-          select: { id: true, name: true },
-        },
-        attendances: {
-          include: {
-            student: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                gradeId: true,
-              },
-            },
-          },
-          orderBy: {
-            student: {
-              name: "asc",
-            },
-          },
-        },
-      },
-    });
+    const [liveSession] = await db
+      .select()
+      .from(schema.liveSessions)
+      .where(eq(schema.liveSessions.id, sessionId))
+      .limit(1);
 
     if (!liveSession) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
+    // Fetch track with grade and instructor
+    const [track] = await db
+      .select()
+      .from(schema.tracks)
+      .where(eq(schema.tracks.id, liveSession.trackId))
+      .limit(1);
+
+    const [grade, instructor] = await Promise.all([
+      track!.gradeId ? db.select({ id: schema.grades.id, name: schema.grades.name })
+        .from(schema.grades)
+        .where(eq(schema.grades.id, track!.gradeId))
+        .limit(1)
+        .then(r => r[0] || null) : Promise.resolve(null),
+      liveSession.instructorId ? db.select({ id: schema.users.id, name: schema.users.name })
+        .from(schema.users)
+        .where(eq(schema.users.id, liveSession.instructorId))
+        .limit(1)
+        .then(r => r[0] || null) : Promise.resolve(null)
+    ]);
+
+    // Fetch attendances
+    const attendances = await db
+      .select()
+      .from(schema.sessionAttendances)
+      .where(eq(schema.sessionAttendances.sessionId, sessionId));
+
+    // Fetch student for each attendance
+    const attendancesWithStudents = await Promise.all(
+      attendances.map(async (att: any) => {
+        const [student] = await db
+          .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email, gradeId: schema.users.gradeId })
+          .from(schema.users)
+          .where(eq(schema.users.id, att.studentId))
+          .limit(1);
+        return { ...att, student: student || null };
+      })
+    );
+
+    // Sort by student name
+    attendancesWithStudents.sort((a, b) => 
+      (a.student?.name || '').localeCompare(b.student?.name || '')
+    );
+
+    const liveSessionWithRelations = {
+      ...liveSession,
+      track: {
+        ...track,
+        grade
+      },
+      instructor,
+      attendances: attendancesWithStudents
+    };
+
     // If instructor, verify they own this session
     if (
       session.user.role === "instructor" &&
-      liveSession.instructorId !== session.user.id
+      liveSessionWithRelations.instructorId !== session.user.id
     ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     // Get all students in the track's grade who should attend this session
-    const enrolledStudents = await prisma.user.findMany({
-      where: {
-        role: "student",
-        gradeId: liveSession.track.gradeId,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        gradeId: true,
-      },
-      orderBy: {
-        name: "asc",
-      },
-    });
+    const enrolledStudents = await db
+      .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email, gradeId: schema.users.gradeId })
+      .from(schema.users)
+      .where(
+        and(
+          eq(schema.users.role, "student"),
+          eq(schema.users.gradeId, liveSessionWithRelations.track.gradeId!)
+        )
+      );
+
+    // Sort by name
+    enrolledStudents.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
     // Create attendance records for students who don't have them yet
-    const existingAttendances = liveSession.attendances.map((a) => a.studentId);
+    const existingAttendances = liveSessionWithRelations.attendances.map((a: any) => a.studentId);
     const missingStudents = enrolledStudents.filter(
-      (s) => !existingAttendances.includes(s.id)
+      (s: any) => !existingAttendances.includes(s.id)
     );
 
     if (missingStudents.length > 0) {
-      await prisma.sessionAttendance.createMany({
-        data: missingStudents.map((student) => ({
+      await db
+        .insert(schema.sessionAttendances)
+        .values(missingStudents.map((student: any) => ({
           sessionId: sessionId,
           studentId: student.id,
           status: "absent",
-        })),
-      });
+        })));
     }
 
     // Fetch updated attendance data
-    const updatedSession = await prisma.liveSession.findUnique({
-      where: { id: sessionId },
-      include: {
-        track: {
-          include: {
-            grade: {
-              select: { id: true, name: true },
-            },
-          },
-        },
-        instructor: {
-          select: { id: true, name: true },
-        },
-        attendances: {
-          include: {
-            student: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                gradeId: true,
-              },
-            },
-          },
-          orderBy: {
-            student: {
-              name: "asc",
-            },
-          },
-        },
-      },
-    });
+    const updatedAttendances = await db
+      .select()
+      .from(schema.sessionAttendances)
+      .where(eq(schema.sessionAttendances.sessionId, sessionId));
+
+    // Fetch students for updated attendances
+    const updatedAttendancesWithStudents = await Promise.all(
+      updatedAttendances.map(async (att: any) => {
+        const [student] = await db
+          .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email, gradeId: schema.users.gradeId })
+          .from(schema.users)
+          .where(eq(schema.users.id, att.studentId))
+          .limit(1);
+        return { ...att, student: student || null };
+      })
+    );
+
+    // Sort by student name
+    updatedAttendancesWithStudents.sort((a, b) => 
+      (a.student?.name || '').localeCompare(b.student?.name || '')
+    );
+
+    const updatedSession = {
+      ...liveSessionWithRelations,
+      attendances: updatedAttendancesWithStudents
+    };
 
     // Calculate attendance statistics
-    const totalStudents = updatedSession!.attendances.length;
-    const presentCount = updatedSession!.attendances.filter(
-      (a) => a.status === "present"
+    const totalStudents = updatedSession.attendances.length;
+    const presentCount = updatedSession.attendances.filter(
+      (a: any) => a.status === "present"
     ).length;
-    const absentCount = updatedSession!.attendances.filter(
-      (a) => a.status === "absent"
+    const absentCount = updatedSession.attendances.filter(
+      (a: any) => a.status === "absent"
     ).length;
-    const lateCount = updatedSession!.attendances.filter(
-      (a) => a.status === "late"
+    const lateCount = updatedSession.attendances.filter(
+      (a: any) => a.status === "late"
     ).length;
-    const excusedCount = updatedSession!.attendances.filter(
-      (a) => a.status === "excused"
+    const excusedCount = updatedSession.attendances.filter(
+      (a: any) => a.status === "excused"
     ).length;
 
     const attendanceStats = {
@@ -185,7 +201,7 @@ export async function PUT(
 ) {
   try {
     const { sessionId } = await params;
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -211,10 +227,11 @@ export async function PUT(
     }
 
     // Verify the session exists and instructor has access
-    const liveSession = await prisma.liveSession.findUnique({
-      where: { id: sessionId },
-      select: { id: true, instructorId: true },
-    });
+    const [liveSession] = await db
+      .select({ id: schema.liveSessions.id, instructorId: schema.liveSessions.instructorId })
+      .from(schema.liveSessions)
+      .where(eq(schema.liveSessions.id, sessionId))
+      .limit(1);
 
     if (!liveSession) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
@@ -228,7 +245,7 @@ export async function PUT(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Update attendance records
+    // Update attendance records - manual upsert
     const updatePromises = attendanceUpdates.map(
       async (update: { studentId: string; status: string; notes?: string }) => {
         const validStatuses = ["present", "absent", "late", "excused"];
@@ -236,55 +253,74 @@ export async function PUT(
           throw new Error(`Invalid status: ${update.status}`);
         }
 
-        return prisma.sessionAttendance.upsert({
-          where: {
-            sessionId_studentId: {
+        // Check if record exists
+        const existing = await db
+          .select()
+          .from(schema.sessionAttendances)
+          .where(
+            and(
+              eq(schema.sessionAttendances.sessionId, sessionId),
+              eq(schema.sessionAttendances.studentId, update.studentId)
+            )
+          )
+          .limit(1);
+
+        if (existing.length > 0) {
+          // Update
+          return db
+            .update(schema.sessionAttendances)
+            .set({
+              status: update.status,
+              notes: update.notes || null,
+              markedBy: session.user.id,
+              markedAt: new Date(),
+            })
+            .where(eq(schema.sessionAttendances.id, existing[0].id));
+        } else {
+          // Create
+          return db
+            .insert(schema.sessionAttendances)
+            .values({
               sessionId: sessionId,
               studentId: update.studentId,
-            },
-          },
-          update: {
-            status: update.status,
-            notes: update.notes || null,
-            markedBy: session.user.id,
-            markedAt: new Date(),
-          },
-          create: {
-            sessionId: sessionId,
-            studentId: update.studentId,
-            status: update.status,
-            notes: update.notes || null,
-            markedBy: session.user.id,
-            markedAt: new Date(),
-          },
-        });
+              status: update.status,
+              notes: update.notes || null,
+              markedBy: session.user.id,
+              markedAt: new Date(),
+            });
+        }
       }
     );
 
     await Promise.all(updatePromises);
 
     // Return updated attendance data
-    const updatedAttendance = await prisma.liveSession.findUnique({
-      where: { id: sessionId },
-      include: {
-        attendances: {
-          include: {
-            student: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-          },
-          orderBy: {
-            student: {
-              name: "asc",
-            },
-          },
-        },
-      },
-    });
+    const updatedAttendances = await db
+      .select()
+      .from(schema.sessionAttendances)
+      .where(eq(schema.sessionAttendances.sessionId, sessionId));
+
+    // Fetch students for each attendance
+    const attendancesWithStudents = await Promise.all(
+      updatedAttendances.map(async (att: any) => {
+        const [student] = await db
+          .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
+          .from(schema.users)
+          .where(eq(schema.users.id, att.studentId))
+          .limit(1);
+        return { ...att, student: student || null };
+      })
+    );
+
+    // Sort by student name
+    attendancesWithStudents.sort((a, b) => 
+      (a.student?.name || '').localeCompare(b.student?.name || '')
+    );
+
+    const updatedAttendance = {
+      id: sessionId,
+      attendances: attendancesWithStudents
+    };
 
     return NextResponse.json({
       message: "Attendance updated successfully",

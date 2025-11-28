@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+
+import { db, schema, eq, and, or, desc, asc, count, sql, isNull, inArray } from "@/lib/db";
 
 // GET /api/attendance - Get attendance records
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -34,20 +34,20 @@ export async function GET(request: NextRequest) {
       }
     } else if (session.user.role === "instructor") {
       // Instructors can see attendance for their sessions
-      const instructorSessions = await prisma.liveSession.findMany({
-        where: { instructorId: session.user.id },
-        select: { id: true },
-      });
+      const instructorSessions = await db
+        .select({ id: schema.liveSessions.id })
+        .from(schema.liveSessions)
+        .where(eq(schema.liveSessions.instructorId, session.user.id));
 
       if (sessionId) {
-        const isAuthorized = instructorSessions.some((s) => s.id === sessionId);
+        const isAuthorized = instructorSessions.some((s: any) => s.id === sessionId);
         if (!isAuthorized) {
           return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
         whereClause.sessionId = sessionId;
       } else {
         whereClause.sessionId = {
-          in: instructorSessions.map((s) => s.id),
+          in: instructorSessions.map((s: any) => s.id),
         };
       }
 
@@ -66,29 +66,57 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // For now, return empty array since SessionAttendance table might not have data
-    // This prevents the 404 error and allows the student dashboard to work
-    const attendances = await prisma.sessionAttendance
-      .findMany({
-        where: whereClause,
-        include: {
-          session: {
-            include: {
-              track: {
-                select: { id: true, name: true },
-              },
-            },
-          },
-          student: {
-            select: { id: true, name: true, email: true },
-          },
-        },
-        orderBy: { createdAt: "desc" },
+    // Build Drizzle WHERE conditions
+    const conditions = [];
+    if (whereClause.studentId) conditions.push(eq(schema.sessionAttendances.studentId, whereClause.studentId));
+    if (whereClause.sessionId) {
+      if (typeof whereClause.sessionId === 'string') {
+        conditions.push(eq(schema.sessionAttendances.sessionId, whereClause.sessionId));
+      } else if (whereClause.sessionId.in) {
+        conditions.push(inArray(schema.sessionAttendances.sessionId, whereClause.sessionId.in));
+      }
+    }
+
+    const baseAttendances = await db
+      .select()
+      .from(schema.sessionAttendances)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(schema.sessionAttendances.createdAt))
+      .catch(() => []);
+
+    // Fetch relations
+    const attendances = await Promise.all(
+      baseAttendances.map(async (att: any) => {
+        const [session, student] = await Promise.all([
+          att.sessionId
+            ? db
+                .select()
+                .from(schema.liveSessions)
+                .where(eq(schema.liveSessions.id, att.sessionId))
+                .then(async (r) => {
+                  const sess = r[0];
+                  if (!sess) return null;
+                  const track = sess.trackId
+                    ? await db
+                        .select({ id: schema.tracks.id, name: schema.tracks.name })
+                        .from(schema.tracks)
+                        .where(eq(schema.tracks.id, sess.trackId))
+                        .then((tr) => tr[0] || null)
+                    : null;
+                  return { ...sess, track };
+                })
+            : null,
+          att.studentId
+            ? db
+                .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
+                .from(schema.users)
+                .where(eq(schema.users.id, att.studentId))
+                .then((r) => r[0] || null)
+            : null,
+        ]);
+        return { ...att, session, student };
       })
-      .catch(() => {
-        // If table doesn't exist or has issues, return empty array
-        return [];
-      });
+    );
 
     return NextResponse.json({ attendances });
   } catch (error) {
@@ -101,9 +129,9 @@ export async function GET(request: NextRequest) {
 // POST /api/attendance - Create attendance record
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -127,9 +155,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify the session exists
-    const liveSession = await prisma.liveSession.findUnique({
-      where: { id: sessionId },
-    });
+    const [liveSession] = await db
+      .select({ id: schema.liveSessions.id, instructorId: schema.liveSessions.instructorId })
+      .from(schema.liveSessions)
+      .where(eq(schema.liveSessions.id, sessionId))
+      .limit(1);
 
     if (!liveSession) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
@@ -144,39 +174,102 @@ export async function POST(request: NextRequest) {
     }
 
     // Create or update attendance record
-    const attendance = await prisma.sessionAttendance.upsert({
-      where: {
-        sessionId_studentId: {
-          sessionId,
-          studentId,
-        },
-      },
-      update: {
-        status,
-        notes,
-        updatedAt: new Date(),
-      },
-      create: {
+    const [existing] = await db
+      .select({ id: schema.sessionAttendances.id })
+      .from(schema.sessionAttendances)
+      .where(
+        and(
+          eq(schema.sessionAttendances.sessionId, sessionId),
+          eq(schema.sessionAttendances.studentId, studentId)
+        )
+      )
+      .limit(1);
+
+    if (existing) {
+      await db
+        .update(schema.sessionAttendances)
+        .set({
+          status,
+          notes,
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.sessionAttendances.id, existing.id));
+    } else {
+      await db.insert(schema.sessionAttendances).values({
         sessionId,
         studentId,
         status,
         notes,
-      },
-      include: {
-        session: {
-          include: {
-            track: {
-              select: { id: true, name: true },
-            },
-          },
-        },
-        student: {
-          select: { id: true, name: true, email: true },
-        },
-      },
-    });
+      });
+    }
 
-    return NextResponse.json({ attendance }, { status: 201 });
+    // Fetch the attendance record with relations
+    const [attendance] = await db
+      .select({
+        id: schema.sessionAttendances.id,
+        sessionId: schema.sessionAttendances.sessionId,
+        studentId: schema.sessionAttendances.studentId,
+        status: schema.sessionAttendances.status,
+        notes: schema.sessionAttendances.notes,
+        createdAt: schema.sessionAttendances.createdAt,
+        updatedAt: schema.sessionAttendances.updatedAt,
+      })
+      .from(schema.sessionAttendances)
+      .where(
+        and(
+          eq(schema.sessionAttendances.sessionId, sessionId),
+          eq(schema.sessionAttendances.studentId, studentId)
+        )
+      )
+      .limit(1);
+
+    const [liveSessionData] = attendance
+      ? await db
+          .select({
+            id: schema.liveSessions.id,
+            title: schema.liveSessions.title,
+            trackId: schema.liveSessions.trackId,
+          })
+          .from(schema.liveSessions)
+          .where(eq(schema.liveSessions.id, attendance.sessionId))
+          .limit(1)
+      : [null];
+
+    const [track] = liveSessionData
+      ? await db
+          .select({
+            id: schema.tracks.id,
+            name: schema.tracks.name,
+          })
+          .from(schema.tracks)
+          .where(eq(schema.tracks.id, liveSessionData.trackId))
+          .limit(1)
+      : [null];
+
+    const [student] = attendance
+      ? await db
+          .select({
+            id: schema.users.id,
+            name: schema.users.name,
+            email: schema.users.email,
+          })
+          .from(schema.users)
+          .where(eq(schema.users.id, attendance.studentId))
+          .limit(1)
+      : [null];
+
+    const attendanceWithRelations: any = {
+      ...attendance,
+      session: liveSessionData
+        ? {
+            ...liveSessionData,
+            track,
+          }
+        : null,
+      student,
+    };
+
+    return NextResponse.json({ attendance: attendanceWithRelations }, { status: 201 });
   } catch (error) {
     console.error("Error creating attendance:", error);
     return NextResponse.json(
@@ -185,3 +278,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

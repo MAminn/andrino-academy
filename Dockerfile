@@ -1,5 +1,5 @@
 # Andrino Academy - Production Dockerfile for Coolify/VPS
-# Optimized for Next.js 15.5.0 with Prisma SQLite
+# Optimized for Next.js 15.5.0 with Drizzle ORM + MySQL
 
 FROM node:20-alpine AS base
 
@@ -31,11 +31,11 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
-# Generate Prisma Client
-RUN npx prisma generate
+# Generate Drizzle migrations
+RUN npm run db:generate
 
 # Build Next.js application
-RUN npm run build:original
+RUN npm run build
 
 # Production image, copy all the files and run next
 FROM base AS runner
@@ -48,22 +48,15 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-
 # Copy all app files from builder
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/next.config.ts ./
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/src ./src
+COPY --from=builder /app/backend ./backend
+COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
 COPY --from=builder /app/start.sh ./start.sh
-
-# Copy Prisma files including seed scripts
-COPY --from=builder /app/prisma ./prisma
-
-# Explicitly copy Prisma engine binaries
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
 # Create necessary directories with proper permissions
 RUN mkdir -p /app/public/uploads/assignments \
@@ -71,14 +64,11 @@ RUN mkdir -p /app/public/uploads/assignments \
     && mkdir -p /app/public/uploads/modules \
     && mkdir -p /app/assets \
     && mkdir -p /app/.next/cache/images \
-    && mkdir -p /app/prisma \
-    && mkdir -p /app/src/generated \
     && chmod +x /app/start.sh \
     && chown -R nextjs:nodejs /app/public \
     && chown -R nextjs:nodejs /app/assets \
     && chown -R nextjs:nodejs /app/.next/cache \
-    && chown -R nextjs:nodejs /app/prisma \
-    && chown -R nextjs:nodejs /app/src
+    && chown -R nextjs:nodejs /app/backend
 
 USER nextjs
 

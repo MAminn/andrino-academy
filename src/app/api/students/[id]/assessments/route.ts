@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { db, schema, eq } from "@/lib/db";
 
 export async function GET(
   request: NextRequest,
@@ -9,28 +9,81 @@ export async function GET(
     const { id } = await params;
 
     // Get student with tracks and sessions
-    const student = await prisma.user.findUnique({
-      where: { id },
-      include: {
-        assignedGrade: {
-          include: {
-            tracks: {
-              include: {
-                instructor: true,
-                liveSessions: true,
-              },
-            },
-          },
-        },
-      },
-    });
+    const studentData = await db
+      .select({
+        id: schema.users.id,
+        name: schema.users.name,
+        gradeId: schema.users.gradeId,
+      })
+      .from(schema.users)
+      .where(eq(schema.users.id, id))
+      .limit(1);
 
-    if (!student) {
+    if (studentData.length === 0) {
       return NextResponse.json({ error: "الطالب غير موجود" }, { status: 404 });
     }
 
+    const student = studentData[0];
+
+    // Get assigned grade with tracks
+    let assignedGrade = null;
+    if (student.gradeId) {
+      const gradeData = await db
+        .select({
+          id: schema.grades.id,
+          name: schema.grades.name,
+        })
+        .from(schema.grades)
+        .where(eq(schema.grades.id, student.gradeId))
+        .limit(1);
+
+      if (gradeData.length > 0) {
+        const tracksData = await db
+          .select({
+            id: schema.tracks.id,
+            name: schema.tracks.name,
+            instructorId: schema.tracks.instructorId,
+          })
+          .from(schema.tracks)
+          .where(eq(schema.tracks.gradeId, gradeData[0].id));
+
+        const tracks = await Promise.all(
+          tracksData.map(async (track) => {
+            const [instructor, liveSessions] = await Promise.all([
+              db
+                .select({
+                  id: schema.users.id,
+                  name: schema.users.name,
+                })
+                .from(schema.users)
+                .where(eq(schema.users.id, track.instructorId))
+                .limit(1),
+              db
+                .select({
+                  id: schema.liveSessions.id,
+                  title: schema.liveSessions.title,
+                })
+                .from(schema.liveSessions)
+                .where(eq(schema.liveSessions.trackId, track.id)),
+            ]);
+
+            return {
+              ...track,
+              instructor: instructor[0] || null,
+              liveSessions,
+            };
+          })
+        );
+
+        assignedGrade = {
+          ...gradeData[0],
+          tracks,
+        };
+      }
+    }
+
     // Generate mock assessments based on tracks and sessions
-    const tracks = student.assignedGrade?.tracks || [];
+    const tracks = assignedGrade?.tracks || [];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const assessments: any[] = [];
     let assessmentId = 1;

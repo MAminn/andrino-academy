@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+
+import { db, schema, eq, and } from "@/lib/db";
 
 // PUT /api/instructor/availability/confirm - Confirm weekly availability (locks it)
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -31,14 +31,27 @@ export async function PUT(request: NextRequest) {
     // Parse date in local time to avoid timezone shift issues
     const [year, month, day] = weekStartDate.split('-').map(Number);
     const weekStart = new Date(year, month - 1, day);
+    weekStart.setHours(0, 0, 0, 0);
+
+    console.log("Confirm availability - date parsing:", {
+      receivedWeekStartDate: weekStartDate,
+      parsedDate: weekStart.toISOString(),
+      parsedDayOfWeek: weekStart.getDay(),
+      instructorId: session.user.id,
+      trackId
+    });
 
     // Verify track exists and instructor is assigned to it
-    const track = await prisma.track.findFirst({
-      where: {
-        id: trackId,
-        instructorId: session.user.id,
-      },
-    });
+    const [track] = await db
+      .select({ id: schema.tracks.id })
+      .from(schema.tracks)
+      .where(
+        and(
+          eq(schema.tracks.id, trackId),
+          eq(schema.tracks.instructorId, session.user.id)
+        )
+      )
+      .limit(1);
 
     if (!track) {
       return NextResponse.json(
@@ -48,34 +61,73 @@ export async function PUT(request: NextRequest) {
     }
 
     // Find all unconfirmed availability slots for this week/track
-    const slotsToConfirm = await prisma.instructorAvailability.findMany({
-      where: {
-        instructorId: session.user.id,
-        trackId,
-        weekStartDate: weekStart,
-        isConfirmed: false,
-      },
-    });
+    const slotsToConfirm = await db
+      .select({ 
+        id: schema.instructorAvailabilities.id,
+        weekStartDate: schema.instructorAvailabilities.weekStartDate,
+        dayOfWeek: schema.instructorAvailabilities.dayOfWeek,
+        startHour: schema.instructorAvailabilities.startHour,
+        endHour: schema.instructorAvailabilities.endHour,
+      })
+      .from(schema.instructorAvailabilities)
+      .where(
+        and(
+          eq(schema.instructorAvailabilities.instructorId, session.user.id),
+          eq(schema.instructorAvailabilities.trackId, trackId),
+          eq(schema.instructorAvailabilities.weekStartDate, weekStart),
+          eq(schema.instructorAvailabilities.isConfirmed, false)
+        )
+      );
+
+    console.log("Found slots to confirm:", slotsToConfirm);
 
     if (slotsToConfirm.length === 0) {
-      return NextResponse.json(
-        { error: "No unconfirmed availability slots found for this week/track" },
-        { status: 404 }
-      );
+      // Debug: Check what slots exist for this instructor/track
+      const allSlots = await db
+        .select({
+          id: schema.instructorAvailabilities.id,
+          weekStartDate: schema.instructorAvailabilities.weekStartDate,
+          dayOfWeek: schema.instructorAvailabilities.dayOfWeek,
+          startHour: schema.instructorAvailabilities.startHour,
+          isConfirmed: schema.instructorAvailabilities.isConfirmed,
+        })
+        .from(schema.instructorAvailabilities)
+        .where(
+          and(
+            eq(schema.instructorAvailabilities.instructorId, session.user.id),
+            eq(schema.instructorAvailabilities.trackId, trackId)
+          )
+        );
+      
+      console.log("All slots for this instructor/track:", allSlots);
+      
+      // Provide a helpful error message based on what we found
+      if (allSlots.length === 0) {
+        return NextResponse.json(
+          { error: "لم يتم العثور على فترات متاحة. الرجاء حفظ الفترات الزمنية أولاً قبل التأكيد." },
+          { status: 404 }
+        );
+      } else {
+        // Slots exist but they're all confirmed
+        return NextResponse.json(
+          { error: "جميع الفترات الزمنية مؤكدة بالفعل لهذا الأسبوع/المسار" },
+          { status: 404 }
+        );
+      }
     }
 
     // Confirm all slots
-    await prisma.instructorAvailability.updateMany({
-      where: {
-        instructorId: session.user.id,
-        trackId,
-        weekStartDate: weekStart,
-        isConfirmed: false,
-      },
-      data: {
-        isConfirmed: true,
-      },
-    });
+    await db
+      .update(schema.instructorAvailabilities)
+      .set({ isConfirmed: true })
+      .where(
+        and(
+          eq(schema.instructorAvailabilities.instructorId, session.user.id),
+          eq(schema.instructorAvailabilities.trackId, trackId),
+          eq(schema.instructorAvailabilities.weekStartDate, weekStart),
+          eq(schema.instructorAvailabilities.isConfirmed, false)
+        )
+      );
 
     return NextResponse.json({
       message: `Confirmed ${slotsToConfirm.length} availability slots for the week`,
@@ -89,3 +141,4 @@ export async function PUT(request: NextRequest) {
     );
   }
 }
+

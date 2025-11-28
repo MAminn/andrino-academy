@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { prisma } from "@/lib/prisma";
-import { Prisma, SessionStatus } from "@prisma/client";
+import { auth } from "@/lib/auth";
+import { db, schema, eq, and, or, desc, asc, count, sql, isNull, gte, lt } from "@/lib/db";
+
+type SessionStatus = "DRAFT" | "SCHEDULED" | "READY" | "ACTIVE" | "PAUSED" | "COMPLETED" | "CANCELLED";
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await auth.api.getSession({ headers: request.headers });
 
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -24,63 +25,125 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status");
     const format = searchParams.get("format");
 
-    // Build where clause for filtering
-    const whereClause: Prisma.LiveSessionWhereInput = {};
+    // Build where conditions for filtering
+    const conditions = [];
 
     // Date range filter
-    if (dateFrom || dateTo) {
-      whereClause.date = {};
-      if (dateFrom) {
-        whereClause.date.gte = new Date(dateFrom);
-      }
-      if (dateTo) {
-        const endDate = new Date(dateTo);
-        endDate.setDate(endDate.getDate() + 1); // Include the end date
-        whereClause.date.lt = endDate;
-      }
+    if (dateFrom) {
+      conditions.push(gte(schema.liveSessions.date, new Date(dateFrom)));
+    }
+    if (dateTo) {
+      const endDate = new Date(dateTo);
+      endDate.setDate(endDate.getDate() + 1);
+      conditions.push(lt(schema.liveSessions.date, endDate));
     }
 
     // Track filter
     if (trackId) {
-      whereClause.trackId = trackId;
-    }
-
-    // Grade filter (through track)
-    if (gradeId) {
-      whereClause.track = {
-        gradeId: gradeId,
-      };
+      conditions.push(eq(schema.liveSessions.trackId, trackId));
     }
 
     // Status filter
     if (status) {
-      whereClause.status = status as SessionStatus;
+      conditions.push(eq(schema.liveSessions.status, status as SessionStatus));
+    }
+
+    // Fetch sessions
+    let sessionsQuery = db
+      .select({
+        id: schema.liveSessions.id,
+        title: schema.liveSessions.title,
+        date: schema.liveSessions.date,
+        startTime: schema.liveSessions.startTime,
+        endTime: schema.liveSessions.endTime,
+        status: schema.liveSessions.status,
+        trackId: schema.liveSessions.trackId,
+      })
+      .from(schema.liveSessions);
+
+    if (conditions.length > 0) {
+      sessionsQuery = sessionsQuery.where(and(...conditions)) as any;
+    }
+
+    const sessionsData = await sessionsQuery.orderBy(
+      desc(schema.liveSessions.date),
+      desc(schema.liveSessions.startTime)
+    );
+
+    // Filter by grade if needed
+    let filteredSessions = sessionsData;
+    if (gradeId) {
+      const tracksInGrade = await db
+        .select({ id: schema.tracks.id })
+        .from(schema.tracks)
+        .where(eq(schema.tracks.gradeId, gradeId));
+      const trackIds = tracksInGrade.map((t) => t.id);
+      filteredSessions = sessionsData.filter((s) =>
+        trackIds.includes(s.trackId)
+      );
     }
 
     // Fetch sessions with attendance data
-    const sessions = await prisma.liveSession.findMany({
-      where: whereClause,
-      include: {
-        track: {
-          include: {
-            grade: {
-              select: { id: true, name: true, description: true },
-            },
-            instructor: {
-              select: { id: true, name: true, email: true },
-            },
+    const sessions = await Promise.all(
+      filteredSessions.map(async (session) => {
+        const [track] = await db
+          .select({
+            id: schema.tracks.id,
+            name: schema.tracks.name,
+            gradeId: schema.tracks.gradeId,
+            instructorId: schema.tracks.instructorId,
+          })
+          .from(schema.tracks)
+          .where(eq(schema.tracks.id, session.trackId))
+          .limit(1);
+
+        const [grade, instructor, attendances] = await Promise.all([
+          db
+            .select({ id: schema.grades.id, name: schema.grades.name, description: schema.grades.description })
+            .from(schema.grades)
+            .where(eq(schema.grades.id, track.gradeId))
+            .limit(1),
+          db
+            .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
+            .from(schema.users)
+            .where(eq(schema.users.id, track.instructorId))
+            .limit(1),
+          db
+            .select({
+              id: schema.sessionAttendances.id,
+              status: schema.sessionAttendances.status,
+              studentId: schema.sessionAttendances.studentId,
+            })
+            .from(schema.sessionAttendances)
+            .where(eq(schema.sessionAttendances.sessionId, session.id)),
+        ]);
+
+        const attendancesWithStudents = await Promise.all(
+          attendances.map(async (attendance) => {
+            const [student] = await db
+              .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
+              .from(schema.users)
+              .where(eq(schema.users.id, attendance.studentId))
+              .limit(1);
+
+            return {
+              ...attendance,
+              student: student || null,
+            };
+          })
+        );
+
+        return {
+          ...session,
+          track: {
+            ...track,
+            grade: grade[0] || null,
+            instructor: instructor[0] || null,
           },
-        },
-        attendances: {
-          include: {
-            student: {
-              select: { id: true, name: true, email: true },
-            },
-          },
-        },
-      },
-      orderBy: [{ date: "desc" }, { startTime: "desc" }],
-    });
+          attendances: attendancesWithStudents,
+        };
+      })
+    );
 
     // Process the data into reports format
     const reports = sessions.map((session) => {
@@ -206,3 +269,4 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+

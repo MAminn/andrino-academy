@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { db, schema, eq, and, count, desc } from "@/lib/db";
 
 // GET /api/tracks/[id] - Get a specific track
 export async function GET(
@@ -9,7 +8,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -18,38 +17,73 @@ export async function GET(
     // Await params in Next.js 15
     const { id } = await params;
 
-    const track = await prisma.track.findUnique({
-      where: { id },
-      include: {
-        grade: {
-          select: { id: true, name: true, description: true },
-        },
-        instructor: {
-          select: { id: true, name: true, email: true },
-        },
-        coordinator: {
-          select: { id: true, name: true, email: true },
-        },
-        liveSessions: {
-          include: {
-            instructor: {
-              select: { id: true, name: true },
-            },
-            _count: {
-              select: { attendances: true },
-            },
-          },
-          orderBy: { date: "asc" },
-        },
-        _count: {
-          select: { liveSessions: true, modules: true },
-        },
-      },
-    });
+    const [track] = await db
+      .select()
+      .from(schema.tracks)
+      .where(eq(schema.tracks.id, id))
+      .limit(1);
 
     if (!track) {
       return NextResponse.json({ error: "Track not found" }, { status: 404 });
     }
+
+    // Fetch nested relations
+    const [grade, instructor, coordinator, liveSessions, sessionCount, moduleCount] = await Promise.all([
+      track.gradeId ? db.select({ id: schema.grades.id, name: schema.grades.name, description: schema.grades.description })
+        .from(schema.grades)
+        .where(eq(schema.grades.id, track.gradeId))
+        .limit(1)
+        .then(r => r[0] || null) : Promise.resolve(null),
+      track.instructorId ? db.select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
+        .from(schema.users)
+        .where(eq(schema.users.id, track.instructorId))
+        .limit(1)
+        .then(r => r[0] || null) : Promise.resolve(null),
+      track.coordinatorId ? db.select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
+        .from(schema.users)
+        .where(eq(schema.users.id, track.coordinatorId))
+        .limit(1)
+        .then(r => r[0] || null) : Promise.resolve(null),
+      db.select()
+        .from(schema.liveSessions)
+        .where(eq(schema.liveSessions.trackId, id))
+        .orderBy(schema.liveSessions.date),
+      db.select({ count: count() })
+        .from(schema.liveSessions)
+        .where(eq(schema.liveSessions.trackId, id))
+        .then(r => r[0].count),
+      db.select({ count: count() })
+        .from(schema.modules)
+        .where(eq(schema.modules.trackId, id))
+        .then(r => r[0].count)
+    ]);
+
+    // Fetch instructor and attendance counts for each session
+    const liveSessionsWithDetails = await Promise.all(
+      liveSessions.map(async (session: any) => {
+        const [sessionInstructor, attendanceCount] = await Promise.all([
+          session.instructorId ? db.select({ id: schema.users.id, name: schema.users.name })
+            .from(schema.users)
+            .where(eq(schema.users.id, session.instructorId))
+            .limit(1)
+            .then(r => r[0] || null) : Promise.resolve(null),
+          db.select({ count: count() })
+            .from(schema.sessionAttendances)
+            .where(eq(schema.sessionAttendances.sessionId, session.id))
+            .then(r => r[0].count)
+        ]);
+        return { ...session, instructor: sessionInstructor, _count: { attendances: attendanceCount } };
+      })
+    );
+
+    const trackWithRelations = {
+      ...track,
+      grade,
+      instructor,
+      coordinator,
+      liveSessions: liveSessionsWithDetails,
+      _count: { liveSessions: sessionCount, modules: moduleCount }
+    };
 
     // Permission checks based on role
     const userRole = session.user.role;
@@ -57,27 +91,28 @@ export async function GET(
 
     // Students can only view tracks in their assigned grade
     if (userRole === "student") {
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { gradeId: true },
-      });
+      const [user] = await db
+        .select({ gradeId: schema.users.gradeId })
+        .from(schema.users)
+        .where(eq(schema.users.id, userId))
+        .limit(1);
 
-      if (!user?.gradeId || user.gradeId !== track.gradeId) {
+      if (!user?.gradeId || user.gradeId !== trackWithRelations.gradeId) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
     }
 
     // Instructors can only view their own tracks
-    if (userRole === "instructor" && track.instructorId !== userId) {
+    if (userRole === "instructor" && trackWithRelations.instructorId !== userId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     // Coordinators can only view tracks they coordinate
-    if (userRole === "coordinator" && track.coordinatorId !== userId) {
+    if (userRole === "coordinator" && trackWithRelations.coordinatorId !== userId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    return NextResponse.json({ track });
+    return NextResponse.json({ track: trackWithRelations });
   } catch (error) {
     console.error("Error fetching track:", error);
     return NextResponse.json(
@@ -93,7 +128,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -112,9 +147,11 @@ export async function PUT(
     const { id } = await params;
 
     // Check if track exists
-    const existingTrack = await prisma.track.findUnique({
-      where: { id },
-    });
+    const [existingTrack] = await db
+      .select()
+      .from(schema.tracks)
+      .where(eq(schema.tracks.id, id))
+      .limit(1);
 
     if (!existingTrack) {
       return NextResponse.json({ error: "Track not found" }, { status: 404 });
@@ -130,9 +167,11 @@ export async function PUT(
 
     // Verify instructor if provided
     if (instructorId) {
-      const instructor = await prisma.user.findUnique({
-        where: { id: instructorId },
-      });
+      const [instructor] = await db
+        .select()
+        .from(schema.users)
+        .where(eq(schema.users.id, instructorId))
+        .limit(1);
 
       if (!instructor || instructor.role !== "instructor") {
         return NextResponse.json(
@@ -144,9 +183,11 @@ export async function PUT(
 
     // Verify coordinator if provided
     if (coordinatorId) {
-      const coordinator = await prisma.user.findUnique({
-        where: { id: coordinatorId },
-      });
+      const [coordinator] = await db
+        .select()
+        .from(schema.users)
+        .where(eq(schema.users.id, coordinatorId))
+        .limit(1);
 
       if (!coordinator || coordinator.role !== "coordinator") {
         return NextResponse.json(
@@ -173,26 +214,49 @@ export async function PUT(
     if (order !== undefined) updateData.order = order;
     if (isActive !== undefined) updateData.isActive = isActive;
 
-    const track = await prisma.track.update({
-      where: { id },
-      data: updateData,
-      include: {
-        grade: {
-          select: { id: true, name: true, description: true },
-        },
-        instructor: {
-          select: { id: true, name: true, email: true },
-        },
-        coordinator: {
-          select: { id: true, name: true, email: true },
-        },
-        _count: {
-          select: { liveSessions: true },
-        },
-      },
-    });
+    await db
+      .update(schema.tracks)
+      .set(updateData)
+      .where(eq(schema.tracks.id, id));
 
-    return NextResponse.json({ track });
+    // Fetch updated track with relations
+    const [track] = await db
+      .select()
+      .from(schema.tracks)
+      .where(eq(schema.tracks.id, id))
+      .limit(1);
+
+    const [grade, instructor, coordinator, sessionCount] = await Promise.all([
+      track!.gradeId ? db.select({ id: schema.grades.id, name: schema.grades.name, description: schema.grades.description })
+        .from(schema.grades)
+        .where(eq(schema.grades.id, track!.gradeId))
+        .limit(1)
+        .then(r => r[0] || null) : Promise.resolve(null),
+      track!.instructorId ? db.select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
+        .from(schema.users)
+        .where(eq(schema.users.id, track!.instructorId))
+        .limit(1)
+        .then(r => r[0] || null) : Promise.resolve(null),
+      track!.coordinatorId ? db.select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
+        .from(schema.users)
+        .where(eq(schema.users.id, track!.coordinatorId))
+        .limit(1)
+        .then(r => r[0] || null) : Promise.resolve(null),
+      db.select({ count: count() })
+        .from(schema.liveSessions)
+        .where(eq(schema.liveSessions.trackId, id))
+        .then(r => r[0].count)
+    ]);
+
+    const trackWithRelations = {
+      ...track,
+      grade,
+      instructor,
+      coordinator,
+      _count: { liveSessions: sessionCount }
+    };
+
+    return NextResponse.json({ track: trackWithRelations });
   } catch (error) {
     console.error("Error updating track:", error);
     return NextResponse.json(
@@ -208,7 +272,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -223,30 +287,33 @@ export async function DELETE(
     const { id } = await params;
 
     // Check if track exists
-    const existingTrack = await prisma.track.findUnique({
-      where: { id },
-      include: {
-        _count: {
-          select: { liveSessions: true },
-        },
-      },
-    });
+    const [existingTrack] = await db
+      .select()
+      .from(schema.tracks)
+      .where(eq(schema.tracks.id, id))
+      .limit(1);
 
     if (!existingTrack) {
       return NextResponse.json({ error: "Track not found" }, { status: 404 });
     }
 
     // Check if track has live sessions
-    if (existingTrack._count.liveSessions > 0) {
+    const sessionCount = await db
+      .select({ count: count() })
+      .from(schema.liveSessions)
+      .where(eq(schema.liveSessions.trackId, id))
+      .then(r => r[0].count);
+
+    if (sessionCount > 0) {
       return NextResponse.json(
         { error: "Cannot delete track with existing sessions" },
         { status: 400 }
       );
     }
 
-    await prisma.track.delete({
-      where: { id },
-    });
+    await db
+      .delete(schema.tracks)
+      .where(eq(schema.tracks.id, id));
 
     return NextResponse.json({ message: "Track deleted successfully" });
   } catch (error) {

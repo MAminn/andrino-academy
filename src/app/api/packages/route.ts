@@ -1,26 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { db, schema, eq, asc, desc } from "@/lib/db";
 
 // GET /api/packages - Get all packages
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({
+      headers: request.headers,
+    });
 
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Managers and CEOs see all packages, others see only active ones
-    const where = ["manager", "ceo"].includes(session.user.role)
-      ? {}
-      : { isActive: true };
+    const isAdmin = ["manager", "ceo"].includes(session.user.role);
 
-    const packages = await prisma.package.findMany({
-      where,
-      orderBy: { order: "asc" },
-    });
+    let packages;
+    if (isAdmin) {
+      packages = await db.select().from(schema.packages).orderBy(asc(schema.packages.order));
+    } else {
+      packages = await db
+        .select()
+        .from(schema.packages)
+        .where(eq(schema.packages.isActive, true))
+        .orderBy(asc(schema.packages.order));
+    }
 
     return NextResponse.json({ packages });
   } catch (error) {
@@ -35,9 +40,11 @@ export async function GET(request: NextRequest) {
 // POST /api/packages - Create a new package (Manager/CEO only)
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth.api.getSession({
+      headers: request.headers,
+    });
 
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -76,23 +83,28 @@ export async function POST(request: NextRequest) {
     // Convert perks array to JSON string for storage
     const perksJson = JSON.stringify(perks);
 
-    const newPackage = await prisma.package.create({
-      data: {
-        name,
-        price: parseFloat(price),
-        discountedPrice: discountedPrice ? parseFloat(discountedPrice) : null,
-        minAge: parseInt(minAge),
-        maxAge: parseInt(maxAge),
-        description,
-        perks: perksJson,
-        durationMonths: parseInt(durationMonths),
-        sessionsPerLevel: parseInt(sessionsPerLevel),
-        pricePerSession,
-        badge: badge || null,
-        order: order !== undefined ? parseInt(order) : 0,
-        isActive: isActive !== undefined ? isActive : true,
-      },
+    await db.insert(schema.packages).values({
+      name,
+      price: parseFloat(price),
+      discountedPrice: discountedPrice ? parseFloat(discountedPrice) : null,
+      minAge: parseInt(minAge),
+      maxAge: parseInt(maxAge),
+      description,
+      perks: perksJson,
+      durationMonths: parseInt(durationMonths),
+      sessionsPerLevel: parseInt(sessionsPerLevel),
+      pricePerSession,
+      badge: badge || null,
+      order: order !== undefined ? parseInt(order) : 0,
+      isActive: isActive !== undefined ? isActive : true,
     });
+
+    const [newPackage] = await db
+      .select()
+      .from(schema.packages)
+      .where(eq(schema.packages.name, name))
+      .orderBy(desc(schema.packages.createdAt))
+      .limit(1);
 
     return NextResponse.json({ package: newPackage }, { status: 201 });
   } catch (error) {
