@@ -36,12 +36,12 @@ export default function Home() {
         <EducationPlan />
       </section>
 
-      <section id='pricing'>
-        <PricingSection />
-      </section>
-
       <section id='TracksRoadmap'>
         <TracksRoadmap />
+      </section>
+
+      <section id='pricing'>
+        <PricingSection />
       </section>
 
       <section id='students'>

@@ -346,7 +346,7 @@ export default function SignupPage() {
                     onChange={handleInputChange}
                     required
                     className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7e5b3f] focus:border-transparent transition-colors'
-                    placeholder='+966 5X XXX XXXX'
+                    placeholder='+20 1X XXXX XXXX'
                   />
                 </div>
               </div>
@@ -369,7 +369,7 @@ export default function SignupPage() {
                     value={formData.phone}
                     onChange={handleInputChange}
                     className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7e5b3f] focus:border-transparent transition-colors'
-                    placeholder='+966 5X XXX XXXX'
+                    placeholder='+20 1X XXXX XXXX'
                   />
                 </div>
 
@@ -383,7 +383,7 @@ export default function SignupPage() {
                     value={formData.address}
                     onChange={handleInputChange}
                     className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7e5b3f] focus:border-transparent transition-colors'
-                    placeholder='المدينة، المملكة العربية السعودية'
+                    placeholder=' جمهورية مصر العربية'
                   />
                 </div>
               </div>

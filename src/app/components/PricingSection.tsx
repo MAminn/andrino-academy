@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, Crown } from "lucide-react";
+import Link from "next/link";
 
 export default function PricingSection() {
   const plans = [
@@ -14,7 +15,6 @@ export default function PricingSection() {
         "خدمة العملاء",
         "تقييم الطالب كل حصة",
         "تسليم مشروع كامل",
-        "إمكانية إضافة حصص (0 حصص)",
       ],
       sessionPrice: "270",
       highlight: false,
@@ -158,9 +158,11 @@ export default function PricingSection() {
               </p>
 
               {/* CTA Button */}
-              <button className='w-full py-3.5 rounded-[14px] font-semibold text-[15px] bg-[#6B4E3D] text-white hover:bg-[#5A3F2F] transition-colors duration-200 shadow-sm hover:shadow-md'>
-                اختر الخطة
-              </button>
+              <Link href='/auth/signup' className='w-full'>
+                <button className='w-full py-3.5 rounded-[14px] font-semibold text-[15px] bg-[#6B4E3D] text-white hover:bg-[#5A3F2F] transition-colors duration-200 shadow-sm hover:shadow-md'>
+                  اختر الخطة
+                </button>
+              </Link>
             </div>
           ))}
         </div>

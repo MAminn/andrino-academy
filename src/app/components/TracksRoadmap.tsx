@@ -243,7 +243,7 @@ const TracksRoadmap: React.FC = () => {
         </AnimatePresence>
 
         {/* Timeline */}
-        <div className='max-w-6xl mx-auto'>
+        <div className='max-w-6xl mx-auto max-sm:hidden'>
           <div className='relative bg-white/80 backdrop-blur-sm rounded-[24px] p-8 md:p-12 shadow-[0_12px_40px_rgba(0,0,0,0.06)] border border-gray-100'>
             {/* Start Flag */}
             <motion.div
