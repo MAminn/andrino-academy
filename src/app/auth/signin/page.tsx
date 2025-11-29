@@ -169,21 +169,6 @@ function SigninForm() {
               ملاحظة: يمكن للطلاب فقط إنشاء حسابات جديدة
             </p>
           </div>
-
-          {/* Demo Accounts */}
-          <div className='mt-6 p-4 bg-gradient-to-br from-[#7e5b3f]/5 to-[#c19170]/5 rounded-xl border border-[#c19170]/20'>
-            <h3 className='text-sm font-medium text-[#343b50] mb-2'>
-              حسابات تجريبية:
-            </h3>
-            <div className='text-xs text-gray-600 space-y-1'>
-              <p>المدير التنفيذي: ceo@andrino-academy.com</p>
-              <p>مدير النظام: manager@andrino-academy.com</p>
-              <p>المنسق: coordinator@andrino-academy.com</p>
-              <p className='text-gray-500'>
-                كلمة المرور لجميع الحسابات متوفرة لدى المطور
-              </p>
-            </div>
-          </div>
         </div>
       </div>
     </div>
