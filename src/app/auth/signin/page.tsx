@@ -165,9 +165,6 @@ function SigninForm() {
                 إنشاء حساب جديد
               </Link>
             </p>
-            <p className='text-xs text-gray-500 mt-2'>
-              ملاحظة: يمكن للطلاب فقط إنشاء حسابات جديدة
-            </p>
           </div>
         </div>
       </div>
