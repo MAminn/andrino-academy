@@ -24,7 +24,7 @@ export default function Footer() {
             <ul className='space-y-4 w-full max-w-sm'>
               <li>
                 <button className='course-item flex items-center justify-end gap-3 w-full text-[#e7e9ee] text-base font-medium transition-all duration-200 hover:text-white group'>
-                  <span>الذكاء الاصطناعي</span>
+                  <span>مجال برمجة الألعاب وتطويرها</span>
                   <div
                     className='course-bullet flex-shrink-0 rounded-full border border-[#c9a265] transition-all duration-200'
                     style={{
@@ -35,7 +35,7 @@ export default function Footer() {
               </li>
               <li>
                 <button className='course-item flex items-center justify-end gap-3 w-full text-[#e7e9ee] text-base font-medium transition-all duration-200 hover:text-white group'>
-                  <span>الواقع الافتراضي</span>
+                  <span>مجال الذكاء الاصطناعي</span>
                   <div
                     className='course-bullet flex-shrink-0 rounded-full border border-[#c9a265] transition-all duration-200'
                     style={{
@@ -46,7 +46,7 @@ export default function Footer() {
               </li>
               <li>
                 <button className='course-item flex items-center justify-end gap-3 w-full text-[#e7e9ee] text-base font-medium transition-all duration-200 hover:text-white group'>
-                  <span>تطوير الشبكة</span>
+                  <span>مجال برمجة المواقع الإلكترونية بمختلف أنواعها</span>
                   <div
                     className='course-bullet flex-shrink-0 rounded-full border border-[#c9a265] transition-all duration-200'
                     style={{
@@ -57,18 +57,7 @@ export default function Footer() {
               </li>
               <li>
                 <button className='course-item flex items-center justify-end gap-3 w-full text-[#e7e9ee] text-base font-medium transition-all duration-200 hover:text-white group'>
-                  <span>تطوير تطبيقات أندرويد</span>
-                  <div
-                    className='course-bullet flex-shrink-0 rounded-full border border-[#c9a265] transition-all duration-200'
-                    style={{
-                      width: "18px",
-                      height: "18px",
-                    }}></div>
-                </button>
-              </li>
-              <li>
-                <button className='course-item flex items-center justify-end gap-3 w-full text-[#e7e9ee] text-base font-medium transition-all duration-200 hover:text-white group'>
-                  <span>البرمجة للأطفال</span>
+                  <span>مجال برمجة تطبيقات الهواتف</span>
                   <div
                     className='course-bullet flex-shrink-0 rounded-full border border-[#c9a265] transition-all duration-200'
                     style={{
