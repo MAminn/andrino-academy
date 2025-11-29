@@ -11,11 +11,7 @@ export default function PricingSection() {
       price: "1,350",
       duration: "1 شهر",
       sessions: "4 حصص مباشرة",
-      features: [
-        "خدمة العملاء",
-        "تقييم الطالب كل حصة",
-        "تسليم مشروع كامل",
-      ],
+      features: ["خدمة العملاء", "تقييم الطالب كل حصة", "تسليم مشروع كامل"],
       sessionPrice: "270",
       highlight: false,
     },
